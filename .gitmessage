@@ -1,0 +1,10 @@
+
+# <유형>: <설명>   (한국어 50자 이내, 마침표 없음, 티켓 번호와 영역 제외)
+# 유형: feat | fix | refactor | test | docs | chore
+#
+# 본문(선택): 제목 아래 한 줄을 비우고 변경 이유를 작성
+#
+# AI 도구가 참여했다면 맨 아래에 표기
+# Co-Authored-By: <도구와 모델> <이메일>
+#
+# 전체 규칙: docs/commit-convention.md
