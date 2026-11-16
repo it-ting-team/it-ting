@@ -1,19 +1,19 @@
 # 디굴디굴 DB 설계
 
-[서비스 명세](../spec/README.md)를 바탕으로 한 테이블 설계다. DB는 MySQL이다. 테이블과 칼럼까지 정했고, 글자 수가 명세에 없는 칼럼의 길이와 조회용 인덱스는 구현하면서 정한다.
+[서비스 명세](../spec/README.md)를 바탕으로 한 테이블 설계다. DB는 MySQL이다. 테이블·칼럼·제약은 [IT-TING-DB의 설계 문서](https://github.com/sbukkki/IT-TING-DB/tree/c8a3311efb0a0c036e7b0c1a5aaedffc4b2db21b/docs)를 기준으로 반영했다(기준 커밋 `c8a3311`). 기존 서비스 명세 링크와 화면·구현 관련 설명은 유지한다. 타입·길이·제약이 정해지지 않은 값은 미정으로 남긴다.
 
 ## 문서 목록
 
 | 문서 | 테이블 |
 |---|---|
-| [계정 · 프로필 · 관심사 · 질문](account.md) | `member`, `member_profile`, `member_suspension`, `interest_category`, `interest`, `member_interest`, `intro_question`, `member_answer` |
+| [계정 · 프로필 · 관심사 · 질문](account.md) | `user`, `user_profile`, `user_suspension`, `interest_category`, `interest`, `user_interest`, `intro_question`, `user_answer` |
 | [들판 · 땅굴 입구 · 방명록 · 단골 · 추천](burrow.md) | `term`, `campus`, `campus_floor`, `burrow`, `burrow_entrance`, `guestbook_entry`, `regular_burrow`, `recommend_setting`, `recommend_setting_question`, `daily_recommendation`, `daily_recommendation_member` |
 | [채팅](chat.md) | `chat_request`, `chat_room`, `chat_room_member`, `chat_message` |
 | [모임](meetup.md) | `meetup`, `meetup_application`, `meetup_like` |
-| [커뮤니티 · 신고](community.md) | `post`, `post_image`, `post_interest`, `comment`, `post_like`, `comment_like`, `post_bookmark`, `report` |
+| [커뮤니티 · 신고](community.md) | `post`, `post_image`, `post_interest`, `comment`, `post_like`, `comment_like`, `post_bookmark`, `report`, `report_action` |
 | [알림 · 공지](notification.md) | `notification`, `notification_setting`, `push_subscription`, `notice` |
 
-테이블은 모두 38개다. 인증 코드와 비밀번호 재설정 링크는 DB가 아니라 임시 저장소(Redis)에 둔다.
+테이블은 모두 39개다. 인증 코드와 비밀번호 재설정 링크는 DB가 아니라 임시 저장소(Redis)에 둔다.
 
 ## 설계 원칙: 저장하는 것과 화면에 그리는 것을 나눈다
 
@@ -31,47 +31,47 @@
 
 ## 이름과 공통 규칙
 
-- 테이블과 칼럼 이름은 영어 소문자와 밑줄(snake_case)로 쓴다. 테이블 이름은 단수형이다. 사용자는 `member`다(계정은 `member`, 프로필은 `member_profile`).
-- PK는 `id`(BIGINT, 자동 증가)다. 다만 두 테이블을 잇기만 하는 테이블은 두 FK를 묶어 PK로 쓰고, 한 사람에 하나뿐인 테이블은 `member_id`를, 순서가 있는 딸린 테이블은 부모의 FK와 순번을 묶어 PK로 쓴다.
-- FK 칼럼은 `가리키는 테이블_id`로 쓴다(예: `member_id`). 뜻을 드러내야 하면 역할을 쓴다(예: `host_id`, `author_id`).
+- 테이블과 칼럼 이름은 영어 소문자와 밑줄(snake_case)로 쓴다. 테이블 이름은 단수형이다. 사용자는 `user`다(계정은 `user`, 프로필은 `user_profile`). 기존 `member` 계열 테이블과 사용자 FK는 `user` 계열과 `user_id`로 맞췄다. `chat_room_member`, `daily_recommendation_member`의 이름과 신고 대상 코드 `MEMBER`는 원본대로 유지한다.
+- PK는 `id`(BIGINT, 자동 증가)다. 다만 두 테이블을 잇기만 하는 테이블은 두 FK를 묶어 PK로 쓰고, 한 사람에 하나뿐인 테이블은 `user_id`를, 순서가 있는 딸린 테이블은 부모의 FK와 순번을 묶어 PK로 쓴다.
+- FK 칼럼은 `가리키는 테이블_id`로 쓴다(예: `user_id`). 뜻을 드러내야 하면 역할을 쓴다(예: `host_id`, `author_id`).
 - 시각은 DATETIME이고 이름은 `…_at`으로 끝난다. 줄이 만들어진 시각은 `created_at`이다. "했는지"는 참/거짓 대신 한 시각으로 저장한다(예: `canceled_at`이 있으면 취소됨).
 - 상태와 종류는 영어 대문자 코드를 VARCHAR로 저장한다(예: `PENDING`). MySQL의 ENUM 타입은 쓰지 않는다.
-- 글자 수가 명세에 있는 칼럼은 그 길이를 쓴다(예: `VARCHAR(50)`). 명세에 없으면 길이를 비워 두고 구현할 때 정한다.
-- 인덱스는 UNIQUE처럼 규칙을 지키는 데 필요한 것만 적었다. 조회 속도를 위한 인덱스는 구현하면서 더한다.
+- 글자 수가 명세에 있는 칼럼은 그 길이를 쓴다(예: `VARCHAR(50)`). 명세에 없으면 길이를 미정으로 표시하고 구현할 때 정한다. 타입이나 NULL·UNIQUE 제약도 정해지지 않았다면 임의로 확정하지 않는다.
+- UNIQUE처럼 규칙을 지키는 제약과 원본에서 명시한 조회 인덱스 후보를 적었다. 나머지 조회 인덱스와 물리 FK 여부가 미정인 논리 참조는 구현하면서 정한다.
 
 ## 전체 관계
 
 ```mermaid
 erDiagram
-    member ||--o{ member_interest : ""
+    user ||--o{ user_interest : ""
     interest_category ||--o{ interest : ""
-    interest ||--o{ member_interest : ""
-    member ||--o{ member_answer : ""
-    intro_question ||--o{ member_answer : ""
+    interest ||--o{ user_interest : ""
+    user ||--o{ user_answer : ""
+    intro_question ||--o{ user_answer : ""
     campus ||--o{ campus_floor : ""
-    member ||--o| member_profile : ""
-    campus_floor |o--o{ member_profile : ""
-    member ||--|| burrow : ""
+    user ||--o| user_profile : ""
+    campus_floor ||--o{ user_profile : ""
+    user ||--o| burrow : ""
     burrow ||--o{ burrow_entrance : ""
     term ||--o{ burrow_entrance : ""
     campus_floor ||--o{ burrow_entrance : ""
     burrow ||--o{ guestbook_entry : ""
-    member ||--o{ guestbook_entry : ""
-    member ||--o{ regular_burrow : ""
+    user ||--o{ guestbook_entry : ""
+    user ||--o{ regular_burrow : ""
     burrow ||--o{ regular_burrow : ""
-    member ||--o{ daily_recommendation : ""
-    member ||--o{ chat_request : ""
+    user ||--o{ daily_recommendation : ""
+    user ||--o{ chat_request : ""
     chat_request |o--o| chat_room : ""
     chat_room ||--o{ chat_room_member : ""
-    member ||--o{ chat_room_member : ""
+    user ||--o{ chat_room_member : ""
     chat_room ||--o{ chat_message : ""
-    member ||--o{ meetup : ""
+    user ||--o{ meetup : ""
     campus |o--o{ meetup : ""
     meetup |o--|| chat_room : ""
     meetup ||--o{ meetup_application : ""
-    member ||--o{ meetup_application : ""
+    user ||--o{ meetup_application : ""
     meetup ||--o{ meetup_like : ""
-    member ||--o{ post : ""
+    user ||--o{ post : ""
     meetup |o--o{ post : ""
     post ||--o{ post_interest : ""
     interest_category ||--o{ post_interest : ""
@@ -79,42 +79,50 @@ erDiagram
     post ||--o{ post_like : ""
     post ||--o{ post_bookmark : ""
     comment ||--o{ comment_like : ""
-    member ||--o{ report : ""
-    member ||--o{ notification : ""
+    user ||--o{ report : ""
+    report |o--o| report_action : "신고 종결"
+    user ||--o{ report_action : "관리자 조치"
+    user ||--o{ notification : ""
 ```
 
-딸린 작은 테이블 8개(`member_suspension`, `recommend_setting`, `recommend_setting_question`, `daily_recommendation_member`, `post_image`, `notification_setting`, `push_subscription`, `notice`)는 그림에서 뺐다. 영역별 그림은 각 문서에 있다.
+딸린 작은 테이블 8개(`user_suspension`, `recommend_setting`, `recommend_setting_question`, `daily_recommendation_member`, `post_image`, `notification_setting`, `push_subscription`, `notice`)는 그림에서 뺐다. 영역별 그림은 각 문서에 있다.
 
 ## 설계하며 정한 것
 
-2026-11-15에 하나씩 정했다. 바꾸려면 이 표와 해당 문서를 함께 고친다.
+2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 바꾸려면 이 표와 해당 문서를 함께 고친다.
 
 | 번호 | 무엇을 | 정한 것 |
 |---|---|---|
-| G1 | 이름 규칙 | snake_case, 테이블은 단수형, 사용자는 `member` |
+| G1 | 이름 규칙 | snake_case, 테이블은 단수형, 사용자는 `user` |
 | G2 | PK | BIGINT 자동 증가 |
 | G3 | 개수와 요약 값(좋아요 수, 댓글 수, 확정 인원, 찜 수, 대화방의 마지막 메시지) | 칼럼으로 두지 않고 조회할 때 센다. 필요해지면 그때 칼럼을 더한다 |
 | G4 | 그림이 프론트엔드에 있는 값 목록(모임 카테고리, 가구, 두더지 아이템, 탈퇴 사유) | 테이블을 두지 않고 고른 값의 코드만 저장한다 |
-| G5 | 탈퇴한 사용자 | `member` 줄은 남기고 로그인 값을 비운다. 프로필 줄은 지운다 |
-| A1 | 계정과 프로필 | `member`(계정)와 `member_profile`(프로필)로 나눈다 |
+| G5 | 탈퇴한 사용자 | `user` 줄은 남기고 로그인 값을 비운다. 프로필·땅굴과 쓰거나 받은 방명록은 정리한다. 재가입은 새 계정 ID를 쓴다 |
+| A1 | 계정과 프로필 | `user`(계정)와 `user_profile`(프로필)로 나눈다 |
 | A2 | Mattermost ID | 저장하고 한 계정만 쓰게 한다 |
 | A3 | 인증 코드와 비밀번호 재설정 링크 | DB가 아니라 임시 저장소(Redis)에 둔다 |
+| A4 | 온보딩 저장 시점 | 중간 입력은 현재 화면 흐름에서 유지하고 최종 확정 시 프로필·관심사·서로 다른 질문 3개의 답변·땅굴·입구를 한 트랜잭션에서 저장한다 |
 | B1 | 땅굴 | `burrow` 테이블을 둔다. 땅굴은 들판 위에 자리를 가진 장소다 |
 | B2 | 땅굴 무드 | 저장하지 않고 대표 관심사의 대분류에서 정한다 |
-| B3 | 프로필의 캠퍼스 · 층 | `member_profile`에 저장하고 기준으로 삼는다. 이번 학기 입구를 여기에 맞춘다 |
+| B3 | 프로필의 캠퍼스 · 층 | `user_profile`에 저장하고 기준으로 삼는다. 이번 학기 입구를 여기에 맞춘다 |
 | B4 | 들판에서 땅굴의 자리 | 자리 번호(`slot`)만 저장한다. 그 자리가 화면의 어디인지와 그리는 일은 프론트엔드가 맡는다 |
 | H1 | 대화 요청의 만료(5일) | 상태로 저장하지 않고 보낸 시각에서 계산한다. 필요해지면 그때 바꾼다 |
 | H2 | 대화 안의 안내 줄 | 메시지로 저장한다(`chat_message.type`). 문구는 저장하지 않는다 |
 | H3 | 메시지 속 모임 카드 | 본문에 링크만 저장하고 카드는 그릴 때 만든다 |
+| H4 | 대화 요청 취소와 중복 | 만료 전 `REJECTED`도 발신자가 취소할 수 있다. 두 사용자 사이의 활성 요청·방을 양방향으로 확인한다 |
+| H5 | 모임 채팅 접근 | `chat_room_member.left_at`과 모임 삭제 여부로 판단한다. 종료·취소 후 방만 나가도 모임 참여 기록은 유지한다 |
 | M1 | 모집 상태 | 저장하지 않고 인원과 시각에서 계산한다. 취소만 `canceled_at`으로 저장한다 |
-| M2 | 참여 신청 | 한 사람이 한 모임에 한 줄. 다시 신청하면 그 줄을 "신청 대기"로 되돌린다 |
+| M2 | 참여 신청 | 한 사람이 한 모임에 한 줄. `WITHDRAWN`에서 다시 신청하면 그 줄을 "신청 대기"로 되돌린다 |
 | M3 | 삭제한 모임 | 줄은 남기고 `deleted_at`을 채운다 |
+| M4 | 모임 취소 | 대기 신청은 `MEETUP_CANCELED`로 마감하고 확정 참여 기록과 채팅방은 유지한다 |
 | C1 | 신고 | 한 테이블에 대상 종류, 대상 id, 처리 상태를 둔다 |
 | C2 | 조회수 | 글에 숫자만 저장한다 |
 | C3 | 답글의 "@닉네임" | 상대를 사용자 참조로 저장한다 |
+| C4 | 관리자 이력과 복구 후 재가림 | `report_action`에 신고 종결·복구 이력을 남기고 마지막 복구 경계 이후 신고만 재가림에 센다. 정지·해제 담당자와 사유는 `user_suspension`에 남긴다 |
 | N1 | 알림의 제목과 설명 | 저장하지 않고 종류 · 대상 · 일으킨 사람에서 만든다 |
+| N2 | 요청 배지와 일정 알림 | 요청 배지는 알림 설정·읽음과 별도로 계산한다. 일정 임박은 `event_key`와 `UNIQUE(user_id, event_key)`로 중복을 막고 댓글 가려짐 알림을 추가한다 |
 
 ## 아직 다루지 않은 것
 
-- 관리자 화면에 필요한 값(신고 처리 결과, 정지의 나머지 규칙, 새 학기를 여는 방법)은 [명세의 보류한 결정](../spec/open-issues.md)이라 최소한만 두었다.
+- 관리자 신고 처리·복구 이력과 계정 정지·해제 조치는 관련 문서에 반영했다. 새 학기를 여는 방식과 남은 운영 정책은 [명세의 보류한 결정](../spec/open-issues.md) 및 영역별 검토 항목을 따른다.
 - 파일(글 사진)을 어디에 올리는지, 실시간(메시지, 알림 점)을 어떻게 보내는지는 DB 설계가 아니라 구현 방식이다.
