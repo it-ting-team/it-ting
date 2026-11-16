@@ -1,134 +1,250 @@
 # 커뮤니티 · 신고
 
-글, 댓글, 좋아요, 저장, 신고를 저장한다. 명세는 [08 커뮤니티](../spec/08-community.md)다. 이름 규칙과 공통 칼럼은 [README](README.md)를 따른다.
+글, 댓글, 좋아요, 저장, 신고를 저장한다. 명세는 [08 커뮤니티](../spec/08-community.md), [09 알림](../spec/09-notification.md), [11 운영 · 관리자](../spec/11-admin.md)다. 이름 규칙과 공통 칼럼은 [README](README.md)를 따른다.
 
 ```mermaid
 erDiagram
-    member ||--o{ post : "쓴다"
+    user ||--o{ post : "쓴다"
     meetup |o--o{ post : "글에 연결한 모임"
     post ||--o{ post_image : "사진 0~3장"
     post ||--o{ post_interest : "태그 0~5개"
     interest_category ||--o{ post_interest : ""
     post ||--o{ comment : "댓글"
     comment |o--o{ comment : "답글(한 단계)"
-    member ||--o{ comment : "쓴다"
+    user ||--o{ comment : "쓴다"
     post ||--o{ post_like : ""
-    member ||--o{ post_like : ""
+    user ||--o{ post_like : ""
     comment ||--o{ comment_like : ""
-    member ||--o{ comment_like : ""
+    user ||--o{ comment_like : ""
     post ||--o{ post_bookmark : ""
-    member ||--o{ post_bookmark : ""
-    member ||--o{ report : "신고한다"
+    user ||--o{ post_bookmark : ""
+    user ||--o{ report : "신고한다"
+    report |o--o| report_action : "신고 종결 이력"
+    user ||--o{ report_action : "관리자 조치"
 ```
 
-## `post` 글
+## 복구 이후에 접수된 신고로 재가림 판단하기
 
-| 칼럼 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | BIGINT | ✓ | PK |
-| `author_id` | BIGINT | ✓ | 작성자. FK → `member` |
-| `category` | VARCHAR(20) | ✓ | `PROMOTION` 모임 홍보 / `REVIEW` 모임 후기 / `FREE` 자유 |
-| `title` | VARCHAR(50) | ✓ | 제목. 최대 50자. 검색 대상 |
-| `content` | VARCHAR(1000) | ✓ | 본문. 최대 1000자. 검색 대상 |
-| `meetup_id` | BIGINT | | 연결한 모임. "모임 홍보"면 필수. FK → `meetup` |
-| `status` | VARCHAR(10) | ✓ | `PUBLIC` 공개 / `HIDDEN` 가려짐 / `DELETED` 삭제 |
-| `view_count` | INT | ✓ | 조회수. 글을 열 때마다 1 올린다 |
-| `created_at` | DATETIME | ✓ | 작성 시각. "최신순" 정렬 |
-| `edited_at` | DATETIME | | 내용을 고친 시각. 값이 있으면 "수정됨" |
+### 기존 설계
 
-- 가려짐은 신고자 수로 계산하지 않고 `status`로 저장한다. 관리자가 복구하면 `PUBLIC`으로 되돌리기 때문이다.
-- 글을 지우면 `status`를 `DELETED`로 바꾸고, 달린 댓글 · 답글도 `DELETED`로 바꾼다. 삭제된 글을 링크나 알림으로 열면 "삭제된 글이에요"를 보여줘야 하므로 줄은 남긴다.
+글과 댓글은 서로 다른 3명의 신고가 쌓이면 `HIDDEN`이 된다. 관리자가 복구하면 `PUBLIC`으로 돌아간다. `report`는 신고자와 대상별로 한 건만 허용한다.
 
-## `post_image` 글 사진
+### 문제와 재현 조건
 
-| 칼럼 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | BIGINT | ✓ | PK |
-| `post_id` | BIGINT | ✓ | FK → `post` |
-| `sort_order` | TINYINT | ✓ | 순서 1 ~ 3. 1번이 대표 사진 |
-| `image_url` | VARCHAR | ✓ | 올린 파일의 위치 |
+A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로 신고했을 때 과거 신고를 다시 합산하면 새 신고가 한 건뿐인데도 글이 가려진다. 복구 시 기존 신고를 삭제하면 관리자 처리 이력과 중복 신고 여부를 확인할 수 없게 된다.
 
-- 글 하나에 최대 3장. 파일 형식과 용량, 저장소는 구현 단계에서 정한다.
+### 원인
 
-## `post_interest` 글의 관심사 태그
+신고의 보관과 자동 가림에 포함할 신고의 범위가 구분되어 있지 않았다.
 
-| 칼럼 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `post_id` | BIGINT | ✓ | FK → `post` |
-| `interest_category_id` | BIGINT | ✓ | 관심사 대분류. FK → `interest_category` |
+### 해결 방법
 
-- PK(`post_id`, `interest_category_id`). 글 하나에 최대 5개. 세부 관심사가 아니라 대분류를 가리킨다.
+`report_action`에 복구 행을 남긴다. 복구 시 해당 글·댓글을 잠그고, 그 대상에 이미 접수된 가장 큰 `report.id`를 `restored_through_report_id`에 기록한 뒤 `PUBLIC`으로 바꾼다. 상태 변경과 복구 기록은 한 트랜잭션에서 처리한다.
 
-## `comment` 댓글 · 답글
+새 신고도 같은 대상 행을 잠근 뒤 삽입한다. 가장 최근 복구에서 기록한 ID보다 큰 신고만 자동 가림에 집계한다. 복구 이력이 없으면 그 대상의 접수 신고 전체를 집계한다. 기존 `UNIQUE(reporter_id, target_type, target_id)`는 유지한다. 과거에 같은 대상을 신고한 사람은 복구 후에도 다시 신고할 수 없다.
 
-| 칼럼 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | BIGINT | ✓ | PK |
-| `post_id` | BIGINT | ✓ | FK → `post` |
-| `author_id` | BIGINT | ✓ | 작성자. FK → `member` |
-| `parent_id` | BIGINT | | 답글이면 부모 댓글. FK → `comment`. 답글의 답글도 같은 부모를 가리킨다(한 단계) |
-| `mention_member_id` | BIGINT | | 답글에 다시 답할 때의 상대("@닉네임"). FK → `member` |
-| `content` | VARCHAR(300) | ✓ | 내용. 최대 300자 |
-| `status` | VARCHAR(10) | ✓ | `PUBLIC` / `HIDDEN` / `DELETED` |
-| `created_at` | DATETIME | ✓ | 작성 시각. 등록순 정렬 |
-| `edited_at` | DATETIME | | 고친 시각. 값이 있으면 "수정됨" |
+세 번째 유효 신고로 공개 상태가 가려짐으로 바뀌는 트랜잭션에서만 작성자 알림을 만든다. 글과 댓글에 별도 알림 종류를 사용하고, 두 경우 모두 신고자 식별 정보를 알림에 담지 않는다. 사용자와 방명록 글 신고는 관리자 검토로 처리한다. 이미 삭제된 방명록 글에 대한 신고는 대상 없음으로 처리 상태를 남길 수 있으며, 삭제된 본문은 보관하지 않는다.
 
-- 댓글을 지우면 달린 답글도 함께 `DELETED`가 된다. 가려진 댓글은 자리에 안내 문구로 보이고 답글은 그대로다.
+### 검증 결과
 
-## `post_like` 글 좋아요 · `comment_like` 댓글 좋아요 · `post_bookmark` 저장
+설계 검토에서 확인했다. 실행 검증에서는 복구 후 다른 세 명이 신고할 때 첫째·둘째 신고에서는 공개, 셋째에서는 가려짐과 알림 1건을 확인한다. 과거 신고자의 중복 요청, 복구 직전·직후의 동시 신고, 가려진 글에 추가로 들어온 신고도 확인한다.
 
-세 테이블은 모양이 같다. 누르면 줄을 넣고 다시 누르면 지운다.
+## 신고 처리와 계정 정지·해제의 관리자 이력 남기기
 
-| 테이블 | 칼럼 | 설명 |
-|---|---|---|
-| `post_like` | `post_id`, `member_id`, `created_at` | PK(`post_id`, `member_id`). `created_at`은 "최근 7일 동안 받은 좋아요"에 쓴다 |
-| `comment_like` | `comment_id`, `member_id`, `created_at` | PK(`comment_id`, `member_id`) |
-| `post_bookmark` | `post_id`, `member_id`, `created_at` | PK(`post_id`, `member_id`). `created_at`은 "11월 9일 저장" 표시와 저장한 순서 정렬에 쓴다 |
+### 기존 설계
 
-- 탈퇴하면 그 사람의 좋아요와 저장을 지운다.
+`report.status`는 최초 접수만 정의했다. `user_suspension`은 정지 사유와 기간, 해제 시각을 담지만 누가 정지·해제했는지와 해제 사유를 담지 않았다.
 
-## `report` 신고
+### 문제와 재현 조건
 
-| 칼럼 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `id` | BIGINT | ✓ | PK |
-| `reporter_id` | BIGINT | ✓ | 신고한 사람. FK → `member` |
-| `target_type` | VARCHAR(20) | ✓ | 대상 종류: `POST` 글 / `COMMENT` 댓글 / `MEMBER` 사용자 / `GUESTBOOK` 방명록 글 |
-| `target_id` | BIGINT | ✓ | 대상의 id. `target_type`에 따라 가리키는 테이블이 다르다 |
-| `reason` | VARCHAR(20) | ✓ | `SPAM` 스팸·홍보 / `ABUSE` 욕설·비하·괴롭힘 / `OBSCENE` 음란물 / `ETC` 기타 |
-| `detail` | VARCHAR(100) | | "기타"일 때의 내용. 최대 100자 |
-| `status` | VARCHAR(20) | ✓ | 신고의 처리 상태. 처음 값은 `RECEIVED` 접수 |
-| `created_at` | DATETIME | ✓ | 신고 시각 |
+관리자가 신고를 처리하거나 정지를 해제한 뒤, 누가 언제 어떤 판단을 했는지 기존 상태값만으로 확인할 수 없다. 같은 글·댓글이 여러 번 복구되면 마지막 복구 정보만으로는 이전 조치를 확인할 수 없다.
 
-- 같은 대상은 한 번만 신고한다: UNIQUE(`reporter_id`, `target_type`, `target_id`).
-- 글 · 댓글은 서로 다른 3명째 신고가 들어올 때 대상의 `status`를 `HIDDEN`으로 바꾼다. 사용자와 방명록 글은 자동 조치가 없다.
-- 신고한 사람에게 그 글 · 댓글이 접혀 보이는 것은 이 테이블에 그 사람의 줄이 있는지로 판단한다.
-- 처리 상태의 나머지 값과 처리 흐름은 관리자 화면을 정할 때 정한다([명세의 보류한 결정](../spec/open-issues.md)).
+### 원인
+
+현재 상태와 상태를 바꾼 관리자의 조치 기록은 기록 목적과 보존 범위가 다르다.
+
+### 해결 방법
+
+`report_action`을 추가한다. 각 행은 신고 처리 또는 대상 복구 한 건을 기록한다. 컬럼과 제약은 아래 [`report_action`](#report_action) 표에 정리한다.
+
+신고 처리 시 `report.status`를 `RECEIVED`에서 `RESOLVED`로 바꾸고 같은 트랜잭션에서 처리 결과를 삽입한다. 신고 처리 행의 대상 정보는 `report_id`가 참조하는 신고에서 읽는다. 복구 행은 특정 신고 한 건이 아닌 대상 전체에 대한 조치이므로 직접 대상을 기록한다. 조치 유형에 맞는 칼럼 조합을 제약으로 검증한다. 복구의 최신 행은 `(target_type, target_id, action_type, id)`로, 재가림 집계는 `report(target_type, target_id, id)`로 조회한다.
+
+`user_suspension`에는 `imposed_by`와 `lifted_by`(BIGINT, FK → `user.id`), `lift_reason`(TEXT)을 추가한다. 정지 조치 시각과 사유는 기존 `created_at`, `reason`을 사용한다. 수동 해제 시에만 `lifted_at`, `lifted_by`, `lift_reason`을 함께 기록한다. 기간 만료는 기존 `ends_at`으로 판단한다.
+
+기존 데이터에 처리자나 사유가 없다면 임의로 채우지 않는다. 과거 기록을 보존하는 전환이 필요할 경우 `imposed_by` 등 누락값은 기존 행에서만 허용하고, 새 조치에는 필수로 받는다. 기존 복구 경계를 확인할 수 없는 데이터는 실제 이력을 확보한 뒤 보정한다.
+
+### 검증 결과
+
+설계 검토에서 확인했다. 실행 검증에서는 두 번 복구한 대상의 두 관리자 조치가 모두 조회되고, 신고 종결 재시도에는 처리 행이 추가되지 않으며, 자연 만료와 수동 해제가 구분되는지 확인한다.
+
+## 테이블 구조
+
+타입이나 제약을 정하지 않은 항목은 미정으로 표시한다. 복합 제약은 각 표 아래에 적는다.
+
+### `post`
+
+커뮤니티 글과 공개 상태, 연결된 모임을 저장한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 글 ID |
+| `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 글 작성자 |
+| `category` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `PROMOTION`, `REVIEW`, `FREE` | 모임 홍보·모임 후기·자유 |
+| `title` | `VARCHAR(50)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 50자 | 글 제목과 검색 대상 |
+| `content` | `VARCHAR(1000)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 1,000자 | 글 본문과 검색 대상 |
+| `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, 개별 UNIQUE 없음, `PROMOTION`이면 필수 | 글에 연결한 모임 |
+| `status` | `VARCHAR(10)` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN`, `DELETED` | 공개·가려짐·삭제 상태 |
+| `view_count` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 글을 열 때마다 1을 더하는 저장형 조회수 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순 정렬 기준 |
+| `edited_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 내용을 마지막으로 고친 시각 |
+
+글을 삭제하면 해당 글과 소속 댓글·답글을 `DELETED`로 바꾼다. 글 행은 삭제된 글 안내와 기존 참조에 사용한다.
+
+가려짐은 신고자 수로 매번 계산하지 않고 `status`로 저장한다. 관리자가 복구하면 `PUBLIC`으로 되돌린다.
+
+### `post_image`
+
+글에 올린 이미지와 표시 순서를 기록한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 사진 ID |
+| `post_id` | `BIGINT` | FK → `post.id` | NOT NULL, 개별 UNIQUE 없음 | 사진이 붙은 글 |
+| `sort_order` | `TINYINT` | — | NOT NULL, 개별 UNIQUE 없음, 1–3, 1번은 대표 사진 | 글 안에서 사진의 표시 순서 |
+| `image_url` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 업로드한 파일 위치 |
+
+한 글에 최대 3장을 붙인다. 파일 저장소, 형식과 용량은 미정이다.
+
+### `post_interest`
+
+글에 붙인 관심사 대분류 태그를 저장한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `post_id` | `BIGINT` | 복합 PK, FK → `post.id` | NOT NULL, 개별 UNIQUE 없음 | 태그가 붙은 글 |
+| `interest_category_id` | `BIGINT` | 복합 PK, FK → `interest_category.id` | NOT NULL, 개별 UNIQUE 없음 | 연결된 관심사 대분류 |
+
+복합 기본키는 `PK(post_id, interest_category_id)`다. 글마다 최대 5개를 붙인다.
+
+### `comment`
+
+글에 달린 댓글과 한 단계 답글을 저장한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 댓글 ID |
+| `post_id` | `BIGINT` | FK → `post.id` | NOT NULL, 개별 UNIQUE 없음 | 댓글이나 답글이 달린 글 |
+| `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 댓글 작성자 |
+| `parent_id` | `BIGINT` | FK → `comment.id` | NULL 허용, 개별 UNIQUE 없음 | 답글의 최상위 댓글. 일반 댓글에서는 비움 |
+| `mention_user_id` | `BIGINT` | FK → `user.id` | NULL 허용, 개별 UNIQUE 없음 | 답글에 답할 때 화면에 표시할 멘션 대상 |
+| `content` | `VARCHAR(300)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 300자 | 댓글 또는 답글 본문 |
+| `status` | `VARCHAR(10)` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN`, `DELETED` | 공개·가려짐·삭제 상태 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 등록순 정렬 기준 |
+| `edited_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 내용을 마지막으로 고친 시각 |
+
+답글에 붙이는 답글도 동일한 최상위 부모를 참조한다. 댓글을 삭제하면 달린 답글도 `DELETED`로 바꾼다. 가려진 댓글은 화면에 안내 문구를 표시한다.
+
+댓글이 가려져도 달린 답글은 그대로 유지한다.
+
+### `post_like`
+
+사용자가 글에 누른 좋아요를 저장한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `post_id` | `BIGINT` | 복합 PK, FK → `post.id` | NOT NULL, 개별 UNIQUE 없음 | 좋아요를 받은 글 |
+| `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 좋아요를 누른 사용자 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 좋아요를 누른 시각. 최근 7일 집계에 사용 |
+
+복합 기본키는 `PK(post_id, user_id)`다. 좋아요를 취소하거나 사용자가 탈퇴하면 행을 삭제한다.
+
+### `comment_like`
+
+사용자가 댓글 또는 답글에 누른 좋아요를 저장한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `comment_id` | `BIGINT` | 복합 PK, FK → `comment.id` | NOT NULL, 개별 UNIQUE 없음 | 좋아요를 받은 댓글 또는 답글 |
+| `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 좋아요를 누른 사용자 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 좋아요를 누른 시각 |
+
+복합 기본키는 `PK(comment_id, user_id)`다. 좋아요를 취소하거나 사용자가 탈퇴하면 행을 삭제한다.
+
+### `post_bookmark`
+
+사용자가 저장한 글을 기록한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `post_id` | `BIGINT` | 복합 PK, FK → `post.id` | NOT NULL, 개별 UNIQUE 없음 | 저장한 글 |
+| `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 글을 저장한 사용자 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 저장한 시각. 저장 날짜와 정렬에 사용 |
+
+복합 기본키는 `PK(post_id, user_id)`다. 저장을 취소하거나 사용자가 탈퇴하면 행을 삭제한다.
+
+### `report`
+
+글·댓글·사용자·방명록에 접수된 신고를 보관한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 신고 ID |
+| `reporter_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 신고한 사용자 |
+| `target_type` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `POST`, `COMMENT`, `MEMBER`, `GUESTBOOK` | 신고 대상의 종류 |
+| `target_id` | `BIGINT` | 종류별 논리 참조 | NOT NULL, 개별 UNIQUE 없음 | 종류에 따라 `post.id`, `comment.id`, `user.id`, `guestbook_entry.id`를 가리킴 |
+| `reason` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `SPAM`, `ABUSE`, `OBSCENE`, `ETC` | 신고 사유 코드 |
+| `detail` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, `ETC`에서 필수, 최대 100자 | 기타 신고 사유의 상세 내용 |
+| `status` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `RECEIVED`, `RESOLVED` | 신고 접수 또는 종결 상태 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 신고가 접수된 시각 |
+
+복합 UNIQUE는 `UNIQUE(reporter_id, target_type, target_id)`다. 공개 상태 변경과 복구 후 신고 집계는 위의 트러블슈팅을 따른다.
+
+내 신고로 글·댓글을 접어 표시하는 여부는 내 신고 행의 존재로 판단한다. 사용자와 방명록 글 신고에는 자동 조치를 적용하지 않는다.
+
+### `report_action`
+
+신고 종결과 글·댓글 복구 시 관리자의 조치와 사유를 남긴다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 조치 ID |
+| `action_type` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `REPORT_ACTIONED`, `REPORT_DISMISSED`, `TARGET_RESTORED` | 조치함·조치 없이 종결·대상 복구 |
+| `admin_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 조치를 수행한 관리자 |
+| `reason` | `TEXT` | — | NOT NULL, 개별 UNIQUE 없음 | 관리자의 조치 또는 종결 사유 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 조치를 기록한 시각 |
+| `report_id` | `BIGINT` | FK → `report.id` | NULL 허용, UNIQUE, 신고 종결 시 필수 | 처리한 신고. 대상 복구 행에서 비움 |
+| `target_type` | `VARCHAR(20)` | — | NULL 허용, 개별 UNIQUE 없음, 대상 복구 시 필수, `POST` 또는 `COMMENT` | 복구한 대상의 종류 |
+| `target_id` | `BIGINT` | 종류별 논리 참조 | NULL 허용, 개별 UNIQUE 없음, 대상 복구 시 필수 | 복구한 글 ID 또는 댓글 ID |
+| `restored_through_report_id` | `BIGINT` | 논리 참조 → `report.id` | NULL 허용, 개별 UNIQUE 없음 | 복구 직전에 해당 대상에 접수된 가장 큰 신고 ID. 대상에 신고가 없으면 비움 |
+
+신고 종결은 `report_id`로 대상 정보를 읽고, 대상 복구 행은 `target_type`과 `target_id`를 함께 기록한다. 이 테이블은 앞서 확정한 관리자 이력 설계를 표로 옮긴 것이다.
 
 ## 저장하지 않는 것
 
-**계산해서 내려주는 값**
+### 계산해서 내려주는 값
 
-| 값 | 무엇에서 계산하나 |
-|---|---|
-| 좋아요 수, 댓글 수(댓글 + 답글), 저장 수 | `post_like`, `comment`, `post_bookmark` 줄 수 |
-| 인기 점수, 이번 주 인기 글 TOP5 | 최근 7일의 좋아요 + 댓글 + 저장 수 |
-| 많이 이야기하는 관심사 | 최근 7일 글의 `post_interest` |
-| 본문 미리보기, 목록 카드의 썸네일 | `content`의 앞부분, 1번 사진 |
-| "수정됨", 상대 시간("방금", "N시간 전") | `edited_at`, `created_at` |
-| 내가 좋아요 · 저장했는지 | 내 `post_like`, `post_bookmark` 줄이 있는지 |
-| 내 활동의 개수(내가 쓴 글, 댓글 단 글, 저장한 글) | `post`, `comment`, `post_bookmark` |
-| "내 관심사만" | 내 `member_interest`가 속한 대분류와 `post_interest` |
-| 작성자 표시("탈퇴한 사용자" 포함) | `member`의 상태 |
+| 값 | 원본 테이블과 컬럼 | 계산 방법 |
+| --- | --- | --- |
+| 좋아요·댓글·저장 수 | `post_like.post_id`, `comment.post_id`, `comment.status`, `post_bookmark.post_id`, `comment_like.comment_id` | 글별 좋아요와 저장은 각 테이블의 해당 글 행을 센다. 댓글 수는 같은 글의 댓글과 답글 중 `DELETED`가 아닌 행을 센다. 댓글별 좋아요는 해당 댓글 ID의 행을 센다. 이 집계들은 별도로 계산한 뒤 합친다. |
+| 인기 점수와 이번 주 인기 글 TOP5 | `post.status`, `post.created_at`, `post_like.post_id`, `post_like.created_at`, `comment.post_id`, `comment.created_at`, `comment.status`, `post_bookmark.post_id`, `post_bookmark.created_at` | 공개 글마다 최근 7일에 생성된 글 좋아요·댓글/답글·저장의 개수를 각각 구해 합산한다. 점수 내림차순과 글 작성 시각 내림차순으로 상위 5개를 고른다. 삭제된 댓글은 제외한다. 숨긴 댓글의 집계와 일반 인기순 정렬에도 7일을 적용할지는 미정이다. |
+| 많이 이야기하는 관심사 | `post.id`, `post.status`, `post.created_at`, `post_interest.post_id`, `post_interest.interest_category_id` | 최근 7일에 작성된 공개 글에 붙은 태그를 대분류별로 묶어 서로 다른 글 ID를 센다. 글 수가 많은 상위 8개를 사용한다. |
+| 본문 미리보기와 썸네일 | `post.content`, `post_image.post_id`, `post_image.sort_order`, `post_image.image_url` | 본문 앞부분을 잘라 미리보기로 쓴다. 글에 연결된 `sort_order = 1` 사진의 URL을 대표로 쓴다. 사진이 없으면 화면의 기본 그림을 사용한다. |
+| 수정 여부와 상대 시간 | `post.edited_at`, `post.created_at`, `comment.edited_at`, `comment.created_at` | `edited_at`에 값이 있으면 수정 표시를 붙인다. 상대 시간은 현재 시각과 작성 시각의 차이로 계산한다. |
+| 내가 좋아요·저장했는지 | `post_like.post_id`, `post_like.user_id`, `comment_like.comment_id`, `comment_like.user_id`, `post_bookmark.post_id`, `post_bookmark.user_id` | 현재 사용자와 해당 글·댓글 ID의 조합으로 각 관계 행이 존재하는지 확인한다. |
+| 내 활동 건수 | `post.author_id`, `post.status`, `comment.author_id`, `comment.post_id`, `comment.status`, `post_bookmark.user_id`, `post_bookmark.post_id` | 내가 쓴 글은 삭제되지 않은 내 글을 센다. 댓글 단 글은 내 삭제되지 않은 댓글·답글이 달린 공개 글 ID를 중복 없이 센다. 저장한 글은 내 저장 행과 연결된 공개 글을 센다. |
+| 내 관심사만 보기 | `user_interest.user_id`, `user_interest.interest_id`, `interest.interest_category_id`, `post_interest.interest_category_id`, `post_interest.post_id` | 내 세부 관심사를 대분류 ID로 바꾸고, 글에 붙은 대분류와 하나 이상 겹치는 글을 조회한다. |
+| 작성자 표시 | `post.author_id`, `comment.author_id`, `user.status`, `user_profile.nickname`, `user_profile.mole_head`, `user_profile.mole_face`, `user_profile.mole_neck`, `user_profile.mole_hand` | 작성자의 계정이 탈퇴 상태면 기본 두더지와 ‘탈퇴한 사용자’를 표시한다. 활동 중이면 프로필의 닉네임과 두더지 아이템을 읽는다. |
+| 내 신고로 접힌 글·댓글과 자동 가림 집계 | `report.reporter_id`, `report.target_type`, `report.target_id`, `report.id`, `report_action.action_type`, `report_action.restored_through_report_id` | 내 신고 행이 존재하면 나에게 해당 글·댓글을 접어 보여준다. 전체 자동 가림에는 마지막 복구 기준 ID 이후에 접수된 서로 다른 신고자 수를 집계한다. 3명이 되는 전이에서만 `post.status` 또는 `comment.status`를 `HIDDEN`으로 기록한다. |
 
-**프론트엔드가 갖는 것**
+### 프론트엔드가 관리하는 것
 
 - 사진이 없을 때 보여주는 관심사 일러스트, 신고 팝업과 안내 화면의 문구
 - 검색어, 탭 · 필터 · 정렬 선택
+- 본문 미리보기의 표시 길이
 
 ## 명세에 없어 구현 단계로 넘기는 것
 
-- 인기순 정렬이 TOP5처럼 최근 7일만 세는지
-- 글을 지울 때 사진 파일, 좋아요, 저장, 신고 줄을 함께 지우는지
-- 글에 연결한 모임이 삭제 · 취소될 때의 처리(남은 검토 항목 60)
-- 관리자가 복구한 글이 다시 가려지는 조건
+아래 항목은 [명세의 보류한 결정](../spec/open-issues.md)과 함께 검토한다.
+
+- 일반 인기순의 기간, 인기 점수에서 가려진 댓글을 포함할지 여부
+- 글 삭제 시 사진 파일·좋아요·저장 관계의 정리와 글에 연결한 모임이 삭제·취소됐을 때의 표시(남은 검토 항목 60)
