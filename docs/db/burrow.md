@@ -13,9 +13,6 @@ erDiagram
     user ||--o{ guestbook_entry : "쓴 사람"
     user ||--o{ regular_burrow : "담는다"
     burrow ||--o{ regular_burrow : "담긴다"
-    user ||--|| recommend_setting : "추천 설정"
-    recommend_setting ||--o{ recommend_setting_question : "답이 궁금한 질문"
-    intro_question ||--o{ recommend_setting_question : ""
     user ||--o{ daily_recommendation : "하루에 한 번"
     daily_recommendation ||--o{ daily_recommendation_member : "0~3명"
 ```
@@ -44,29 +41,29 @@ erDiagram
 
 설계 검토에서 확인했다. 실행 시에는 ‘나중에 하기’를 누른 뒤 새로고침하거나 화면을 옮겨도 안내가 다시 뜨지 않는지, 로그아웃 후 다시 로그인하거나 브라우저를 새로 열면 안내가 다시 뜨는지, 소속을 확정한 뒤에는 어느 접속에서도 안내가 뜨지 않는지 확인한다.
 
-## 선택한 질문에 답한 사람이 부족해도 추천 채우기
+## 추천은 캠퍼스와 기수만 골라 무작위로 뽑기
 
 ### 기존 설계
 
-선택 질문은 `recommend_setting_question`에 둔다. 하루 추천 결과는 `daily_recommendation`과 `daily_recommendation_member`에 순서대로 저장한다.
+추천 조건(관심사, 답이 궁금한 질문, 같은 질문, 소속)을 `recommend_setting`과 `recommend_setting_question`에 저장하고, 조건에 많이 맞는 사람부터 뽑았다. 하루 추천 결과는 `daily_recommendation`과 `daily_recommendation_member`에 순서대로 저장한다.
 
 ### 문제와 재현 조건
 
-선택한 질문에 답한 사람이 한 명이고 이번 학기의 다른 후보가 두 명 이상인 경우, 질문 답변 여부로 조회를 제한하면 한 명만 추천된다. 기대 결과는 답한 사람을 먼저 보여주고 남은 두 자리를 다른 후보로 채우는 것이다.
+조건이 여러 개이고 저장까지 하다 보니 조건별 가중치, 동점 처리, 질문에 답한 사람이 모자랄 때 채우는 순서를 모두 정해야 했다. 추천은 하루에 세 명을 가볍게 만나게 하는 기능인데 규칙이 그보다 무거웠다.
 
 ### 원인
 
-추천 후보 자격과 후보 우선순위를 같은 조건으로 처리하면 낮은 순위의 후보가 제외된다.
+누구를 먼저 보여 줄지 정하는 조건과 그 조건을 기억하는 저장 구조가 추천의 목적에 비해 컸다.
 
 ### 해결 방법
 
-이번 학기 입구가 있는 활동 회원을 후보로 조회하고 본인은 제외한다. 질문을 선택했다면 선택한 질문 중 하나 이상에 답한 사람을 먼저 고려한다. 그 안에서는 관심사·공통 질문·소속 등 설정한 나머지 조건을 적용한다. 3명을 채우지 못하면 선택 질문에 답하지 않은 후보도 같은 조건으로 정렬해 채운다. 질문을 선택하지 않으면 다른 조건으로 정렬한다.
+추천을 받는 시점에 캠퍼스와 기수만 고르게 하고, 그 안에서 무작위로 세 명을 뽑는다. 고른 캠퍼스와 기수는 저장하지 않는다. `recommend_setting`과 `recommend_setting_question`은 없앤다.
 
-`recommend_setting_question`과 `user_answer.intro_question_id`를 비교해 질문 일치 여부를 계산한다. 기존 날짜별 UNIQUE와 결과 순서를 사용해 같은 날의 중복 요청에도 한 번 확정된 결과를 읽는다. 결과가 0명이어도 그날의 `daily_recommendation`은 기록한다.
+후보는 이번 학기 입구가 있고 온보딩을 마친 활동 회원이며 본인은 제외한다. 고른 캠퍼스는 프로필의 캠퍼스-층이 속한 캠퍼스와, 고른 기수는 프로필의 기수와 비교한다. 맞는 사람이 세 명보다 적으면 있는 만큼만 추천한다. 날짜별 UNIQUE와 결과 순서는 그대로 써서, 같은 날 다시 요청하면 처음 확정한 결과를 읽는다. 결과가 0명이어도 그날의 `daily_recommendation`은 기록한다.
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 시에는 일치 후보가 1명일 때 보충 후보 2명이 붙는지, 일치 후보가 3명 이상이면 일치 후보로 3명이 선택되는지, 전체 후보가 부족하면 있는 만큼만 반환되는지 확인한다. 같은 날 동시 요청은 확정된 한 결과를 반환해야 한다.
+설계 검토에서 확인했다. 실행 시에는 고른 캠퍼스와 기수에 맞는 사람만 뽑히는지, 맞는 사람이 세 명보다 적으면 있는 만큼만 반환되는지, 같은 날 다시 요청하면 조건을 바꿔도 처음 결과가 그대로 나오는지 확인한다. 같은 날 동시 요청은 확정된 한 결과를 반환해야 한다.
 
 ## 탈퇴자가 받은 방명록은 지우고 쓴 방명록은 남기기
 
@@ -108,6 +105,8 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `year` | 미정 (정수형) | — | NOT NULL, 개별 UNIQUE 없음 | 학기 연도 |
 | `half` | 미정 (정수형) | — | NOT NULL, 개별 UNIQUE 없음, 1 상반기, 2 하반기 | 연도 내 학기 구분 |
 | `opened_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 들판을 연 시각 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 복합 UNIQUE는 `UNIQUE(year, half)`다. 지난 학기도 계속 탐색할 수 있다.
 
@@ -122,6 +121,9 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 캠퍼스 ID |
 | `name` | 미정 (문자열) | — | NULL 허용·개별 UNIQUE 여부 미정 | 캠퍼스의 표시 이름 |
 | `sort_order` | 미정 (정수형) | — | NULL 허용·개별 UNIQUE 여부 미정 | 캠퍼스 목록의 표시 순서 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
+| `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
 
 목록 값은 임시이며, 예시는 서울 · 대전 · 부울경 · 구미 · 광주다. 운영자가 DB에서 직접 관리한다(관리 화면 없음).
 
@@ -134,6 +136,9 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 캠퍼스·층 ID |
 | `campus_id` | `BIGINT` | FK → `campus.id` | NOT NULL, 개별 UNIQUE 없음 | 층이 속한 캠퍼스 |
 | `floor` | 미정 (정수형) | — | NOT NULL, 개별 UNIQUE 없음 | 캠퍼스 안의 층 번호 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
+| `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
 
 복합 UNIQUE는 `UNIQUE(campus_id, floor)`다. 들판은 학기와 캠퍼스·층의 조합으로 조회한다.
 
@@ -150,7 +155,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `user_id` | `BIGINT` | FK → `user.id` | NOT NULL, UNIQUE | 땅굴 주인 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 온보딩을 확정해 땅굴을 만든 시각 |
 
-- 방 안의 모습(가구, 벽 · 바닥)은 이 테이블에 저장하지 않는다. 주인의 관심사와 고른 가구([계정 · 프로필](account.md)의 `user_interest`)로 그린다.
+- 방 안의 모습(가구, 벽 · 바닥)은 이 테이블에 저장하지 않는다. 주인의 관심사([계정 · 프로필](account.md)의 `user_interest`)로 그린다. 가구는 관심사마다 하나로 정해져 있다.
 - 들판에서의 자리는 학기마다 다르므로 `burrow_entrance`가 갖는다.
 
 ### `burrow_entrance`
@@ -165,6 +170,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | NOT NULL, 개별 UNIQUE 없음 | 그 학기에 고른 캠퍼스·층 |
 | `slot` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 그 들판에서 서버가 배정한 자리 번호 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 해당 학기의 입구를 처음 배치한 시각 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 복합 UNIQUE는 `UNIQUE(burrow_id, term_id)`와 `UNIQUE(term_id, campus_floor_id, slot)`이다. 이번 학기에 캠퍼스·층을 옮길 때 그 학기 행의 층과 자리를 변경한다. 지난 학기 행은 보존한다.
 
@@ -182,11 +188,13 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `burrow_id` | `BIGINT` | FK → `burrow.id` | NOT NULL, 개별 UNIQUE 없음 | 글을 받은 땅굴 |
 | `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 작성자. 땅굴 주인은 자기 땅굴에 작성할 수 없음 |
 | `content` | `VARCHAR(50)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 50자 | 방명록 본문 |
+| `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN` | 공개·가려짐 상태 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순과 7일 만료의 기준 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 본문을 수정할 수 없다. 삭제하거나 만료되면 행을 지운다. 탈퇴한 사용자가 받은 글은 탈퇴할 때 지우고, 쓴 글은 남겨 작성자를 “탈퇴한 사용자”로 보여준다. 범위는 위의 트러블슈팅을 따른다.
 
-신고 대상이다(`report.target_type = GUESTBOOK`, [커뮤니티 · 신고](community.md)). 작성 후 7일이 지난 글은 조회에서 빼고 정리한다.
+신고 대상이다(`report.target_type = GUESTBOOK`, [커뮤니티 · 신고](community.md)). 서로 다른 3명이 신고하면 `status`를 `HIDDEN`으로 바꿔 가린다. 가려지는 조건, 작성자 알림, 관리자 복구는 글·댓글과 같은 규칙을 따른다. 작성 후 7일이 지난 글은 가려졌는지와 관계없이 조회에서 빼고 정리한다.
 
 ### `regular_burrow`
 
@@ -202,31 +210,6 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 상대의 수락이 필요하지 않고 상대에게 알리지 않는다.
 
-### `recommend_setting`
-
-사용자 한 명의 오늘의 추천 조건을 보관한다.
-
-| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
-| --- | --- | --- | --- | --- |
-| `user_id` | `BIGINT` | PK, FK → `user.id` | NOT NULL, PK로 유일 | 추천 조건을 설정한 사용자 |
-| `use_interest` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 겹치는 관심사를 우선순위에 적용할지 |
-| `use_same_question` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 같은 자기소개 질문을 우선순위에 적용할지 |
-| `use_affiliation` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 같은 캠퍼스·기수·층을 우선순위에 적용할지 |
-| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 추천 설정을 마지막으로 갱신한 시각 |
-
-저장한 조건은 다음 날에도 유지한다. 조건의 정확한 화면 형태(켜고 끄기인지, 값을 고르는지)는 명세에 없어 추천 화면 구현 시 맞춘다.
-
-### `recommend_setting_question`
-
-사용자가 답이 궁금하다고 고른 질문을 추천 설정에 연결한다.
-
-| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
-| --- | --- | --- | --- | --- |
-| `user_id` | `BIGINT` | 복합 PK, FK → `recommend_setting.user_id` | NOT NULL, 개별 UNIQUE 없음 | 질문을 고른 추천 설정의 소유자 |
-| `intro_question_id` | `BIGINT` | 복합 PK, FK → `intro_question.id` | NOT NULL, 개별 UNIQUE 없음 | 선택한 자기소개 질문 |
-
-복합 기본키는 `PK(user_id, intro_question_id)`다.
-
 ### `daily_recommendation`
 
 사용자가 특정 날짜에 추천을 받았다는 사실을 기록한다.
@@ -236,8 +219,9 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 일일 추천 ID |
 | `user_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 추천을 받은 사용자 |
 | `recommended_on` | `DATE` | — | NOT NULL, 개별 UNIQUE 없음 | 추천 기준 날짜 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 
-복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다.
+복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다. 추천을 받을 때 고른 캠퍼스와 기수는 저장하지 않는다.
 
 ### `daily_recommendation_member`
 
@@ -268,7 +252,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | 단골 수 | `regular_burrow.burrow_id` | 해당 땅굴을 담은 행을 `COUNT(*)`로 센다. 해제되거나 탈퇴 정리로 삭제된 관계는 제외된다. |
 | 오늘 추천을 이미 받았는지와 결과 | `daily_recommendation.user_id`, `daily_recommendation.recommended_on`, `daily_recommendation.id`, `daily_recommendation_member.daily_recommendation_id`, `daily_recommendation_member.sort_order`, `daily_recommendation_member.target_user_id` | 현재 사용자와 오늘의 추천 기준 날짜로 부모 행의 존재를 확인한다. 행이 있으면 결과를 `sort_order`순으로 읽는다. 결과가 없어도 부모 행이 있으면 추천을 받은 날이다. |
 | 추천 후보 | `burrow_entrance.term_id`, `burrow_entrance.burrow_id`, `burrow.id`, `burrow.user_id`, `user.status`, `user.onboarded_at` | 이번 학기의 입구에서 주인 계정을 찾는다. 본인을 제외하고 `ACTIVE`이면서 온보딩을 마친 사용자만 고른다. |
-| 추천 우선순위 | `recommend_setting.use_interest`, `recommend_setting.use_same_question`, `recommend_setting.use_affiliation`, `recommend_setting_question.intro_question_id`, `user_interest.interest_id`, `user_answer.intro_question_id`, `user_profile.campus_floor_id`, `user_profile.generation`, `campus_floor.campus_id` | 선택 질문에 답한 후보를 우선 조회한다. 관심사는 공통 `interest_id`, 공통 질문은 `intro_question_id`, 소속은 캠퍼스·층·기수의 일치 여부를 비교해 활성화된 조건에 적용한다. 일치 후보가 부족하면 미응답자로 채운다. 조건별 가중치와 동점 정렬은 검토 항목이다. |
+| 고른 캠퍼스와 기수에 맞는지 | `user_profile.campus_floor_id`, `campus_floor.campus_id`, `user_profile.generation` | 후보 프로필의 캠퍼스-층이 고른 캠퍼스에 속하고 기수가 고른 기수와 같은지 비교한다. 맞는 후보 가운데 무작위로 최대 3명을 뽑는다. |
 
 ### 프론트엔드가 관리하는 것
 
@@ -279,4 +263,5 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 ## 명세에 없어 구현 단계로 넘기는 것
 
 - 새 학기의 수동·자동 개설 방식과 빈 입구 자리의 재사용 기준
-- 추천 기준 날짜의 경계, 이전 추천 결과 보관 기간, 추천 조건의 세부 점수와 동점 순서
+- 추천 기준 날짜의 경계, 이전 추천 결과 보관 기간, 캠퍼스나 기수를 고르지 않고 전체에서 받을 수 있는지
+- 가려진 방명록 글을 땅굴 주인과 방문자에게 어떻게 보여줄지, 가려졌다는 알림을 눌렀을 때 갈 곳

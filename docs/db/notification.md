@@ -82,7 +82,7 @@ erDiagram
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 알림 ID |
 | `user_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 알림을 받는 사용자 |
 | `type` | `VARCHAR(40)` | — | NOT NULL, 개별 UNIQUE 없음, 아래의 사건별 알림 유형 | 알림 문구와 분류를 결정하는 종류 코드 |
-| `target_type` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `MEETUP`, `CHAT_ROOM`, `CHAT_REQUEST`, `POST`, `GUESTBOOK`, `NOTICE` | 알림을 눌렀을 때 이동할 대상의 종류 |
+| `target_type` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `MEETUP`, `CHAT_ROOM`, `CHAT_REQUEST`, `POST`, `GUESTBOOK`, `NOTICE` | 알림을 눌렀을 때 이동할 대상의 종류 |
 | `target_id` | `BIGINT` | 종류별 논리 참조 | NULL 허용, 개별 UNIQUE 없음, `GUESTBOOK`에서는 NULL | 이동 대상 ID. 방명록은 수신자 자신의 땅굴로 이동 |
 | `actor_id` | `BIGINT` | FK → `user.id` | NULL 허용, 개별 UNIQUE 없음 | 알림 사건을 일으킨 사용자. 시스템 알림 또는 신고자 보호가 필요한 알림에서는 비움 |
 | `read_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 읽은 시각. NULL이면 안 읽음 |
@@ -109,6 +109,8 @@ erDiagram
 | `burrow_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 땅굴 알림 수신 여부. 기본 켜짐 |
 | `notice_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 공지 알림 수신 여부. 기본 켜짐 |
 | `browser_push_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 브라우저 푸시 수신 여부 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 ### `push_subscription`
 
@@ -133,10 +135,12 @@ erDiagram
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 공지 ID |
-| `category` | `VARCHAR(10)` | — | NOT NULL, 개별 UNIQUE 없음, `NOTICE`, `UPDATE`, `EVENT` | 일반 공지·업데이트·이벤트 구분 |
+| `category` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `NOTICE`, `UPDATE`, `EVENT` | 일반 공지·업데이트·이벤트 구분 |
 | `title` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 공지 제목 |
 | `content` | `TEXT` | — | NOT NULL, 개별 UNIQUE 없음 | 공지 본문 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 공지 게시 시각. 최신순 정렬 기준 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
+| `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
 
 관리자가 올리며 읽기만 한다(댓글 · 좋아요 없음).
 
@@ -156,6 +160,7 @@ erDiagram
 | 커뮤니티 | 글에 댓글, 글 좋아요, 글 가려짐 | 글 작성자 | `POST` |
 | 커뮤니티 | 댓글 답글, 댓글·답글 좋아요, 댓글 가려짐 (`COMMENT_HIDDEN`) | 해당 댓글 또는 답글의 작성자 | `POST` |
 | 땅굴 | 방명록 새 글 | 땅굴 주인 | `GUESTBOOK` |
+| 땅굴 | 방명록 글 가려짐 | 방명록 글 작성자 | 미정 |
 | 공지 | 서비스 공지 | 대상 사용자 전체 | `NOTICE` |
 
 방노트 알림은 보류한다. 명시한 코드 외 알림의 구체적인 코드값은 미정이다.
@@ -166,7 +171,7 @@ erDiagram
 
 | 값 | 원본 테이블과 컬럼 | 계산 방법 |
 | --- | --- | --- |
-| 알림 문구와 이동 대상 | `notification.type`, `notification.target_type`, `notification.target_id`, `notification.actor_id`, `user.status`, `user_profile.nickname`, `meetup.title`, `post.title`, `notice.title` | 종류에 맞는 문구에 대상 제목과 행위자 표시를 채운다. 이동 경로는 대상 종류와 ID로 결정하며, 방명록은 수신자의 땅굴로 보낸다. 원본이 없거나 표시할 수 없으면 대상 없음 안내를 연다. |
+| 알림 문구와 이동 대상 | `notification.type`, `notification.target_type`, `notification.target_id`, `notification.actor_id`, `user.status`, `user_profile.nickname`, `meetup.title`, `post_version.title`, `notice.title` | 종류에 맞는 문구에 대상 제목과 행위자 표시를 채운다. 이동 경로는 대상 종류와 ID로 결정하며, 방명록은 수신자의 땅굴로 보낸다. 원본이 없거나 표시할 수 없으면 대상 없음 안내를 연다. |
 | 알림 분류와 수신 설정 | `notification.type`, `notification_setting.meetup_on`, `notification_setting.chat_on`, `notification_setting.community_on`, `notification_setting.burrow_on`, `notification_setting.notice_on` | 사건별 알림 유형을 다섯 갈래로 매핑한다. 수신자의 해당 스위치를 확인해 새 알림 생성 여부를 정한다. |
 | 안 읽은 알림 수와 GNB 빨간 점 | `notification.user_id`, `notification.read_at`, `notification.created_at`, `notification.type`, `notification_setting.meetup_on`, `notification_setting.chat_on`, `notification_setting.community_on`, `notification_setting.burrow_on`, `notification_setting.notice_on` | 수신자의 30일 이내 알림 중 `read_at IS NULL`인 행을 세어 안 읽은 수를 구한다. GNB에는 그중 현재 켜진 분류가 하나라도 있을 때 빨간 점을 그린다. |
 | 팝업 최근 알림과 전체 목록 | `notification.user_id`, `notification.type`, `notification.read_at`, `notification.created_at` | 수신자의 30일 이내 알림을 안 읽음 먼저, 생성 시각 내림차순으로 정렬한다. 팝업은 모임 참여 신청·대화 요청 알림 유형을 제외하고 5개를 읽는다. 전체 목록은 요청 알림을 포함하고 선택한 분류를 적용한다. |
@@ -180,6 +185,8 @@ erDiagram
 - 종류별 아이콘과 색, 읽지 않음 점, 빈 상태 문구("새 알림이 없어요")
 
 ## 명세에 없어 구현 단계로 넘기는 것
+
+알림은 추가로 살펴봐야 한다. 알림 종류의 코드값, 방명록 글 가려짐 알림의 이동 대상, 일정 임박 알림의 발송 정책이 정해지지 않았고, 정해지면 `type`을 ENUM으로 바꾼다([명세의 보류한 결정](../spec/open-issues.md)).
 
 - 모임 일정 임박의 발송 시점·수신자·일정 변경 시 재발송 기준
 - 새 메시지 알림의 묶음 단위, 서비스 공지의 일괄 발송 방식과 브라우저 푸시 키 저장 형식

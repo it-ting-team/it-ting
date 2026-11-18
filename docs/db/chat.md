@@ -84,7 +84,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | `sender_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 요청을 보낸 사용자 |
 | `receiver_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 요청을 받은 사용자 |
 | `message` | `VARCHAR(50)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 50자 | 요청을 보낼 때 붙이는 인사말 |
-| `status` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `PENDING`, `ACCEPTED`, `REJECTED`, `CANCELED` | 요청의 실제 처리 상태 |
+| `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PENDING`, `ACCEPTED`, `REJECTED`, `CANCELED` | 요청의 실제 처리 상태 |
 | `chat_room_id` | `BIGINT` | FK → `chat_room.id` | NULL 허용, 개별 UNIQUE 없음, 수락 시 연결 | 요청을 수락해 생성한 1:1 방 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 보낸 시각. 5일 만료의 기준 |
 | `responded_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 수락·거절·취소 등 마지막 상태 변경 시각 |
@@ -98,10 +98,11 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 대화방 ID |
-| `type` | `VARCHAR(10)` | — | NOT NULL, 개별 UNIQUE 없음, `DIRECT`, `MEETUP` | 1:1 또는 모임 대화방 |
+| `type` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `DIRECT`, `MEETUP` | 1:1 또는 모임 대화방 |
 | `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, UNIQUE, `MEETUP`일 때 필수 | 연결된 모임. 1:1 방에서는 비움 |
 | `notice` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음 | 모임 대화방 상단에 주최자가 쓰는 공지 한 건 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 1:1 요청 수락 또는 모임 생성 시각 |
+| `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 1:1 방에서 누군가 나간 뒤 다시 요청이 수락되면 새 방을 만든다. 모임당 방은 하나다.
 
@@ -127,7 +128,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 메시지 ID. 방 안에서 조회 순서의 기준 |
 | `chat_room_id` | `BIGINT` | FK → `chat_room.id` | NOT NULL, 개별 UNIQUE 없음 | 메시지가 속한 방 |
-| `type` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `TEXT`, `ACCEPTED`, `JOINED`, `LEFT`, `WITHDRAWN` | 사용자 메시지 또는 수락·참여·퇴장·탈퇴 안내 |
+| `type` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `TEXT`, `ACCEPTED`, `JOINED`, `LEFT`, `WITHDRAWN` | 사용자 메시지 또는 수락·참여·퇴장·탈퇴 안내 |
 | `sender_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 작성자 또는 안내를 일으킨 사용자 |
 | `content` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음, `TEXT`일 때 빈 값 불가 | 일반 메시지 본문. 안내 사건에서는 비움 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 발송 또는 안내 사건이 발생한 시각 |
