@@ -12,16 +12,18 @@
 
 - MUST: 모든 주소는 `/api/v1`로 시작한다.
 - MUST: 자원은 영어 소문자 복수형 명사로 쓴다. 낱말이 둘 이상이면 하이픈으로 잇는다(`chat-rooms`).
+- MUST: 하나뿐인 자원은 단수형으로 쓴다(`/me/profile`, `/posts/{postId}/bookmark`).
 - MUST: 딸린 자원은 부모 아래에 쓴다(`/api/v1/meetups/{meetupId}/applications`).
 - MUST: 로그인한 사용자 자신의 자원은 `/api/v1/me` 아래에 쓴다. 주소에 자기 id를 넣지 않는다.
 - MUST: 필터, 정렬, 검색은 쿼리 파라미터로 받는다. 이름은 camelCase다.
 - MUST NOT: 주소에 동사를 쓰지 않는다(`/getMeetup`, `/meetups/create`).
 
-수락, 거절, 취소처럼 자원의 상태를 바꾸는 행동은 예외로 `POST /<자원>/{id}/<행동>`을 쓴다.
+수락, 거절, 취소처럼 자원의 상태를 바꾸는 행동은 예외로 `POST /<자원>/{id}/<행동>`을 쓴다. 대상이 id로 정해지지 않으면 `{id}` 없이 쓴다.
 
 ```text
 POST /api/v1/chat-requests/{chatRequestId}/accept
 POST /api/v1/meetups/{meetupId}/cancel
+POST /api/v1/email-verifications/check
 ```
 
 ## 메서드
@@ -58,6 +60,8 @@ POST /api/v1/meetups/{meetupId}/cancel
 - MUST NOT: 실패를 `200`으로 답하지 않는다.
 - MUST NOT: 본문이 없는 `204`를 쓰지 않는다.
 
+브라우저를 다른 주소로 보내는 것으로 답하는 주소(Google 로그인)는 이 틀을 쓰지 않는다.
+
 ## 상태 코드
 
 | 코드 | 때 |
@@ -81,7 +85,8 @@ POST /api/v1/meetups/{meetupId}/cancel
   "error": {
     "code": "NICKNAME_DUPLICATED",
     "message": "이미 사용 중인 닉네임입니다.",
-    "fields": null
+    "fields": null,
+    "detail": null
   }
 }
 ```
@@ -91,6 +96,7 @@ POST /api/v1/meetups/{meetupId}/cancel
 | `code` | 프론트엔드가 실패 종류를 구분하는 값 |
 | `message` | 개발자가 읽는 한국어 설명 한 문장 |
 | `fields` | 입력 오류일 때만 어느 필드가 왜 틀렸는지의 목록. 그 밖에는 `null` |
+| `detail` | 화면에 보여 줄 값이 실패에 딸려 있을 때만 그 값을 담은 객체(예: 계정 정지의 사유와 끝나는 시각). 그 밖에는 `null` |
 
 - MUST: `code`는 영어 대문자와 밑줄로만 쓰고 `<대상>_<상태>` 모양으로 짓는다(`MEETUP_NOT_FOUND`, `MEETUP_FULL`). 숫자는 쓰지 않는다.
 - MUST: 같은 실패에는 어느 API에서나 같은 `code`를 쓴다.
@@ -106,9 +112,12 @@ POST /api/v1/meetups/{meetupId}/cancel
   "message": "입력값이 올바르지 않습니다.",
   "fields": [
     { "field": "nickname", "message": "12자를 넘을 수 없습니다." }
-  ]
+  ],
+  "detail": null
 }
 ```
+
+`detail`에 무엇을 담는지는 그 `code`를 쓰는 API의 문서에 적는다.
 
 ### 공통 에러 코드
 
@@ -188,7 +197,7 @@ GET /api/v1/notifications?size=20&cursor=eyJpZCI6ODEyfQ
 
 ## 영역별 API 목록
 
-구현한 API의 기준 문서는 Swagger(springdoc)가 만든 문서다. 구현하기 전의 설계는 영역을 구현하기 직전에 `docs/api/<영역>.md`로 쓴다. [템플릿](api/_template.md)을 복사해서 시작한다.
+구현한 API의 기준 문서는 Swagger(springdoc)가 만든 문서다. 구현하기 전의 설계는 `docs/api/<번호>-<영역>.md`로 쓴다. 번호는 서비스 명세의 문서 번호와 같다. [템플릿](api/_template.md)을 복사해서 시작하고, 문서 목록은 [API 명세](api/README.md)에 둔다.
 
 ## AI 에이전트 작업 절차
 
