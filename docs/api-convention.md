@@ -135,13 +135,27 @@ POST /api/v1/email-verifications/check
 ## JSON 필드
 
 - MUST: 필드 이름은 camelCase로 쓴다(`createdAt`, `hostId`). DB 칼럼은 snake_case이고 API에서 바꾼다.
-- MUST: id는 숫자로 준다.
+- MUST: id는 숫자로 준다. 자원 자신의 id는 `id`로, 다른 자원을 가리키는 id는 `<자원>Id`로 쓴다(`hostId`, `campusFloorId`).
 - MUST: 시각은 UTC의 ISO 8601 형식으로 주고 이름은 `…At`으로 끝낸다(`"createdAt": "2026-11-18T08:01:05Z"`).
 - MUST: 날짜만 있는 값은 `YYYY-MM-DD`로 준다.
-- MUST: 상태와 종류는 DB와 같은 대문자 코드 문자열로 준다(`"status": "PENDING"`).
+- MUST: 상태와 종류처럼 값이 정해진 목록인 필드는 enum으로 다룬다. 값은 DB와 같은 대문자 코드다(`"status": "PENDING"`).
+- MUST: enum인 필드는 문서의 타입에 `enum`이라고 적고 가능한 값을 모두 적는다.
+- MUST: 목록에 없는 enum 값을 받으면 `400`과 `INVALID_INPUT`으로 답한다.
+- MUST NOT: enum 값을 숫자나 순번으로 주고받지 않는다.
 - MUST: 참과 거짓은 `is`, `has`, `can`으로 시작한다(`isLiked`, `hasNext`).
 - MUST: 값이 없으면 필드를 빼지 않고 `null`로 준다. 빈 목록은 `[]`로 준다.
 - MUST NOT: "3분 전", "신청 대기" 같은 화면 표현을 서버가 만들어 주지 않는다. 시간대 변환과 문구는 프론트엔드가 맡는다.
+
+enum은 층마다 이렇게 다룬다.
+
+| 층 | 다루는 법 |
+|---|---|
+| DB | 값의 이름을 `VARCHAR`로 저장한다. MySQL의 ENUM 타입은 쓰지 않는다([DB 설계](db/README.md)) |
+| 백엔드 | 코드의 enum으로 정의하고 이름 그대로 저장하고 내려 준다 |
+| API 문서 | 타입을 `enum`으로 적고 값을 모두 적는다. Swagger에도 enum으로 나온다 |
+| 프론트엔드 | Swagger에서 생성한 타입으로 받는다. 화면에 보여 줄 낱말은 값마다 프론트엔드가 정한다 |
+
+문서의 타입 칸에는 숫자, 문자열, enum, 참/거짓, 시각, 날짜, 객체, 목록 가운데 하나를 쓴다.
 
 ## 목록
 
