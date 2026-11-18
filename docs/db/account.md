@@ -5,6 +5,7 @@
 ```mermaid
 erDiagram
     user ||--o{ user_suspension : "정지 기록"
+    user ||--o| user_withdrawal : "탈퇴 기록"
     user ||--o| user_profile : "프로필"
     campus_floor ||--o{ user_profile : "프로필의 캠퍼스-층"
     interest_category ||--o{ interest : "세부 관심사"
@@ -71,7 +72,7 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 
 ### 해결 방법
 
-`A2`, `G5`의 회원 식별 구조를 유지한다. 탈퇴 트랜잭션에서 `status = WITHDRAWN`과 `withdrawn_at`을 기록하고 `email`, `password_hash`, `google_sub`, `google_email`, `mattermost_id`를 NULL로 바꾼다. 프로필·땅굴과 의존 관계를 정리한다. 받은 방명록은 삭제하고 쓴 방명록은 남기며, 범위는 [들판 · 땅굴](burrow.md)에 정의한다.
+`A2`, `G5`의 회원 식별 구조를 유지한다. 탈퇴 트랜잭션에서 `status`를 `WITHDRAWN`으로 바꾸고 `user_withdrawal`에 탈퇴 사유와 시각을 한 줄 남긴 뒤 `email`, `password_hash`, `google_sub`, `google_email`, `mattermost_id`를 NULL로 바꾼다. 프로필·땅굴과 의존 관계를 정리한다. 받은 방명록은 삭제하고 쓴 방명록은 남기며, 범위는 [들판 · 땅굴](burrow.md)에 정의한다.
 
 재가입 시 현재 인증 가능한 계정에 대한 `mattermost_id` UNIQUE 규칙을 적용한다. 인증이 끝난 새 계정은 별도의 `user.id`를 사용한다. 과거 커뮤니티 글·댓글, 남은 방명록 글, 채팅 메시지, 지난 모임 기록은 기존 탈퇴 계정을 계속 가리킨다.
 
@@ -81,7 +82,7 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 
 ## 계정 영역 테이블 구조
 
-기존 계정 영역의 8개 테이블을 상세 검토할 수 있도록 정리했다. `미정`은 기존 설계나 서비스 명세에서 구체화되지 않은 타입 또는 제약이다.
+계정 영역의 9개 테이블을 상세 검토할 수 있도록 정리했다. `미정`은 기존 설계나 서비스 명세에서 구체화되지 않은 타입 또는 제약이다.
 
 ### `user`
 
@@ -98,18 +99,29 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | `ssafy_verified_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | SSAFY 인증을 마친 시각 |
 | `terms_agreed_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 필수 약관과 개인정보 수집·이용에 모두 동의한 시각 |
 | `onboarded_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 온보딩 마지막 단계에서 관심사를 확정한 시각 |
-| `role` | `VARCHAR(10)` | — | `NOT NULL`, 개별 UNIQUE 없음, `USER` / `ADMIN` | 서비스 사용자 또는 관리자 역할 |
-| `status` | `VARCHAR(10)` | — | `NOT NULL`, 개별 UNIQUE 없음, `ACTIVE` / `WITHDRAWN` | 계정 상태. 가입 진행 단계는 인증·완료 시각으로 판단 |
-| `withdrawn_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 탈퇴한 시각 |
-| `withdraw_reason` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 사유 코드 목록 미정 | 사용자가 선택한 탈퇴 사유 |
+| `role` | `ENUM` | — | `NOT NULL`, 개별 UNIQUE 없음, `USER` / `ADMIN` | 서비스 사용자 또는 관리자 역할 |
+| `status` | `ENUM` | — | `NOT NULL`, 개별 UNIQUE 없음, `ACTIVE` / `WITHDRAWN` | 계정 상태. 가입 진행 단계는 인증·완료 시각으로 판단 |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 계정이 생성된 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 계정 정보가 마지막으로 갱신된 시각 |
 
 이메일 가입은 비밀번호 설정 완료 시, Google 가입은 첫 Google 로그인 시 계정 행을 생성한다. 재로그인 시 인증·온보딩 완료 시각에 따라 다음 화면을 정한다.
 
-탈퇴하면 계정 ID를 남기고 로그인·인증 식별 정보를 비운다. 남는 글·댓글·쓴 방명록 글·채팅 메시지·지난 모임 기록은 기존 ID를 참조한다. 탈퇴자가 받은 방명록은 삭제하며, 재가입하면 새 계정 ID를 사용한다.
+탈퇴하면 계정 ID를 남기고 로그인·인증 식별 정보를 비운다. 탈퇴한 시각과 사유는 [`user_withdrawal`](#user_withdrawal)에 따로 남긴다. 남는 글·댓글·쓴 방명록 글·채팅 메시지·지난 모임 기록은 기존 ID를 참조한다. 탈퇴자가 받은 방명록은 삭제하며, 재가입하면 새 계정 ID를 사용한다.
 
 관리자 권한은 DB에서 직접 설정한다. 탈퇴한 사용자는 화면에서 "탈퇴한 사용자"와 기본 두더지로 보여준다. 받은 방명록은 탈퇴 시 삭제하고, 쓴 방명록을 포함한 보존 콘텐츠는 기존 계정 ID를 가리킨다.
+
+### `user_withdrawal`
+
+탈퇴 기록이다. 탈퇴한 계정과 사유, 시각을 한 곳에 모아 본다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 탈퇴 기록 ID |
+| `user_id` | `BIGINT` | FK → `user.id` | `NOT NULL`, `UNIQUE` | 탈퇴한 계정 |
+| `reason` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 사유 코드 목록 미정 | 사용자가 선택한 탈퇴 사유. 고르지 않으면 비움 |
+| `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 탈퇴한 시각 |
+
+다시 가입하면 새 계정 ID를 쓰므로 계정 하나에 탈퇴 기록은 하나다. `user.status`는 로그인과 조회에서 탈퇴한 계정을 바로 거르려고 그대로 둔다. 한 번 쓰고 바꾸지 않는 기록이라 `updated_at`과 `deleted_at`은 두지 않는다. 사유 코드 목록이 정해지면 `reason`을 `ENUM`으로 바꾼다.
 
 ### `user_profile`
 
@@ -122,16 +134,18 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | `generation` | `SMALLINT` | — | `NOT NULL`, 개별 UNIQUE 없음 | SSAFY 인증에 사용한 기수. 내 정보 수정에서 변경할 수 없음 |
 | `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | `NOT NULL`, 개별 UNIQUE 없음 | 프로필 소속의 기준이 되는 캠퍼스·층 |
 | `intro` | `VARCHAR(150)` | — | `NULL` 허용, 개별 UNIQUE 없음, 최대 150자 | 선택 자기소개 |
+| `profile_image_url` | `VARCHAR`(길이 미정) | — | `NULL` 허용, 개별 UNIQUE 없음 | 선택 프로필 사진의 주소. 올리지 않으면 비움 |
 | `mole_head` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 머리 부위 아이템 코드 | 두더지 머리 아이템. NULL은 미착용 |
 | `mole_face` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 얼굴 부위 아이템 코드 | 두더지 얼굴 아이템. NULL은 미착용 |
 | `mole_neck` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 목 부위 아이템 코드 | 두더지 목 아이템. NULL은 미착용 |
 | `mole_hand` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 손 부위 아이템 코드 | 두더지 손 아이템. NULL은 미착용 |
+| `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 프로필 정보가 마지막으로 갱신된 시각 |
 
 SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임은 온보딩 미완료 단계에서 NULL을 허용하며, 온보딩 완료에는 닉네임이 필요하다. 두더지 선택도 온보딩 최종 확정 시 반영한다.
 
 - 남의 땅굴, 글 작성자, 프로필 팝업처럼 다른 사람을 보여줄 때 로그인 값은 노출하지 않고 프로필을 읽는다.
-- 실명, 사진, 반은 받지 않는다. 땅굴은 `burrow`([들판 · 땅굴](burrow.md))에 따로 있다.
+- 실명과 반은 받지 않는다. 프로필 사진은 선택이고, 올리지 않아도 두더지로 표시한다. 땅굴은 `burrow`([들판 · 땅굴](burrow.md))에 따로 있다.
 
 ### `user_suspension`
 
@@ -149,6 +163,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | `lifted_by` | `BIGINT` | FK → `user.id` | `NULL` 허용, 개별 UNIQUE 없음 | 수동 해제한 관리자 계정 |
 | `lift_reason` | `TEXT` | — | `NULL` 허용, 개별 UNIQUE 없음 | 수동 해제 사유 |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 정지 조치를 등록한 시각 |
+| `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 수동 해제 시 `lifted_at`, `lifted_by`, `lift_reason`을 함께 채운다. 기간 만료 여부는 `ends_at`에서 판단한다. 관리자를 알 수 없는 기존 정지 기록을 이관하는 경우의 예외는 [커뮤니티 · 신고](community.md)의 조치 이력 설계를 따른다.
 
@@ -160,6 +175,9 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 관심사 대분류 ID |
 | `name` | 미정 (문자열) | — | NULL 허용·UNIQUE 여부 미정 | 대분류 표시 이름 |
+| `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
+| `deleted_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
 
 관심사 대분류와 세부 관심사는 운영자가 DB에서 직접 관리한다(관리 화면 없음). 대분류는 커뮤니티 글의 태그와 관심사 질문의 연결에 쓴다.
 
@@ -172,21 +190,25 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 세부 관심사 ID |
 | `interest_category_id` | `BIGINT` | FK → `interest_category.id` | `NOT NULL`, 개별 UNIQUE 없음 | 세부 관심사가 속한 대분류 |
 | `name` | 미정 (문자열) | — | NULL 허용·UNIQUE 여부 미정 | 세부 관심사 표시 이름 |
+| `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
+| `deleted_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
 
-세부 관심사는 땅굴 가구와 겹치는 관심사를 표시하는 데 사용한다.
+세부 관심사는 땅굴 가구와 겹치는 관심사를 표시하는 데 사용한다. 가구는 세부 관심사마다 하나로 정해져 있고, 어느 관심사에 어느 가구인지는 프론트엔드가 갖는다.
 
 ### `user_interest`
 
-사용자가 고른 세부 관심사, 선택 순서, 관심사별 가구를 연결한다.
+사용자가 고른 세부 관심사와 선택 순서를 저장한다.
 
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | `NOT NULL`, 개별 UNIQUE 없음 | 관심사를 고른 사용자 |
 | `interest_id` | `BIGINT` | 복합 PK, FK → `interest.id` | `NOT NULL`, 개별 UNIQUE 없음 | 선택한 세부 관심사 |
 | `sort_order` | `TINYINT` | — | `NOT NULL`, 개별 UNIQUE 없음, `1`이 대표 관심사 | 사용자마다 관심사를 고른 순서. 이 값으로 선택 목록을 정렬 |
-| `furniture` | `VARCHAR(30)` | — | `NOT NULL`, 개별 UNIQUE 없음, 해당 관심사의 가구 코드 | 해당 관심사 자리에 놓은 가구. 처음에는 기본 가구 사용 |
+| `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-복합 기본키는 `PK(user_id, interest_id)`다. 사용자 한 명은 관심사를 3~10개 고른다. 선택하지 않게 된 관심사의 행이 삭제되면 그 행의 가구 선택도 함께 사라진다.
+복합 기본키는 `PK(user_id, interest_id)`다. 사용자 한 명은 관심사를 3~10개 고른다. 선택하지 않게 된 관심사의 행은 지운다. 가구는 관심사마다 하나로 정해져 있어 사용자가 고르지 않으므로 저장하지 않는다.
 
 ### `intro_question`
 
@@ -195,10 +217,11 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 질문 ID |
-| `type` | `VARCHAR`(길이 미정) | — | `NOT NULL`, 개별 UNIQUE 없음, `INTEREST` / `TMI` | 관심사 질문 또는 TMI 질문 |
+| `type` | `ENUM` | — | `NOT NULL`, 개별 UNIQUE 없음, `INTEREST` / `TMI` | 관심사 질문 또는 TMI 질문 |
 | `interest_category_id` | `BIGINT` | FK → `interest_category.id` | `NULL` 허용, 개별 UNIQUE 없음, `INTEREST`일 때 필수 | 관심사 질문에 연결된 대분류. TMI는 비워 둠 |
-| `content` | 미정 (문자열) | — | `NOT NULL`, 개별 UNIQUE 없음 | 사용자에게 표시할 질문 문구 |
+| `content` | `TEXT` | — | `NOT NULL`, 개별 UNIQUE 없음 | 사용자에게 표시할 질문 문구 |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 질문이 생성된 시각 |
+| `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 관리자가 질문을 추가·수정하며, 숨기거나 지우지 않는다.
 
@@ -209,9 +232,11 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | `NOT NULL`, 개별 UNIQUE 없음 | 질문에 답한 사용자 |
-| `slot` | 미정 (정수형) | 복합 PK | `NOT NULL`, 개별 UNIQUE 없음, `1`~`3` | 자기소개에서 질문과 답변이 보이는 자리 |
+| `slot` | `TINYINT` | 복합 PK | `NOT NULL`, 개별 UNIQUE 없음, `1`, `2`, `3`만 허용 | 자기소개에서 질문과 답변이 보이는 자리 |
 | `intro_question_id` | `BIGINT` | FK → `intro_question.id` | `NOT NULL`, 개별 UNIQUE 없음 | 선택한 자기소개 질문 |
 | `answer` | `VARCHAR(50)` | — | `NOT NULL`, 개별 UNIQUE 없음, 10~50자 | 선택 질문에 작성한 답변 |
+| `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
 복합 기본키 `PK(user_id, slot)`는 같은 사용자의 자리 중복을 막는다. 복합 UNIQUE `UNIQUE(user_id, intro_question_id)`는 같은 사용자가 한 질문을 여러 자리에 고르는 것을 막는다.
 
@@ -245,7 +270,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 
 ### 프론트엔드가 관리하는 것
 
-- 두더지와 아이템 그림, 가구 그림과 방 안의 자리, 무드별 벽 · 바닥 그림, 분야 아이콘과 한 줄 안내
+- 두더지와 아이템 그림, 관심사마다 하나로 정해진 가구와 그 그림, 방 안의 자리, 무드별 벽 · 바닥 그림, 분야 아이콘과 한 줄 안내
 - 견본 방(팀이 만들어 둔 예시 방)의 내용 전체, 비로그인이 구경한 방 수
 - 온보딩 진행 표시, 글자 수 표시, 안내 문구
 
