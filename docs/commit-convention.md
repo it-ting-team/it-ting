@@ -45,6 +45,48 @@
 - MUST NOT: 빌드나 테스트가 깨진 상태로 커밋하지 않는다.
 - MUST NOT: 비밀번호, API 키, 웹훅 URL 같은 비밀값을 커밋하지 않는다.
 
+## 작성자 정보
+
+- MUST: `user.name`과 `user.email`에는 커밋하는 사람 본인의 정보를 쓴다.
+- MUST: `user.email`은 본인 GitHub 계정에 인증된 이메일을 쓴다. GitHub이 주는 `noreply` 주소도 된다.
+- MUST NOT: 다른 사람의 이름이나 이메일로 커밋하지 않는다. `--author`나 `GIT_AUTHOR_*`, `GIT_COMMITTER_*` 환경 변수로 바꾸는 것도 포함한다.
+- MUST NOT: 다른 사람의 서명 키를 쓰거나 자신의 개인 키를 공유하지 않는다.
+- MUST NOT: AI 에이전트는 사용자의 `user.name`, `user.email`, 서명 설정을 바꾸지 않고 `--no-gpg-sign`으로 서명을 건너뛰지 않는다.
+
+함께 작업한 사람은 작성자를 바꾸지 말고 메시지 맨 아래에 `Co-Authored-By: <이름> <이메일>`로 표시한다.
+
+## 커밋 서명
+
+`main`과 `dev`에는 서명된 커밋만 병합된다([보호 규칙](branch-strategy.md#보호-규칙)). 컴퓨터마다 한 번 설정한다.
+
+1. 서명용 키를 만든다.
+
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_signing -C "commit signing"
+   ```
+
+2. 모든 커밋에 서명하도록 설정한다.
+
+   ```bash
+   git config --global gpg.format ssh
+   git config --global user.signingkey ~/.ssh/id_ed25519_signing.pub
+   git config --global commit.gpgsign true
+   ```
+
+3. GitHub → Settings → SSH and GPG keys → New SSH key에서 Key type을 `Signing Key`로 고르고 `~/.ssh/id_ed25519_signing.pub`의 내용을 등록한다.
+4. 같은 화면 맨 아래 Vigilant mode의 `Flag unsigned commits as unverified`를 켠다.
+5. 커밋을 푸시한 뒤 GitHub 커밋 목록에서 `Verified` 표시를 확인한다.
+
+### 서명 없는 커밋이 이미 있는 작업 브랜치
+
+커밋을 다시 만들어 서명한 뒤 작업 브랜치에 강제 푸시한다. 자기 커밋만 든 브랜치에서 쓴다.
+
+```bash
+git fetch origin
+git rebase --no-ff origin/dev
+git push --force-with-lease
+```
+
 ## AI 공동 작성 표시
 
 AI 에이전트가 작성에 참여한 커밋은 메시지 맨 아래에 `Co-Authored-By`를 쓴다.

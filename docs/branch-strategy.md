@@ -14,6 +14,26 @@
 작업 브랜치 → dev → test → main
 ```
 
+## 보호 규칙
+
+`main`과 `dev`에는 GitHub 규칙 세트 `protect-main-dev`가 적용된다. 관리자를 포함해 예외가 없다.
+
+- MUST: `main`과 `dev`의 변경은 PR로만 병합한다.
+- MUST: PR에 든 모든 커밋은 서명되어 있어야 한다. 설정은 [커밋 서명](commit-convention.md#커밋-서명)을 따른다.
+- MUST NOT: `main`과 `dev`에 직접 푸시하지 않는다.
+- MUST NOT: `main`과 `dev`에 강제 푸시하거나 브랜치를 삭제하지 않는다.
+
+| 시도 | 결과 |
+|---|---|
+| `git push origin dev` | 거부 |
+| `git push --force origin dev` | 거부 |
+| 서명 없는 커밋이 든 PR 병합 | 차단 |
+| 작업 브랜치에 푸시, 강제 푸시 | 허용 |
+
+`test` 브랜치를 만들면 같은 규칙 세트의 대상에 추가한다.
+
+규칙 세트는 저장소 Settings → Rules → Rulesets에서 확인한다. 규칙을 바꿀 때는 이 문서를 함께 고치는 PR을 올린다.
+
 ## 작업 브랜치 이름
 
 ```text
