@@ -5,10 +5,10 @@
 ```mermaid
 erDiagram
     campus ||--o{ campus_floor : "층"
-    term ||--o{ burrow_entrance : "학기마다"
+    term ||--o{ burrow_entrance : "이 학기 들판에 놓임"
     campus_floor ||--o{ burrow_entrance : "이 층 들판에 놓임"
     user ||--o| burrow : "온보딩 확정 후 하나"
-    burrow ||--o{ burrow_entrance : "학기에 하나"
+    burrow ||--|| burrow_entrance : "한 들판에 하나"
     burrow ||--o{ guestbook_entry : "땅굴에 달린 글"
     user ||--o{ guestbook_entry : "쓴 사람"
     user ||--o{ regular_burrow : "담는다"
@@ -21,7 +21,7 @@ erDiagram
 
 ### 기존 설계
 
-이번 학기의 `burrow_entrance` 유무로 새 학기 소속 확정 여부를 판단했다. 안내에서 ‘나중에 하기’를 누르면 입구 없이 서비스를 계속 쓸 수 있었고, 안내를 이미 보여줬는지는 브라우저의 접속 단위 저장소에 기록했다.
+이번 학기의 `burrow_entrance` 유무로 새 학기 소속 확정 여부를 판단했다. 안내에서 ‘나중에 하기’를 누르면 입구 없이 서비스를 계속 쓸 수 있었고, 안내를 이미 보여줬는지는 브라우저의 접속 단위 저장소에 기록했다. 입구는 학기마다 한 행씩 두어 지난 학기 들판에도 입구가 남았다.
 
 ### 문제와 재현 조건
 
@@ -33,13 +33,13 @@ erDiagram
 
 ### 해결 방법
 
-기존 `burrow_entrance` 구조를 유지한다. ‘나중에 하기’와 닫기를 없앤다. 접속한 사용자의 땅굴에 이번 학기 입구가 없으면 새 학기 안내를 띄우고, 고를 때까지 다른 기능을 쓸 수 없게 한다. 안내 표시 여부는 기록하지 않는다.
+‘나중에 하기’와 닫기를 없앤다. 접속한 사용자의 땅굴 입구가 이번 학기 들판에 있지 않으면 새 학기 안내를 띄우고, 고를 때까지 다른 기능을 쓸 수 없게 한다. 안내 표시 여부는 기록하지 않는다.
 
-‘이 층으로 정하기’로 이번 학기 캠퍼스·층을 확정하면 `user_profile.campus_floor_id`를 바꾸고 이번 학기 입구를 만든다. 지난 학기 입구는 유지한다. 그 뒤 내 정보 수정에서 캠퍼스·층을 바꾸면 이번 학기 입구를 옮긴다. 새 학기가 열린 뒤 아직 접속하지 않은 사용자는 이번 학기 입구가 없고 지난 학기 들판에만 남는다.
+땅굴은 이사한다. ‘이 층으로 정하기’로 이번 학기 캠퍼스·층을 확정하면 `user_profile.campus_floor_id`를 바꾸고, 땅굴의 `burrow_entrance` 행을 이번 학기의 그 층 들판으로 옮긴다(`term_id`, `campus_floor_id`, `slot`을 바꾼다). 땅굴 하나에 입구는 하나이고 지난 학기 들판의 자리는 비운다. 방명록, 단골, 방의 모습은 땅굴에 딸려 있어 그대로다. 그 뒤 내 정보 수정에서 캠퍼스·층을 바꾸면 같은 행을 다시 옮긴다. 새 학기가 열린 뒤 아직 접속하지 않은 사용자의 입구는 지난 학기 들판에 그대로 있다.
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 시에는 이번 학기 입구가 없는 계정으로 접속하면 안내가 뜨고 닫을 수 없는지, 고르기 전에는 다른 기능이 막히는지, 확정한 뒤에는 어느 접속에서도 안내가 뜨지 않는지, 지난 학기 입구가 그대로 남는지 확인한다.
+설계 검토에서 확인했다. 실행 시에는 입구가 이번 학기 들판에 있지 않은 계정으로 접속하면 안내가 뜨고 닫을 수 없는지, 고르기 전에는 다른 기능이 막히는지, 확정한 뒤에는 어느 접속에서도 안내가 뜨지 않는지, 지난 학기 들판의 자리가 비고 방명록과 단골이 그대로인지 확인한다.
 
 ## 추천은 캠퍼스·층과 기수만 골라 덜 추천된 사람부터 뽑기
 
@@ -108,7 +108,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-복합 UNIQUE는 `UNIQUE(year, half)`다. 지난 학기도 계속 탐색할 수 있다.
+복합 UNIQUE는 `UNIQUE(year, half)`다. 지난 학기도 계속 탐색할 수 있다. 지난 학기 들판에는 새 학기에 아직 접속하지 않은 사용자의 입구만 남는다.
 
 새 학기를 여는 방법(직접 / 날짜에 자동)은 [보류한 결정](../spec/open-issues.md)이다. 어느 쪽이든 `term`에 행이 생긴다.
 
@@ -156,25 +156,25 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 온보딩을 확정해 땅굴을 만든 시각 |
 
 - 방 안의 모습(가구, 벽 · 바닥)은 이 테이블에 저장하지 않는다. 주인의 관심사([계정 · 프로필](account.md)의 `user_interest`)로 그린다. 가구는 관심사마다 하나로 정해져 있다.
-- 들판에서의 자리는 학기마다 다르므로 `burrow_entrance`가 갖는다.
+- 들판에서의 자리는 `burrow_entrance`가 갖는다. 땅굴 하나에 입구는 하나다.
 
 ### `burrow_entrance`
 
-특정 학기와 캠퍼스·층의 들판에 놓인 땅굴 입구다.
+땅굴이 지금 놓인 들판과 자리다. 땅굴 하나에 한 행이다.
 
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 입구 ID |
-| `burrow_id` | `BIGINT` | FK → `burrow.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 연결된 땅굴 |
-| `term_id` | `BIGINT` | FK → `term.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 속한 학기 |
-| `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | NOT NULL, 개별 UNIQUE 없음 | 그 학기에 고른 캠퍼스·층 |
+| `burrow_id` | `BIGINT` | FK → `burrow.id` | NOT NULL, UNIQUE | 입구가 연결된 땅굴 |
+| `term_id` | `BIGINT` | FK → `term.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 놓인 들판의 학기 |
+| `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 놓인 들판의 캠퍼스·층 |
 | `slot` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 그 들판에서 서버가 배정한 자리 번호 |
-| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 해당 학기의 입구를 처음 배치한 시각 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 입구를 처음 놓은 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-복합 UNIQUE는 `UNIQUE(burrow_id, term_id)`와 `UNIQUE(term_id, campus_floor_id, slot)`이다. 이번 학기에 캠퍼스·층을 옮길 때 그 학기 행의 층과 자리를 변경한다. 지난 학기 행은 보존한다.
+`burrow_id`는 UNIQUE다. 복합 UNIQUE는 `UNIQUE(term_id, campus_floor_id, slot)`이다. 새 학기에 이사하거나 캠퍼스·층을 옮길 때 이 행의 학기, 층, 자리를 바꾼다. 지난 자리의 행은 남기지 않는다.
 
-- 입구가 생기는 때는 온보딩 최종 확정과 새 학기 안내의 "이 층으로 정하기"다. 새 학기 안내는 보류할 수 없다.
+- 입구가 생기는 때는 온보딩 최종 확정이다. 새 학기 안내의 "이 층으로 정하기"와 내 정보 수정의 캠퍼스·층 변경은 입구를 옮긴다. 새 학기 안내는 보류할 수 없다.
 - 자리 번호는 서버가 그 들판에 땅굴이 놓인 순서대로 준다. 같은 들판에서는 유지하고, 캠퍼스·층을 바꾸면 새 들판의 다음 자리 번호를 배정한다.
 - DB는 "어느 들판의 몇 번 자리"까지만 안다. 배치 좌표와 구멍을 그리는 일은 프론트엔드가 맡는다.
 
@@ -245,8 +245,8 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | --- | --- | --- |
 | 이번 학기 | `term.id`, `term.opened_at` | 현재 시각까지 개설된 행 중 `opened_at`이 가장 최근인 학기를 고른다. 개설된 학기가 없으면 이번 학기가 비어 있다. |
 | 들판 입구 목록과 비어 있음 | `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id`, `burrow_entrance.slot`, `burrow_entrance.burrow_id` | 선택한 학기와 층이 모두 일치하는 입구를 `slot` 순으로 조회한다. 조회 결과가 0개면 비어 있음이다. |
-| 이번 학기 소속 확정 및 안내 여부 | `burrow.user_id`, `burrow_entrance.burrow_id`, `burrow_entrance.term_id` | 사용자 땅굴에 이번 학기 입구가 있는지 확인한다. 입구가 없으면 새 학기 안내를 띄우고, 고를 때까지 다른 기능을 막는다. |
-| 땅굴에서 탐색으로 나갈 들판 | `burrow_entrance.burrow_id`, `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id`, `term.opened_at` | 현재 땅굴의 입구를 학기와 조인하고 개설 시각이 가장 최근인 학기의 캠퍼스·층을 사용한다. |
+| 이번 학기 소속 확정 및 안내 여부 | `burrow.user_id`, `burrow_entrance.burrow_id`, `burrow_entrance.term_id` | 사용자 땅굴의 입구가 이번 학기 들판에 있는지 확인한다. 아니면 새 학기 안내를 띄우고, 고를 때까지 다른 기능을 막는다. |
+| 땅굴에서 탐색으로 나갈 들판 | `burrow_entrance.burrow_id`, `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id` | 현재 땅굴의 입구가 놓인 학기와 캠퍼스·층을 사용한다. |
 | 방노트 | `burrow.user_id`, `user_profile.intro`, `user_interest.interest_id`, `user_interest.sort_order`, `interest.name`, `user_answer.slot`, `user_answer.intro_question_id`, `user_answer.answer`, `intro_question.content` | 주인 ID로 프로필·관심사·답변을 조회한다. 관심사는 `sort_order`로, 질문과 답변은 `slot`으로 정렬한다. |
 | 방명록 글 수 | `guestbook_entry.burrow_id`, `guestbook_entry.status` | 해당 땅굴에 달린 행 중 `status`가 `PUBLIC`인 행을 센다. 삭제된 행은 남아 있지 않다. |
 | 단골 수 | `regular_burrow.burrow_id` | 해당 땅굴을 담은 행을 `COUNT(*)`로 센다. 해제되거나 탈퇴 정리로 삭제된 관계는 제외된다. |
