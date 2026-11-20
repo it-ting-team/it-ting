@@ -33,7 +33,7 @@
 | 내 정보 수정 · 관심사 고르기 | 화면을 열 때 | [`GET /api/v1/interest-categories`](00-common.md#get-apiv1interest-categories) | 고른 관심사와 순서, 3 ~ 10개 제한, "고르기 완료"로 칩에 반영, 저장 전 취소 확인 |
 | 내 정보 수정 | "저장하기" | `PATCH /api/v1/me/profile` | 저장한 뒤 내 정보 카드로 돌아가기 |
 
-방명록 글의 "신고"는 신고 API를 부른다. 신고 API는 [08 커뮤니티](README.md)에서 다룬다.
+방명록 글의 "신고"는 [`POST /api/v1/reports`](08-community.md#post-apiv1reports)에 `targetType`을 `GUESTBOOK`으로 보낸다.
 
 ## 영역 규칙
 

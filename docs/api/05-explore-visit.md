@@ -47,7 +47,7 @@
 | 방문자 뷰 · 방명록 | "남기기" | `POST /api/v1/burrows/{burrowId}/guestbook-entries` | 목록 맨 위에 올리기 |
 | 방문자 뷰 · 방명록 | "삭제" | [`DELETE /api/v1/guestbook-entries/{guestbookEntryId}`](04-my-burrow.md#delete-apiv1guestbook-entriesguestbookentryid) | 확인 문구 |
 
-신고는 신고 API를 부른다. 신고 API는 [08 커뮤니티](README.md)에서 다룬다.
+신고는 [`POST /api/v1/reports`](08-community.md#post-apiv1reports)를 부른다. 방노트의 신고 아이콘은 `targetType`을 `MEMBER`로, 방명록 글의 "신고"는 `GUESTBOOK`으로 보낸다.
 
 ## 영역 규칙
 

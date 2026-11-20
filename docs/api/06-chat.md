@@ -53,7 +53,7 @@
 | 거절 확인 팝업 | "예" | `POST /api/v1/chat-requests/{chatRequestId}/reject` | 토스트, 다음 요청 골라 두기 |
 | 보낸 요청 | "요청 취소" | `POST /api/v1/chat-requests/{chatRequestId}/cancel` | 카드 빼기 |
 
-사용자 표시를 눌렀을 때의 프로필 팝업은 [`GET /api/v1/users/{userId}/profile`](00-common.md#get-apiv1usersuseridprofile)을 부른다. 신고 API는 [08 커뮤니티](README.md)에서 다룬다.
+사용자 표시를 눌렀을 때의 프로필 팝업은 [`GET /api/v1/users/{userId}/profile`](00-common.md#get-apiv1usersuseridprofile)을 부른다. 프로필 팝업의 신고는 [`POST /api/v1/reports`](08-community.md#post-apiv1reports)에 `targetType`을 `MEMBER`로 보낸다.
 
 ## 영역 규칙
 
