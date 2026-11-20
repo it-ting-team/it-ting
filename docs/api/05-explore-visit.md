@@ -790,7 +790,7 @@ POST /api/v1/burrows/27/guestbook-entries
 2. `burrow`에서 그 땅굴을 찾는다. 없으면 `404`와 `BURROW_NOT_FOUND`.
 3. 내 땅굴이면 `403`과 `OWN_BURROW_NOT_ALLOWED`.
 4. `guestbook_entry`에 한 줄을 만든다. `burrow_id`는 그 땅굴, `author_id`는 요청한 사람, `content`는 본문, `status`는 `PUBLIC`이다.
-5. 땅굴 주인에게 알림(땅굴 종류)을 만든다. 알림의 모양과 주인의 알림 설정을 따르는 것은 [09 알림](README.md)에서 다룬다.
+5. 땅굴 주인에게 방명록 새 글 알림(`GUESTBOOK_ENTRY_CREATED`)을 만든다([알림 API](09-notification.md#알림의-종류)).
 
 ### 응답 `data`
 
@@ -875,7 +875,7 @@ POST /api/v1/chat-requests
 6. 그 사람이 나에게 보낸 살아 있는 요청이 `PENDING`이면 `409`와 `CHAT_REQUEST_ALREADY_RECEIVED`. 요청을 새로 만들지 않는다.
 7. 그 사람이 나에게 보낸 살아 있는 요청이 `REJECTED`면 내가 거절한 요청이다. 요청을 새로 만들지 않고 그 요청을 내가 수락한 것으로 처리한 뒤 끝낸다. 대화방과 참여자를 만들고, 요청을 `ACCEPTED`로 바꾸고, 수락 안내 메시지를 넣고, 그 사람에게 수락 알림을 만든다([대화 요청 수락](06-chat.md#post-apiv1chat-requestschatrequestidaccept)의 5 ~ 7, 9와 같다). 인사를 보냈으면 만든 대화방에 내가 보낸 첫 메시지로 넣는다.
 8. `chat_request`에 한 줄을 만든다. `sender_id`는 요청한 사람, `receiver_id`는 받을 사람, `message`는 인사(없으면 `NULL`), `status`는 `PENDING`이다.
-9. 받을 사람에게 대화 요청 알림을 만든다. 알림의 모양은 [09 알림](README.md)에서 다룬다.
+9. 받을 사람에게 대화 요청 알림(`CHAT_REQUEST_RECEIVED`)을 만든다([알림 API](09-notification.md#알림의-종류)).
 
 살아 있는 요청의 뜻은 [대화 버튼의 상태](#대화-버튼의-상태)에 있다. 두 사람이 같은 순간에 서로에게 보내도 하나만 만들어진다. 7에서는 그 사람에게 거절됐던 것이 드러나지 않는다. 그 사람이 보기에는 기다리던 요청이 수락된 것이다.
 
@@ -972,4 +972,3 @@ POST /api/v1/chat-requests
 - 오늘의 추천 기준 날짜가 바뀌는 시각(DB 설계에서도 구현 단계로 넘겼다)
 - 캠퍼스 · 층이나 기수를 고르지 않고 전체에서 추천받을 수 있는지(명세의 보류한 결정이다)
 - 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
-- 방명록 알림과 대화 요청 알림의 모양(09 알림에서 정한다)

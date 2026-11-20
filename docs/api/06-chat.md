@@ -219,7 +219,7 @@ A가 B에게 요청을 보냈고 B가 거절했다. 그 요청이 만료되기 �
 
 - 받는 길은 [`GET /api/v1/me/event-stream`](#get-apiv1meevent-stream) 하나다. 로그인한 뒤 한 번 연결해 두면 서버가 그 계정에 알릴 일이 생길 때마다 소식을 보낸다. 대화방마다 따로 연결하지 않는다.
 - 보내는 길은 일반 API다. 메시지를 보낼 때는 [`POST /api/v1/chat-rooms/{chatRoomId}/messages`](#post-apiv1chat-roomschatroomidmessages)를 부른다.
-- 이 문서의 소식은 `CHAT_MESSAGE_CREATED`와 `CHAT_REQUEST_COUNT_CHANGED` 둘이다. 알림 아이콘의 빨간 점에 쓰는 소식은 [09 알림](README.md)에서 더한다.
+- 채팅의 소식은 `CHAT_MESSAGE_CREATED`와 `CHAT_REQUEST_COUNT_CHANGED` 둘이다. 알림 아이콘의 빨간 점에 쓰는 소식 `NOTIFICATION_UNREAD_CHANGED`는 [알림 API](09-notification.md#실시간-소식)에 있고 같은 연결로 온다.
 - 그 밖의 것(공지, 보낸 요청의 목록, 모임 정보)은 화면을 열거나 새로 고칠 때 바뀐다.
 
 ## GET /api/v1/me/chat-rooms
@@ -694,7 +694,7 @@ POST /api/v1/chat-rooms/15/messages
 4. `chat_message`에 한 줄을 만든다. `chat_room_id`는 그 대화방, `type`은 `TEXT`, `sender_id`는 요청한 사람, `content`는 본문이다. 사진이 있으면 `chat_message_image`에 사진마다 한 줄을 만든다. `sort_order`는 `imageIds`의 순서대로 1부터다.
 5. 보낸 사람의 `chat_room_member.last_read_message_id`를 이 메시지로 옮긴다.
 6. 대화방에 있는 모든 사람에게 실시간 소식 `CHAT_MESSAGE_CREATED`를 보낸다([실시간 소식](#get-apiv1meevent-stream)).
-7. 새 메시지 알림을 만드는 규칙은 [09 알림](README.md)에서 다룬다.
+7. 대화방의 다른 사람에게 새 메시지 알림(`CHAT_MESSAGE_RECEIVED`)을 만든다. 대화방마다 한 줄로 묶는다([알림 API](09-notification.md#새-메시지-알림)).
 
 ### 응답 `data`
 
@@ -787,6 +787,7 @@ POST /api/v1/chat-rooms/15/read
 1. [들어갈 수 있는 대화방](#대화방에-들어갈-수-있는-사람)인지 본다. 아니면 `404`와 `CHAT_ROOM_NOT_FOUND`.
 2. `messageId`가 이 대화방의 메시지인지 본다. 아니면 `400`과 `INVALID_INPUT`.
 3. 내 `chat_room_member.last_read_message_id`가 비어 있거나 `messageId`보다 작으면 `messageId`로 바꾼다. 이미 더 뒤까지 읽었으면 바꾸지 않는다.
+4. 이 대화방의 안 읽은 새 메시지 알림이 있으면 읽음으로 바꾼다([알림 API](09-notification.md#새-메시지-알림)).
 
 상대에게는 아무것도 알리지 않는다. 읽음 표시가 없기 때문이다.
 
@@ -1149,7 +1150,7 @@ POST /api/v1/chat-requests/91/accept
 6. `chat_request.status`를 `ACCEPTED`로, `chat_room_id`를 만든 대화방으로 바꾸고 `responded_at`을 채운다.
 7. `chat_message`에 `type`이 `ACCEPTED`이고 `sender_id`가 나인 안내 메시지를 넣는다. 두 사람에게 실시간 소식 `CHAT_MESSAGE_CREATED`로 간다.
 8. 나에게 실시간 소식 `CHAT_REQUEST_COUNT_CHANGED`를 보낸다.
-9. 보낸 사람에게 수락 알림을 만든다. 알림의 모양은 [09 알림](README.md)에서 다룬다.
+9. 보낸 사람에게 수락 알림(`CHAT_REQUEST_ACCEPTED`)을 만든다([알림 API](09-notification.md#알림의-종류)).
 
 5 ~ 7은 한 번에 처리한다. 요청에 붙인 인사는 대화방의 메시지로 옮기지 않는다. 대화방은 대화 시작 안내만 있는 채로 열린다.
 
@@ -1341,7 +1342,7 @@ event: CHAT_REQUEST_COUNT_CHANGED
 data: {"receivedCount":3}
 ```
 
-소식의 이름은 enum이다. 이 문서의 것은 둘이다.
+소식의 이름은 enum이다. 채팅의 것은 아래 둘이다. 알림의 `NOTIFICATION_UNREAD_CHANGED`도 이 연결로 오고, 값은 [알림 API](09-notification.md#실시간-소식)에 적었다.
 
 | 이름 | 보내는 때 | 받는 사람 |
 |---|---|---|
@@ -1430,4 +1431,3 @@ data: {"receivedCount":3}
 - 메시지와 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
 - 두 사람이 모두 나간 1:1 대화방과 삭제된 모임의 대화방을 언제 지우는지(DB 설계에서도 넘겼다)
 - 대화 나가기의 확인 팝업 화면과 문구(명세의 보류한 결정이다)
-- 새 메시지 알림과 수락 알림의 모양, 알림 아이콘의 빨간 점에 쓰는 실시간 소식(09 알림에서 정한다)
