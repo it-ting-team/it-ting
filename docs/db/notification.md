@@ -99,7 +99,7 @@ erDiagram
 
 ### `notification_setting`
 
-사용자의 분류별 알림 설정과 브라우저 푸시 설정을 관리한다.
+사용자의 분류별 알림 설정을 관리한다. 줄이 없는 계정은 모두 켜진 것으로 본다. 브라우저 푸시는 브라우저마다 켜고 끄므로 이 테이블에 두지 않고 [`push_subscription`](#push_subscription)에 줄이 있는지로 안다.
 
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
@@ -109,7 +109,6 @@ erDiagram
 | `community_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 커뮤니티 알림 수신 여부. 기본 켜짐 |
 | `burrow_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 땅굴 알림 수신 여부. 기본 켜짐 |
 | `notice_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 공지 알림 수신 여부. 기본 켜짐 |
-| `browser_push_on` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 브라우저 푸시 수신 여부 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
@@ -125,7 +124,7 @@ erDiagram
 | `push_keys` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 푸시 암호화 키. 저장 형식 미정 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 구독이 등록된 시각 |
 
-사용자는 여러 브라우저에서 구독할 수 있다.
+“브라우저 알림 받기”를 켠 브라우저마다 한 줄이다. 사용자는 여러 브라우저에서 구독할 수 있다. 끄면 그 브라우저의 줄만 지운다. 브라우저 하나는 한 계정의 푸시만 받는다. 이미 있는 `endpoint`를 다른 계정이 등록하면 새 줄을 넣지 않고 그 줄의 `user_id`를 바꾼다.
 
 구독 정보의 정확한 저장 형식과 칼럼은 푸시 구현 단계에서 맞춘다.
 
