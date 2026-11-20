@@ -142,7 +142,7 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 글 ID |
 | `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 글 작성자 |
 | `category` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PROMOTION`, `REVIEW`, `FREE` | 모임 홍보·모임 후기·자유 |
-| `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, 개별 UNIQUE 없음, `PROMOTION`이면 필수 | 글에 연결한 모임 |
+| `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, 개별 UNIQUE 없음, `PROMOTION`이면 필수 | 글에 연결한 모임. `PROMOTION`은 작성자가 연 모집 중인 모임, 그 밖은 작성자가 열었거나 참여가 확정된 모임(취소된 모임 제외)만 연결한다. 연결한 뒤 모임의 상태가 바뀌어도 그대로 둔다 |
 | `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN`, `DELETED` | 공개·가려짐·삭제 상태 |
 | `view_count` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 글을 열 때마다 1을 더하는 저장형 조회수 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순 정렬 기준 |
@@ -343,6 +343,6 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 
 아래 항목은 [명세의 보류한 결정](../spec/open-issues.md)과 함께 검토한다.
 
-- 글 삭제 시 좋아요·저장 관계의 정리와 글에 연결한 모임이 삭제·취소됐을 때의 표시(남은 검토 항목 60)
+- 글 삭제 시 좋아요·저장 관계의 정리(남은 검토 항목 60)
 - 2주 뒤 버전과 사진을 지우는 예약 작업의 실행 방법, 사진 파일을 저장소에서 지우는 때
 - 글을 고쳐 사진을 바꿨을 때 이전 사진을 남길지(지금은 가장 최근 사진만 둔다)
