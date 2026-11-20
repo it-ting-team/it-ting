@@ -322,7 +322,7 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 | 값 | 원본 테이블과 컬럼 | 계산 방법 |
 | --- | --- | --- |
 | 좋아요·댓글·저장 수 | `post_like.post_id`, `comment.post_id`, `comment.status`, `post_bookmark.post_id`, `comment_like.comment_id` | 글별 좋아요와 저장은 각 테이블의 해당 글 행을 센다. 댓글 수는 같은 글의 댓글과 답글 중 `DELETED`가 아닌 행을 센다. 댓글별 좋아요는 해당 댓글 ID의 행을 센다. 이 집계들은 별도로 계산한 뒤 합친다. |
-| 인기 점수와 이번 주 인기 글 TOP5 | `post.status`, `post.created_at`, `post_like.post_id`, `post_like.created_at`, `comment.post_id`, `comment.created_at`, `comment.status`, `post_bookmark.post_id`, `post_bookmark.created_at` | 공개 글마다 최근 7일에 생성된 글 좋아요·댓글/답글·저장의 개수를 각각 구해 합산한다. 점수 내림차순과 글 작성 시각 내림차순으로 상위 5개를 고른다. 삭제된 댓글은 제외한다. 숨긴 댓글의 집계와 일반 인기순 정렬에도 7일을 적용할지는 미정이다. |
+| 인기 점수와 이번 주 인기 글 TOP5 | `post.status`, `post.created_at`, `post_like.post_id`, `post_like.created_at` | 공개 글마다 최근 7일에 생성된 글 좋아요의 개수를 센다. 댓글과 저장은 세지 않는다. 점수 내림차순과 글 작성 시각 내림차순으로 정렬하고, TOP5는 점수가 0인 글을 빼고 상위 5개를 고른다. 인기순 정렬과 다음 읽을 글도 같은 점수를 쓴다. |
 | 많이 이야기하는 관심사 | `post.id`, `post.status`, `post.created_at`, `post_interest.post_id`, `post_interest.interest_category_id` | 최근 7일에 작성된 공개 글에 붙은 태그를 대분류별로 묶어 서로 다른 글 ID를 센다. 글 수가 많은 상위 8개를 사용한다. |
 | 지금 보이는 제목과 본문 | `post_version.post_id`, `post_version.version`, `comment_version.comment_id`, `comment_version.version` | 글이나 댓글마다 `version`이 가장 큰 줄을 읽는다. 검색도 이 줄의 제목과 본문에서 한다. |
 | 본문 미리보기와 썸네일 | `post_version.content`, `post_image.post_id`, `post_image.sort_order`, `post_image.image_id`, `uploaded_image.image_url` | 본문 앞부분을 잘라 미리보기로 쓴다. 글에 연결된 `sort_order = 1` 사진의 URL을 대표로 쓴다. 사진이 없으면 화면의 기본 그림을 사용한다. |
@@ -343,7 +343,6 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 
 아래 항목은 [명세의 보류한 결정](../spec/open-issues.md)과 함께 검토한다.
 
-- 일반 인기순의 기간, 인기 점수에서 가려진 댓글을 포함할지 여부
 - 글 삭제 시 좋아요·저장 관계의 정리와 글에 연결한 모임이 삭제·취소됐을 때의 표시(남은 검토 항목 60)
 - 2주 뒤 버전과 사진을 지우는 예약 작업의 실행 방법, 사진 파일을 저장소에서 지우는 때
 - 글을 고쳐 사진을 바꿨을 때 이전 사진을 남길지(지금은 가장 최근 사진만 둔다)
