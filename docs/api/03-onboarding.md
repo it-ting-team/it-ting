@@ -21,7 +21,7 @@
 | 화면 | 부르는 때 | API | API 없이 프론트엔드가 하는 것 |
 |---|---|---|---|
 | 온보딩 1 – 나를 부르는 이름 | "다음" | `POST /api/v1/nicknames/check` | 두더지 아이템 목록과 그림, 랜덤으로 꾸미기, 미리보기 |
-| 온보딩 2 – 관심 분야 고르기 | 화면을 열 때 | [`GET /api/v1/interest-categories`](00-common.md#get-apiv1interest-categories) | 분야 아이콘과 한 줄 안내, 고른 관심사와 순서, 3 ~ 10개 제한 |
+| 온보딩 2 – 관심 분야 고르기 | 화면을 열 때 | [`GET /api/v1/interest-categories`](00-common.md#get-apiv1interest-categories) | 대분류의 아이콘, 지금 보는 대분류, 대분류마다 고른 개수 배지, 고른 관심사와 순서, 3 ~ 10개 제한 |
 | 온보딩 3 – 자기소개 | 화면을 열 때 | [`GET /api/v1/intro-questions`](00-common.md#get-apiv1intro-questions) | 추천 · 관심사 · TMI 필터, 고른 질문과 답변, 글자 수, 미리보기 |
 | 온보딩 3a – 땅굴 만드는 중 | 부르지 않는다 | | 진행 체크리스트, 땅굴 무드, 가구 매칭 목록 |
 | 온보딩 4 – 땅굴 미리보기 | "관심사 확정" | `POST /api/v1/me/onboarding/complete` | 땅굴 미리보기, 땅굴 정보 카드 |
