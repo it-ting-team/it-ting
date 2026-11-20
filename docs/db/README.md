@@ -13,7 +13,7 @@
 | [커뮤니티 · 신고](community.md) | `post`, `post_version`, `post_image`, `post_interest`, `comment`, `comment_version`, `post_like`, `comment_like`, `post_bookmark`, `report`, `report_action` |
 | [알림 · 공지](notification.md) | `notification`, `notification_setting`, `push_subscription`, `notice` |
 
-테이블은 모두 40개다. 인증 코드와 비밀번호 재설정 링크는 DB가 아니라 임시 저장소(Redis)에 둔다.
+테이블은 모두 40개다. 인증 코드와 비밀번호 재설정 링크, 가입 진행 기록은 DB가 아니라 임시 저장소(Redis)에 둔다.
 
 ## 설계 원칙: 저장하는 것과 화면에 그리는 것을 나눈다
 
