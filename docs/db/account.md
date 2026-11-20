@@ -265,7 +265,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | 땅굴 이름("닉네임의 땅굴"), 관심사 가구 수 | `user_profile.nickname`, `user_interest` 줄 수 |
 | 가입 방법(이메일 / Google로만), Google 연동 상태 | `password_hash`, `google_sub`가 있는지 |
 | 지금 정지 중인지, 정지 안내의 남은 기간 | `user_suspension`의 기간과 `lifted_at` |
-| 로그인 뒤 갈 곳(온보딩 / 내 땅굴) | `onboarded_at` |
+| 로그인 뒤 갈 곳(온보딩 / 새 학기 안내 / 내 땅굴) | `onboarded_at`, 땅굴의 `burrow_entrance`가 이번 학기 들판에 있는지([들판 · 땅굴](burrow.md)) |
 | 분야 팝업의 "많이 고르는 취향" / "통하는 취향" | 관심사별 `user_interest` 줄 수 |
 | 겹치는 관심사 | 두 사람의 `user_interest` |
 | 인증 코드의 남은 시간 | 임시 저장소(Redis)에 남은 만료 시간 |
