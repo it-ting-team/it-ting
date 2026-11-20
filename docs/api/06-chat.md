@@ -26,7 +26,7 @@
 | `POST` | `/api/v1/chat-requests/{chatRequestId}/cancel` | 보낸 요청을 취소한다 | 필요 | 보낸 요청 2 |
 | `GET` | `/api/v1/me/event-stream` | 새 메시지와 요청 수의 변화를 실시간으로 준다. 아직 정하지 않은 제안이다 | 필요 | 00 공통 2 |
 
-대화 요청을 보내는 API는 [탐색 · 방문 API](05-explore-visit.md#post-apiv1chat-requests)에 있다. 모임 상세의 모임 대화 미리보기는 [07 모임](README.md)에서 다룬다.
+대화 요청을 보내는 API는 [탐색 · 방문 API](05-explore-visit.md#post-apiv1chat-requests)에 있다. 모임 상세의 모임 대화 미리보기는 프론트엔드가 [메시지 조회](#get-apiv1chat-roomschatroomidmessages)를 `size=3`으로 불러 그린다([모임 API](07-meetup.md#모임-대화방)).
 
 ## 화면마다 부르는 API
 
@@ -43,7 +43,7 @@
 | 모임 대화 | 공지를 쓰거나 고칠 때 | `PUT /api/v1/chat-rooms/{chatRoomId}/notice` | 주최자에게만 쓰기 · 고치기 · 지우기 보여 주기 |
 | 모임 대화 | 공지를 지울 때 | `DELETE /api/v1/chat-rooms/{chatRoomId}/notice` | 공지 줄 숨기기 |
 | 모임 정보 팝업 | 열 때 | 없음. 대화방을 고를 때 받은 값을 쓴다 | "주최"와 "나" 표시, `leaveType`으로 나가기 버튼의 모습과 부를 API 정하기 |
-| 모임 나가기 확인 팝업 | "예", 끝나지 않은 모임일 때 | 모임의 참여 취소. [07 모임](README.md)에서 정한다 | 토스트, 대화 선택 전으로 가기 |
+| 모임 나가기 확인 팝업 | "예", 끝나지 않은 모임일 때 | [`POST /api/v1/meetups/{meetupId}/cancel-participation`](07-meetup.md#post-apiv1meetupsmeetupidcancel-participation) | 토스트, 대화 선택 전으로 가기 |
 | 모임 나가기 확인 팝업 | "예", 끝났거나 취소된 모임일 때 | `POST /api/v1/chat-rooms/{chatRoomId}/leave` | 토스트, 대화 선택 전으로 가기 |
 | 받은 요청 | 열 때 | `GET /api/v1/me/chat-requests`에 `direction=RECEIVED`, `GET /api/v1/me/chat-requests/count` | 빈 상태, 첫 요청 골라 두기 |
 | 보낸 요청 | 열 때 | `GET /api/v1/me/chat-requests`에 `direction=SENT` | "답변 기다리는 중" 문구 |
@@ -163,7 +163,7 @@ A가 B에게 요청을 보냈고 B가 거절했다. 그 요청이 만료되기 �
 
 ### 대화방에서 나가기
 
-[`POST /api/v1/chat-rooms/{chatRoomId}/leave`](#post-apiv1chat-roomschatroomidleave)는 대화방에서만 나간다. 모임의 참여는 바꾸지 않는다. 끝나지 않은 모임에서 나가는 일은 모임의 참여 취소가 하고([07 모임](README.md)), 참여가 취소되면 서버가 그 사람을 대화방에서도 뺀다.
+[`POST /api/v1/chat-rooms/{chatRoomId}/leave`](#post-apiv1chat-roomschatroomidleave)는 대화방에서만 나간다. 모임의 참여는 바꾸지 않는다. 끝나지 않은 모임에서 나가는 일은 모임의 [참여 취소](07-meetup.md#post-apiv1meetupsmeetupidcancel-participation)가 하고, 참여가 취소되면 서버가 그 사람을 대화방에서도 뺀다.
 
 나가기 버튼이 지금 하는 일은 대화방 조회의 `leaveType`으로 미리 알려 준다. 프론트엔드는 이 값으로 버튼의 모습과 부를 API를 정한다.
 
@@ -177,7 +177,7 @@ A가 B에게 요청을 보냈고 B가 거절했다. 그 요청이 만료되기 �
 
 - 모임이 끝났는지는 지금 시각이 `meetup.ends_at`을 지났는지로 본다. `ends_at`이 비어 있으면 `meetup.starts_at`으로 본다([DB 설계](../db/chat.md)).
 - 취소되지도 끝나지도 않은 모임의 대화방에서 나가기를 부르면 `409`와 `CHAT_ROOM_LEAVE_NOT_ALLOWED`로 답한다.
-- 참여 취소와 내보내기 때 `chat_room_member.left_at`을 채우고 `LEFT` 안내 메시지를 넣는 일은 모임 API가 한다([07 모임](README.md)).
+- 참여 취소와 내보내기 때 `chat_room_member.left_at`을 채우고 `LEFT` 안내 메시지를 넣는 일은 모임 API가 한다([모임 API](07-meetup.md#모임-대화방)).
 - 화면을 열어 둔 사이에 모임이 취소되거나 끝나면 `leaveType`이 `LEAVE_ROOM`으로 바뀐다. 그때 모임의 참여 취소를 부르면 에러가 온다. 프론트엔드는 대화방을 다시 조회해 버튼을 맞춘다.
 - 한 번 나간 대화방에는 다시 들어갈 수 없다.
 
@@ -350,7 +350,7 @@ GET /api/v1/chat-rooms/21
 | `meetup.id` | 숫자 | 모임의 id. "모임 상세 보기"가 이 모임의 상세로 간다 | `meetup.id` |
 | `meetup.hostId` | 숫자 | 주최자의 계정 id | `meetup.host_id` |
 | `meetup.title` | 문자열 | 모임 이름 | `meetup.title` |
-| `meetup.category` | 문자열 | 모임 카테고리의 코드. 값의 목록은 [07 모임](README.md)에서 정한다 | `meetup.category` |
+| `meetup.category` | enum | 모임의 [카테고리](07-meetup.md#카테고리) 가운데 하나 | `meetup.category` |
 | `meetup.startsAt` | 시각 | 시작 시각 | `meetup.starts_at` |
 | `meetup.endsAt` | 시각 | 끝나는 시각. 정하지 않은 모임은 `null` | `meetup.ends_at` |
 | `meetup.mode` | enum | `OFFLINE`, `ONLINE` 가운데 하나 | `meetup.mode` |
@@ -589,9 +589,9 @@ GET /api/v1/chat-rooms/15/messages?size=30&cursor=eyJpZCI6NDA3MX0
         "meetupCard": {
           "meetupId": 19,
           "title": "토요일 한강 러닝",
-          "startsAt": "2026-11-21T22:00:00Z",
-          "capacity": 8,
-          "confirmedCount": 4
+          "startsAt": "2026-11-27T22:00:00Z",
+          "capacity": 6,
+          "confirmedCount": 3
         },
         "createdAt": "2026-11-20T06:58:03Z"
       },
@@ -1393,7 +1393,5 @@ data: {"receivedCount":3}
 - 메시지와 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
 - 두 사람이 모두 나간 1:1 대화방과 삭제된 모임의 대화방을 언제 지우는지(DB 설계에서도 넘겼다)
 - 대화 나가기의 확인 팝업 화면과 문구(명세의 보류한 결정이다)
-- 모임 카테고리의 값(07 모임에서 정한다)
-- 모임의 참여 취소 API의 주소와 에러. 채팅의 "모임 나가기"도 이 API를 부른다(07 모임에서 정한다)
 - 실시간으로 받는 연결의 방식과 소식의 종류(09 알림에서 정한다. 이 문서의 것은 제안이다)
 - 새 메시지 알림과 수락 알림의 모양, 알림 아이콘의 빨간 점에 쓰는 실시간 소식(09 알림에서 정한다)
