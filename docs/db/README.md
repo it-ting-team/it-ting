@@ -54,7 +54,7 @@
 - **켜고 끄는 관계**(`user_interest`, `regular_burrow`, `meetup_like`, `post_like`, `comment_like`, `post_bookmark`): 지운 줄이 남아 있으면 다시 켤 때 기본키에 걸린다. 끄면 줄을 지운다.
 - **상태나 다른 시각이 그 역할을 하는 테이블**: `user`는 `status`와 `user_withdrawal`, `chat_request`와 `meetup_application`은 `status`, `chat_room_member`는 `left_at`으로 안다.
 - **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`, `daily_recommendation`, `daily_recommendation_member`), **기간이 지나면 정리하는 줄**(`notification`은 30일), **지우면 줄을 바로 지우는 글**(`guestbook_entry`. 시간이 지나도 지우지 않는다).
-- **탈퇴하면 실제로 지우는 개인 정보**(`user_profile`, `user_answer`, `burrow`, `burrow_entrance`, `push_subscription`, `notification_setting`).
+- **탈퇴하면 실제로 지우는 개인 정보**(`user_profile`, `user_interest`, `user_answer`, `burrow`, `burrow_entrance`, `push_subscription`, `notification_setting`, 받은 `notification`).
 
 ## 전체 관계
 

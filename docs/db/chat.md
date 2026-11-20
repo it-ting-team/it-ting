@@ -119,7 +119,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | `left_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 대화방에서 나간 시각 |
 | `last_read_message_id` | `BIGINT` | 논리 참조 → `chat_message.id` | NULL 허용, 개별 UNIQUE 없음 | 마지막으로 읽은 같은 방의 메시지 ID. 물리 FK 여부 미정 |
 
-복합 기본키는 `PK(chat_room_id, user_id)`다. 1:1은 두 사람이며, 모임은 주최자와 확정 참여자가 입장한다. 참여 취소·내보내기·탈퇴와 방에서만 나가기는 위의 접근 규칙을 따른다.
+복합 기본키는 `PK(chat_room_id, user_id)`다. 1:1은 두 사람이며, 모임은 주최자와 확정 참여자가 입장한다. 참여 취소·내보내기·탈퇴와 방에서만 나가기는 위의 접근 규칙을 따른다. 탈퇴하면 들어 있던 모든 방(1:1, 모임)에 `WITHDRAWN` 안내 메시지를 한 줄 넣고 `left_at`을 채운다.
 
 ### `chat_message`
 
