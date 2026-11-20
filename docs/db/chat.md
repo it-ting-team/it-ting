@@ -11,6 +11,7 @@ erDiagram
     user ||--o{ chat_room_member : ""
     chat_room ||--o{ chat_message : "메시지"
     user ||--o{ chat_message : "보낸다"
+    chat_message ||--o{ chat_message_image : "사진 0~3장"
 ```
 
 ## 상대에게 숨긴 거절 이후에도 요청 취소 허용하기
@@ -130,14 +131,26 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | `chat_room_id` | `BIGINT` | FK → `chat_room.id` | NOT NULL, 개별 UNIQUE 없음 | 메시지가 속한 방 |
 | `type` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `TEXT`, `ACCEPTED`, `JOINED`, `LEFT`, `WITHDRAWN` | 사용자 메시지 또는 수락·참여·퇴장·탈퇴 안내 |
 | `sender_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 작성자 또는 안내를 일으킨 사용자 |
-| `content` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음, `TEXT`일 때 빈 값 불가 | 일반 메시지 본문. 안내 사건에서는 비움 |
+| `content` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음, `TEXT`이고 사진이 없으면 빈 값 불가, 최대 1,000자 | 일반 메시지 본문. 안내 사건과 사진만 보낸 메시지에서는 비움 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 발송 또는 안내 사건이 발생한 시각 |
 
 메시지는 수정·삭제 없이 남기고 발신자가 탈퇴해도 기존 계정 ID를 참조한다. 안내 문구는 종류와 사용자 표시를 바탕으로 화면에서 만든다.
 
 - 읽은 사람 목록은 저장하지 않는다(읽음 표시 없음).
 - 안내 사건이 발생할 때 서버가 메시지 행을 넣는다. 프론트엔드는 `type`과 사용자의 닉네임으로 문구를 만들며, 대화 조회는 저장된 메시지를 순서대로 읽는다.
-- 첨부는 종류가 명세에 없어 테이블을 두지 않았다. 정해지면 더한다.
+- 첨부는 사진만 받는다. 메시지에 붙인 사진은 [`chat_message_image`](#chat_message_image)에 둔다.
+
+### `chat_message_image`
+
+메시지에 붙인 사진과 표시 순서를 기록한다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `chat_message_id` | `BIGINT` | 복합 PK, FK → `chat_message.id` | NOT NULL, 개별 UNIQUE 없음 | 사진이 붙은 메시지 |
+| `sort_order` | `TINYINT` | 복합 PK | NOT NULL, 개별 UNIQUE 없음, 1–3 | 메시지 안에서 사진의 표시 순서 |
+| `image_id` | `BIGINT` | FK → `uploaded_image.id` | NOT NULL, UNIQUE | 붙인 사진. 사진 하나는 메시지 하나에만 붙는다 |
+
+복합 기본키는 `PK(chat_message_id, sort_order)`다. 메시지 하나에 최대 3장을 붙인다. 사진은 먼저 올려 [`uploaded_image`](community.md#uploaded_image)에 기록하고, 메시지를 보낼 때 이 표로 메시지에 붙인다. 메시지를 고치거나 지우지 않으므로 이 표의 줄도 바뀌지 않는다.
 
 ## 저장하지 않는 것
 
@@ -163,6 +176,6 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 
 ## 명세에 없어 구현 단계로 넘기는 것
 
-- 메시지 길이와 첨부의 종류·크기·개수, 모임 방 목록 이미지의 표현
+- 모임 방 목록 이미지의 표현
 - 둘 다 나간 1:1 방과 삭제된 모임에 연결된 방의 보관 기준
 - 읽음 위치의 물리 FK와 본인 발신 메시지의 안 읽은 수 포함 여부

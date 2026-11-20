@@ -8,7 +8,7 @@
 |---|---|
 | [계정 · 프로필 · 관심사 · 질문](account.md) | `user`, `user_withdrawal`, `user_profile`, `user_suspension`, `interest_category`, `interest`, `user_interest`, `intro_question`, `user_answer` |
 | [들판 · 땅굴 입구 · 방명록 · 단골 · 추천](burrow.md) | `term`, `campus`, `campus_floor`, `burrow`, `burrow_entrance`, `guestbook_entry`, `regular_burrow`, `daily_recommendation`, `daily_recommendation_member` |
-| [채팅](chat.md) | `chat_request`, `chat_room`, `chat_room_member`, `chat_message` |
+| [채팅](chat.md) | `chat_request`, `chat_room`, `chat_room_member`, `chat_message`, `chat_message_image` |
 | [모임](meetup.md) | `meetup`, `meetup_application`, `meetup_like` |
 | [커뮤니티 · 신고](community.md) | `post`, `post_version`, `post_image`, `uploaded_image`, `post_interest`, `comment`, `comment_version`, `post_like`, `comment_like`, `post_bookmark`, `report`, `report_action` |
 | [알림 · 공지](notification.md) | `notification`, `notification_setting`, `push_subscription`, `notice` |
@@ -101,7 +101,7 @@ erDiagram
     user ||--o{ notification : ""
 ```
 
-딸린 작은 테이블 10개(`user_withdrawal`, `user_suspension`, `daily_recommendation_member`, `post_version`, `comment_version`, `post_image`, `uploaded_image`, `notification_setting`, `push_subscription`, `notice`)는 그림에서 뺐다. 영역별 그림은 각 문서에 있다.
+딸린 작은 테이블 11개(`user_withdrawal`, `user_suspension`, `daily_recommendation_member`, `chat_message_image`, `post_version`, `comment_version`, `post_image`, `uploaded_image`, `notification_setting`, `push_subscription`, `notice`)는 그림에서 뺐다. 영역별 그림은 각 문서에 있다.
 
 ## 설계하며 정한 것
 

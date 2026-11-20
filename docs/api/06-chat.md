@@ -37,6 +37,7 @@
 | 대화 선택 전 | 열 때 | 없음. 위에서 받은 값을 쓴다 | 찻방 그림, 빈 상태 안내. 내 두더지는 [`GET /api/v1/users/{userId}/profile`](00-common.md#get-apiv1usersuseridprofile)을 내 id로 불러 얻는다 |
 | 1:1 대화 · 모임 대화 | 대화를 고를 때 | `GET /api/v1/chat-rooms/{chatRoomId}`, `GET /api/v1/chat-rooms/{chatRoomId}/messages`. 이어서 `POST /api/v1/chat-rooms/{chatRoomId}/read` | 찻방의 두더지 자리, 메시지의 좌우 배치, 겹치는 관심사 수 세기, "주최" 표시, 안내 메시지의 문구 |
 | 1:1 대화 · 모임 대화 | 위로 스크롤할 때 | `GET /api/v1/chat-rooms/{chatRoomId}/messages`에 `cursor`를 붙인다 | 이어 붙이기 |
+| 1:1 대화 · 모임 대화 | 첨부에서 사진을 고를 때 | [`POST /api/v1/images`](08-community.md#post-apiv1images) | 썸네일, 3장까지만 받기 |
 | 1:1 대화 · 모임 대화 | "보내기" | `POST /api/v1/chat-rooms/{chatRoomId}/messages` | 빈 메시지 막기, 이모지 고르기 |
 | 1:1 대화 · 모임 대화 | 열려 있는 대화에 새 메시지가 왔을 때 | `POST /api/v1/chat-rooms/{chatRoomId}/read` | 맨 아래로 내리기 |
 | 1:1 대화 | "대화 나가기" | `POST /api/v1/chat-rooms/{chatRoomId}/leave` | 확인 팝업 |
@@ -99,26 +100,31 @@ A가 B에게 요청을 보냈고 B가 거절했다. 그 요청이 만료되기 �
 | `id` | 숫자 | 메시지의 id. 같은 방 안에서 클수록 나중 메시지다 | `chat_message.id` |
 | `type` | enum | `TEXT`, `ACCEPTED`, `JOINED`, `LEFT`, `WITHDRAWN` 가운데 하나 | `chat_message.type` |
 | `sender` | 객체 | 보낸 사람, 또는 안내를 일으킨 사람의 [사용자 표시](00-common.md#사용자-표시) | |
-| `content` | 문자열 | 본문. `type`이 `TEXT`가 아니면 `null` | `chat_message.content` |
+| `content` | 문자열 | 본문. 안내 메시지와, 글 없이 사진만 보낸 메시지는 `null` | `chat_message.content` |
 | `meetupCard` | 객체 | 본문에 모임 링크가 있을 때의 모임 카드. 없으면 `null` | |
 | `meetupCard.meetupId` | 숫자 | 모임의 id. "모임 보기"가 이 모임의 상세로 간다 | `meetup.id` |
 | `meetupCard.title` | 문자열 | 모임 이름 | `meetup.title` |
 | `meetupCard.startsAt` | 시각 | 모임 시작 시각 | `meetup.starts_at` |
 | `meetupCard.capacity` | 숫자 | 정원. 주최자 포함 | `meetup.capacity` |
 | `meetupCard.confirmedCount` | 숫자 | 확정 인원. 주최자 포함 | 계산: 주최자 1명에 `meetup_application.status`가 `CONFIRMED`인 줄 수를 더한 값 |
+| `images` | 목록 | 메시지에 붙인 사진. 보낸 순서대로이고 없으면 `[]` | |
+| `images[].id` | 숫자 | 사진의 id | `chat_message_image.image_id` |
+| `images[].url` | 문자열 | 사진의 주소 | `uploaded_image.image_url` |
 | `createdAt` | 시각 | 보낸 시각, 또는 안내할 일이 일어난 시각 | `chat_message.created_at` |
 
 `type`의 값:
 
 | `type` | 뜻 | `sender` |
 |---|---|---|
-| `TEXT` | 사람이 보낸 메시지 | 보낸 사람 |
+| `TEXT` | 사람이 보낸 메시지. 글만, 사진만, 또는 둘 다다 | 보낸 사람 |
 | `ACCEPTED` | 대화 요청을 수락해 1:1 대화방이 열림 | 수락한 사람 |
 | `JOINED` | 모임 대화방에 들어옴 | 들어온 사람 |
 | `LEFT` | 대화방에서 나감. 1:1의 대화 나가기, 모임의 참여 취소 · 내보내기 · 대화방에서만 나가기가 모두 이 값이다 | 나간 사람 |
 | `WITHDRAWN` | 서비스에서 탈퇴함 | 탈퇴한 사람 |
 
 - `TEXT`가 아닌 것은 안내 메시지다. 일이 일어날 때 서버가 메시지로 넣는다. "새벽산책님이 대화 요청을 수락했어요" 같은 문구는 프론트엔드가 `type`과 `sender`의 닉네임으로 만든다.
+- 사진은 메시지 하나에 3장까지 붙는다. 먼저 [`POST /api/v1/images`](08-community.md#post-apiv1images)로 올려 id를 받고, 메시지를 보낼 때 그 id를 담는다. 받는 형식과 크기는 [커뮤니티 API](08-community.md#사진)와 같다.
+- 글 없이 사진만 보낸 메시지는 `content`가 `null`이다. 대화 목록의 마지막 메시지에서는 프론트엔드가 "사진" 같은 글로 보여 준다.
 - 메시지는 고치거나 지울 수 없다. 읽음 표시도 없다.
 - 내 메시지인지는 주지 않는다. 프론트엔드가 `sender.id`를 내 계정 id와 비교해 오른쪽이나 왼쪽에 둔다.
 - 모임 대화의 "주최" 표시는 `sender.id`가 [대화방 조회](#get-apiv1chat-roomschatroomid)의 `meetup.hostId`와 같은지로 정한다.
@@ -141,7 +147,33 @@ A가 B에게 요청을 보냈고 B가 거절했다. 그 요청이 만료되기 �
   },
   "content": "이번 주 토요일 아침에 한강 어때요?",
   "meetupCard": null,
+  "images": [],
   "createdAt": "2026-11-20T07:02:41Z"
+}
+```
+
+글 없이 사진 한 장만 보낸 메시지:
+
+```json
+{
+  "id": 4110,
+  "type": "TEXT",
+  "sender": {
+    "id": 52,
+    "nickname": "새벽산책",
+    "profileImageUrl": null,
+    "mole": { "head": null, "face": "GLASSES_ROUND", "neck": null, "hand": null },
+    "campusName": "서울",
+    "generation": 14,
+    "floor": 2,
+    "isWithdrawn": false
+  },
+  "content": null,
+  "meetupCard": null,
+  "images": [
+    { "id": 530, "url": "https://cdn.digguldiggul.example/images/2026/11/c41d07.webp" }
+  ],
+  "createdAt": "2026-11-20T07:05:12Z"
 }
 ```
 
@@ -260,6 +292,7 @@ GET /api/v1/me/chat-rooms
           },
           "content": "이번 주는 그래프 문제 세 개 풀어 와요.",
           "meetupCard": null,
+          "images": [],
           "createdAt": "2026-11-20T07:40:12Z"
         },
         "unreadCount": 3,
@@ -294,6 +327,7 @@ GET /api/v1/me/chat-rooms
           },
           "content": "이번 주 토요일 아침에 한강 어때요?",
           "meetupCard": null,
+          "images": [],
           "createdAt": "2026-11-20T07:02:41Z"
         },
         "unreadCount": 1,
@@ -570,6 +604,7 @@ GET /api/v1/chat-rooms/15/messages?size=30&cursor=eyJpZCI6NDA3MX0
         },
         "content": "이번 주 토요일 아침에 한강 어때요?",
         "meetupCard": null,
+        "images": [],
         "createdAt": "2026-11-20T07:02:41Z"
       },
       {
@@ -593,6 +628,7 @@ GET /api/v1/chat-rooms/15/messages?size=30&cursor=eyJpZCI6NDA3MX0
           "capacity": 6,
           "confirmedCount": 3
         },
+        "images": [],
         "createdAt": "2026-11-20T06:58:03Z"
       },
       {
@@ -610,6 +646,7 @@ GET /api/v1/chat-rooms/15/messages?size=30&cursor=eyJpZCI6NDA3MX0
         },
         "content": null,
         "meetupCard": null,
+        "images": [],
         "createdAt": "2026-11-20T06:51:30Z"
       }
     ],
@@ -640,22 +677,23 @@ GET /api/v1/chat-rooms/15/messages?size=30&cursor=eyJpZCI6NDA3MX0
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
 | 경로 | `chatRoomId` | 숫자 | ✓ | 대화방의 id |
-| 본문 | `content` | 문자열 | ✓ | 본문. 1 ~ 1000자. 공백만으로는 보낼 수 없다. 이모지는 글자로 넣는다 |
+| 본문 | `content` | 문자열 | | 본문. 1,000자 이하. 이모지는 글자로 넣는다. 사진이 없으면 꼭 보내고 공백만으로는 안 된다. 사진만 보낼 때는 `null` |
+| 본문 | `imageIds` | 목록 | | 붙일 사진의 id. 0 ~ 3개. 보낸 순서로 보여 준다. 사진이 없으면 `[]`이거나 보내지 않는다 |
 
 ```text
 POST /api/v1/chat-rooms/15/messages
 ```
 
 ```json
-{ "content": "좋아요. 7시에 여의나루역에서 봐요!" }
+{ "content": "좋아요. 7시에 여의나루역에서 봐요!", "imageIds": [] }
 ```
 
 ### 서버가 하는 일
 
-1. 입력값의 모양을 본다. 본문의 길이다. 어긋나면 `400`과 `INVALID_INPUT`.
+1. 입력값의 모양을 본다. 본문의 길이, 사진의 수, 본문과 사진이 모두 비었는지, [쓸 수 없는 사진](08-community.md#사진)의 id인지다. 어긋나면 `400`과 `INVALID_INPUT`.
 2. [들어갈 수 있는 대화방](#대화방에-들어갈-수-있는-사람)인지 본다. 아니면 `404`와 `CHAT_ROOM_NOT_FOUND`.
 3. [읽기 전용 대화방](#읽기-전용-대화방)이면 `409`와 `CHAT_ROOM_READ_ONLY`.
-4. `chat_message`에 한 줄을 만든다. `chat_room_id`는 그 대화방, `type`은 `TEXT`, `sender_id`는 요청한 사람, `content`는 본문이다.
+4. `chat_message`에 한 줄을 만든다. `chat_room_id`는 그 대화방, `type`은 `TEXT`, `sender_id`는 요청한 사람, `content`는 본문이다. 사진이 있으면 `chat_message_image`에 사진마다 한 줄을 만든다. `sort_order`는 `imageIds`의 순서대로 1부터다.
 5. 보낸 사람의 `chat_room_member.last_read_message_id`를 이 메시지로 옮긴다.
 6. 대화방에 있는 모든 사람에게 실시간 소식 `CHAT_MESSAGE_CREATED`를 보낸다([실시간 소식](#get-apiv1meevent-stream)).
 7. 새 메시지 알림을 만드는 규칙은 [09 알림](README.md)에서 다룬다.
@@ -695,6 +733,7 @@ POST /api/v1/chat-rooms/15/messages
     },
     "content": "좋아요. 7시에 여의나루역에서 봐요!",
     "meetupCard": null,
+    "images": [],
     "createdAt": "2026-11-20T07:05:12Z"
   },
   "error": null
@@ -1337,6 +1376,7 @@ data: {"receivedCount":3}
     },
     "content": "네, 그때 봬요.",
     "meetupCard": null,
+    "images": [],
     "createdAt": "2026-11-20T07:06:40Z"
   },
   "unreadCount": 1
@@ -1380,12 +1420,11 @@ data: {"receivedCount":3}
 - **이미 처리된 요청**: 사라진 요청에 수락, 거절, 취소를 부르면 `CHAT_REQUEST_NOT_FOUND` 하나로 답한다. 수락을 두 번 부르면 같은 대화방을 준다. 취소했는데 이미 수락됐으면 `CHAT_REQUEST_ALREADY_ACCEPTED`와 대화방 id를 준다.
 - **요청에 붙인 인사**: 수락해도 대화방의 메시지로 옮기지 않는다.
 - **모임 카드**: 서버가 메시지 본문에서 모임 링크를 찾아 `meetupCard`로 준다. 저장하지 않고 줄 때마다 모임의 지금 값을 담는다.
-- **글자 수와 첨부**: 메시지는 1,000자, 공지는 200자까지다. 첨부를 보내는 API는 이 문서에 두지 않았다. 파일을 올리는 방식을 08 커뮤니티에서 글 사진과 함께 정한 뒤 더한다.
+- **글자 수와 첨부**: 메시지는 1,000자, 공지는 200자까지다. 첨부는 사진만 받고 메시지 하나에 3장까지다. 사진은 커뮤니티의 사진 올리기로 먼저 올린다. 글 없이 사진만 보낼 수 있다.
 - **온라인 모임의 접속 링크**: 대화방 조회의 `meetup.joinUrl`로 준다. 화면의 어디에 보여 줄지는 명세에 없다.
 
 ## 구현 단계로 넘기는 것
 
-- 첨부 파일의 종류, 크기, 개수와 올리는 방식. 08 커뮤니티에서 글 사진을 올리는 방식과 함께 정하고, 정해지면 메시지에 더한다(DB 설계에서도 넘겼다)
 - 메시지 본문에서 알아보는 모임 링크의 정확한 모양
 - 찻방에 그릴 두더지의 수(명세가 구현 단계로 넘겼다)
 - 실시간 연결을 유지하려고 보내는 신호의 간격과, 서버가 여러 대일 때 소식을 전하는 방법
