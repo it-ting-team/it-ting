@@ -104,7 +104,7 @@ POST /api/v1/email-verifications/check
 - MUST NOT: 프론트엔드가 `message`의 글자로 실패를 구분하지 않는다.
 - MUST NOT: `message`에 스택 트레이스, SQL, 다른 사용자의 정보를 넣지 않는다.
 
-입력 오류는 `400`과 `INVALID_INPUT`으로 답하고 `fields`를 채운다. `field`는 요청 JSON의 필드 이름이다.
+입력 오류는 `400`과 `INVALID_INPUT`으로 답하고 `fields`를 채운다. `field`는 요청 JSON의 필드 이름이다. 객체나 목록 안의 값은 `mole.head`, `answers[1].answer`처럼 경로로 적고, 목록의 자리는 0부터 센다.
 
 ```json
 "error": {
