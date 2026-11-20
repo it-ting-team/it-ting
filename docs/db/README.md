@@ -53,7 +53,7 @@
 
 - **켜고 끄는 관계**(`user_interest`, `regular_burrow`, `meetup_like`, `post_like`, `comment_like`, `post_bookmark`): 지운 줄이 남아 있으면 다시 켤 때 기본키에 걸린다. 끄면 줄을 지운다.
 - **상태나 다른 시각이 그 역할을 하는 테이블**: `user`는 `status`와 `user_withdrawal`, `chat_request`와 `meetup_application`은 `status`, `chat_room_member`는 `left_at`으로 안다.
-- **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`)과 **기간이 지나면 정리하는 줄**(`guestbook_entry`는 7일, `notification`은 30일).
+- **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`), **기간이 지나면 정리하는 줄**(`notification`은 30일), **지우면 줄을 바로 지우는 글**(`guestbook_entry`. 시간이 지나도 지우지 않는다).
 - **탈퇴하면 실제로 지우는 개인 정보**(`user_profile`, `user_answer`, `burrow`, `burrow_entrance`, `push_subscription`, `notification_setting`).
 
 ## 전체 관계
@@ -105,7 +105,7 @@ erDiagram
 
 ## 설계하며 정한 것
 
-2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 2026-11-18에 서비스 명세와 대조해 탈퇴자가 쓴 방명록(G5, 남긴다)과 새 학기 안내를 다시 띄우는 때(접속할 때마다)를 명세에 맞췄다. 같은 날 공통 날짜 칼럼, ENUM 타입, 탈퇴 기록 테이블, 프로필 사진, 추천 단순화, 방명록 가림, 글 · 댓글 버전 관리를 반영했다(G6, G7, A5, A6, B5, B6, M5, C5, C6). 바꾸려면 이 표와 해당 문서를 함께 고친다.
+2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 2026-11-18에 서비스 명세와 대조해 탈퇴자가 쓴 방명록(G5, 남긴다)과 새 학기 안내를 다시 띄우는 때(접속할 때마다)를 명세에 맞췄다. 같은 날 공통 날짜 칼럼, ENUM 타입, 탈퇴 기록 테이블, 프로필 사진, 추천 단순화, 방명록 가림, 글 · 댓글 버전 관리를 반영했다(G6, G7, A5, A6, B5, B6, M5, C5, C6). 2026-11-20에 방명록 글을 기간으로 지우지 않게 바꿨다. 바꾸려면 이 표와 해당 문서를 함께 고친다.
 
 | 번호 | 무엇을 | 정한 것 |
 |---|---|---|

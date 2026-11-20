@@ -69,7 +69,7 @@ erDiagram
 
 ### 기존 설계
 
-`guestbook_entry.author_id`는 작성자를, `guestbook_entry.burrow_id`는 받은 땅굴을 가리킨다. 일반 방명록은 작성 후 7일이 지나면 삭제한다. 명세([10 설정 · 계정](../spec/10-settings.md)의 회원 탈퇴 1)는 탈퇴하면 내 땅굴은 지우고, 내가 쓴 방명록 글은 남겨 작성자를 “탈퇴한 사용자”로 표시하도록 정한다.
+`guestbook_entry.author_id`는 작성자를, `guestbook_entry.burrow_id`는 받은 땅굴을 가리킨다. 방명록 글은 시간이 지나도 지우지 않는다. 명세([10 설정 · 계정](../spec/10-settings.md)의 회원 탈퇴 1)는 탈퇴하면 내 땅굴은 지우고, 내가 쓴 방명록 글은 남겨 작성자를 “탈퇴한 사용자”로 표시하도록 정한다.
 
 ### 문제와 재현 조건
 
@@ -81,7 +81,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 ### 해결 방법
 
-[회원 탈퇴](account.md)와 같은 트랜잭션에서 `burrow_id = 탈퇴 회원의 땅굴 ID`인 행을 삭제한다. `author_id = 탈퇴 회원 ID`인 행은 지우지 않는다. 이 행은 탈퇴 뒤에도 남는 `user` 행을 계속 가리키고, 화면에는 작성자를 “탈퇴한 사용자”로 보여준다. 남은 글에는 기존 7일 규칙을 그대로 적용한다.
+[회원 탈퇴](account.md)와 같은 트랜잭션에서 `burrow_id = 탈퇴 회원의 땅굴 ID`인 행을 삭제한다. `author_id = 탈퇴 회원 ID`인 행은 지우지 않는다. 이 행은 탈퇴 뒤에도 남는 `user` 행을 계속 가리키고, 화면에는 작성자를 “탈퇴한 사용자”로 보여준다. 남은 글은 다른 방명록 글처럼 계속 남는다.
 
 `regular_burrow`의 담은 회원·담긴 땅굴 기준 행과 땅굴 입구를 정리한 뒤 땅굴을 삭제한다. 방명록 작성과 탈퇴가 겹치면 작성 트랜잭션도 작성자와 땅굴 주인 계정 상태를 잠근 뒤 확인해, 탈퇴한 계정이 새 글을 쓰거나 탈퇴한 사람의 땅굴에 글이 다시 생기지 않게 한다.
 
@@ -89,7 +89,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 검증에서는 A의 땅굴에 달린 글이 사라지고, B의 땅굴에 A가 쓴 글은 “탈퇴한 사용자”의 글로 남았다가 작성 7일 뒤 지워지는지 확인한다. 방명록 쓰기와 A의 탈퇴가 동시에 실행돼도 A의 땅굴에 글이 남거나 탈퇴한 A의 새 글이 생기지 않아야 한다.
+설계 검토에서 확인했다. 실행 검증에서는 A의 땅굴에 달린 글이 사라지고, B의 땅굴에 A가 쓴 글은 “탈퇴한 사용자”의 글로 계속 남는지 확인한다. 방명록 쓰기와 A의 탈퇴가 동시에 실행돼도 A의 땅굴에 글이 남거나 탈퇴한 A의 새 글이 생기지 않아야 한다.
 
 ## 테이블 구조
 
@@ -189,12 +189,12 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 작성자. 땅굴 주인은 자기 땅굴에 작성할 수 없음 |
 | `content` | `VARCHAR(50)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 50자 | 방명록 본문 |
 | `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN` | 공개·가려짐 상태 |
-| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순과 7일 만료의 기준 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순의 기준 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-본문을 수정할 수 없다. 삭제하거나 만료되면 행을 지운다. 탈퇴한 사용자가 받은 글은 탈퇴할 때 지우고, 쓴 글은 남겨 작성자를 “탈퇴한 사용자”로 보여준다. 범위는 위의 트러블슈팅을 따른다.
+본문을 수정할 수 없다. 삭제하면 행을 지운다. 시간이 지나도 지우지 않는다. 탈퇴한 사용자가 받은 글은 탈퇴할 때 지우고, 쓴 글은 남겨 작성자를 “탈퇴한 사용자”로 보여준다. 범위는 위의 트러블슈팅을 따른다.
 
-신고 대상이다(`report.target_type = GUESTBOOK`, [커뮤니티 · 신고](community.md)). 서로 다른 3명이 신고하면 `status`를 `HIDDEN`으로 바꿔 가린다. 가려지는 조건, 작성자 알림, 관리자 복구는 글·댓글과 같은 규칙을 따른다. 작성 후 7일이 지난 글은 가려졌는지와 관계없이 조회에서 빼고 정리한다.
+신고 대상이다(`report.target_type = GUESTBOOK`, [커뮤니티 · 신고](community.md)). 서로 다른 3명이 신고하면 `status`를 `HIDDEN`으로 바꿔 가린다. 가려지는 조건, 작성자 알림, 관리자 복구는 글·댓글과 같은 규칙을 따른다. 가려진 글은 방명록 목록과 글 수에서 빼고, 땅굴 주인·방문자·작성자 모두에게 보여주지 않는다. 가려진 글은 관리자가 복구하거나 지울 때까지 `HIDDEN`으로 남는다.
 
 ### `regular_burrow`
 
@@ -248,7 +248,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | 이번 학기 소속 확정 및 안내 여부 | `burrow.user_id`, `burrow_entrance.burrow_id`, `burrow_entrance.term_id` | 사용자 땅굴에 이번 학기 입구가 있는지 확인한다. 입구가 없고 이번 접속에 해당 사용자·학기의 표시 기록도 없을 때 안내한다. |
 | 땅굴에서 탐색으로 나갈 들판 | `burrow_entrance.burrow_id`, `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id`, `term.opened_at` | 현재 땅굴의 입구를 학기와 조인하고 개설 시각이 가장 최근인 학기의 캠퍼스·층을 사용한다. |
 | 방노트 | `burrow.user_id`, `user_profile.intro`, `user_interest.interest_id`, `user_interest.sort_order`, `interest.name`, `user_answer.slot`, `user_answer.intro_question_id`, `user_answer.answer`, `intro_question.content` | 주인 ID로 프로필·관심사·답변을 조회한다. 관심사는 `sort_order`로, 질문과 답변은 `slot`으로 정렬한다. |
-| 남은 방명록 글 수 | `guestbook_entry.burrow_id`, `guestbook_entry.created_at` | 해당 땅굴에 달린 행 중 `created_at + 7일`이 현재 시각보다 뒤인 행을 센다. 이미 삭제된 행은 조회되지 않는다. |
+| 방명록 글 수 | `guestbook_entry.burrow_id`, `guestbook_entry.status` | 해당 땅굴에 달린 행 중 `status`가 `PUBLIC`인 행을 센다. 삭제된 행은 남아 있지 않다. |
 | 단골 수 | `regular_burrow.burrow_id` | 해당 땅굴을 담은 행을 `COUNT(*)`로 센다. 해제되거나 탈퇴 정리로 삭제된 관계는 제외된다. |
 | 오늘 추천을 이미 받았는지와 결과 | `daily_recommendation.user_id`, `daily_recommendation.recommended_on`, `daily_recommendation.id`, `daily_recommendation_member.daily_recommendation_id`, `daily_recommendation_member.sort_order`, `daily_recommendation_member.target_user_id` | 현재 사용자와 오늘의 추천 기준 날짜로 부모 행의 존재를 확인한다. 행이 있으면 결과를 `sort_order`순으로 읽는다. 결과가 없어도 부모 행이 있으면 추천을 받은 날이다. |
 | 추천 후보 | `burrow_entrance.term_id`, `burrow_entrance.burrow_id`, `burrow.id`, `burrow.user_id`, `user.status`, `user.onboarded_at` | 이번 학기의 입구에서 주인 계정을 찾는다. 본인을 제외하고 `ACTIVE`이면서 온보딩을 마친 사용자만 고른다. |
@@ -264,4 +264,4 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 - 새 학기의 수동·자동 개설 방식과 빈 입구 자리의 재사용 기준
 - 추천 기준 날짜의 경계, 이전 추천 결과 보관 기간, 캠퍼스나 기수를 고르지 않고 전체에서 받을 수 있는지
-- 가려진 방명록 글을 땅굴 주인과 방문자에게 어떻게 보여줄지, 가려졌다는 알림을 눌렀을 때 갈 곳
+- 방명록 글이 가려졌다는 알림을 눌렀을 때 갈 곳
