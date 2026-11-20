@@ -142,7 +142,7 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 글 ID |
 | `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 글 작성자 |
 | `category` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PROMOTION`, `REVIEW`, `FREE` | 모임 홍보·모임 후기·자유 |
-| `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, 개별 UNIQUE 없음, `PROMOTION`이면 필수 | 글에 연결한 모임. `PROMOTION`은 작성자가 연 모집 중인 모임, 그 밖은 작성자가 열었거나 참여가 확정된 모임(취소된 모임 제외)만 연결한다. 연결한 뒤 모임의 상태가 바뀌어도 그대로 둔다 |
+| `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, 개별 UNIQUE 없음, `PROMOTION`과 `REVIEW`면 필수 | 글에 연결한 모임. `PROMOTION`은 작성자가 연 모집 중인 모임, `REVIEW`는 작성자가 열었거나 참여가 확정된 지난 모임, `FREE`는 작성자가 열었거나 참여가 확정된 모임만 연결한다(취소된 모임 제외). 연결한 뒤 모임의 상태가 바뀌어도 그대로 둔다 |
 | `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN`, `DELETED` | 공개·가려짐·삭제 상태 |
 | `view_count` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 글을 열 때마다 1을 더하는 저장형 조회수 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순 정렬 기준 |
