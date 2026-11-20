@@ -87,7 +87,7 @@ erDiagram
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 모임 ID |
 | `host_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 모임 주최자 |
-| `category` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, 스터디·프로젝트·운동·취미/문화·식사/카페·게임·기타에 대응하는 임시 코드 | 모임 카테고리 |
+| `category` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `HOBBY`(취미/문화), `FOOD`(식사/카페), `STUDY`(스터디/프로젝트), `ETC`(기타), `GAME`(게임), `EXERCISE`(운동) | 모임 카테고리 |
 | `title` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 이름. 검색 대상 |
 | `description` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음 | 소개. 검색 대상 |
 | `capacity` | `INT` | — | NOT NULL, 개별 UNIQUE 없음, 2–50명, 주최자 포함 | 모임 정원 |
@@ -171,6 +171,6 @@ erDiagram
 
 ## 명세에 없어 구현 단계로 넘기는 것
 
-- 제목·준비물·장소 등의 글자 수와 카테고리의 최종 코드
+- 제목·준비물·장소 등의 글자 수
 - 취소된 모임을 표시할 내 모임 탭과 캘린더 범위
 - 일정 임박의 발송 시점과 내 모임 ‘확인 필요’ 알림의 새 항목 기준
