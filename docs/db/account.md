@@ -118,10 +118,10 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 탈퇴 기록 ID |
 | `user_id` | `BIGINT` | FK → `user.id` | `NOT NULL`, `UNIQUE` | 탈퇴한 계정 |
-| `reason` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 사유 코드 목록 미정 | 사용자가 선택한 탈퇴 사유. 고르지 않으면 비움 |
+| `reason` | `ENUM` | — | `NULL` 허용, 개별 UNIQUE 없음, `NOT_USING`(자주 쓰지 않아요), `COURSE_ENDED`(SSAFY 과정이 끝났어요), `NO_MATCH`(맞는 사람이나 모임을 찾지 못했어요), `INCONVENIENT`(쓰기 불편해요), `UNPLEASANT`(불쾌한 일을 겪었어요), `ETC`(기타) | 사용자가 선택한 탈퇴 사유. 고르지 않으면 비움 |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 탈퇴한 시각 |
 
-다시 가입하면 새 계정 ID를 쓰므로 계정 하나에 탈퇴 기록은 하나다. `user.status`는 로그인과 조회에서 탈퇴한 계정을 바로 거르려고 그대로 둔다. 한 번 쓰고 바꾸지 않는 기록이라 `updated_at`과 `deleted_at`은 두지 않는다. 사유 코드 목록이 정해지면 `reason`을 `ENUM`으로 바꾼다.
+다시 가입하면 새 계정 ID를 쓰므로 계정 하나에 탈퇴 기록은 하나다. `user.status`는 로그인과 조회에서 탈퇴한 계정을 바로 거르려고 그대로 둔다. 한 번 쓰고 바꾸지 않는 기록이라 `updated_at`과 `deleted_at`은 두지 않는다. 사유의 코드는 [API 명세](../api/10-settings.md#post-apiv1mewithdraw)를 쓰며 정했다. 화면의 글은 프론트엔드가 갖는다.
 
 ### `user_profile`
 
