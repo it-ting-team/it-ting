@@ -8,6 +8,8 @@ erDiagram
     meetup |o--o{ post : "글에 연결한 모임"
     post ||--|{ post_version : "고칠 때마다 한 줄"
     post ||--o{ post_image : "사진 0~3장"
+    user ||--o{ uploaded_image : "올린다"
+    uploaded_image ||--o| post_image : "글에 붙인 사진"
     post ||--o{ post_interest : "태그 0~5개"
     interest_category ||--o{ post_interest : ""
     post ||--o{ comment : "댓글"
@@ -175,10 +177,23 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 사진 ID |
 | `post_id` | `BIGINT` | FK → `post.id` | NOT NULL, 개별 UNIQUE 없음 | 사진이 붙은 글 |
 | `sort_order` | `TINYINT` | — | NOT NULL, 개별 UNIQUE 없음, 1–3, 1번은 대표 사진 | 글 안에서 사진의 표시 순서 |
-| `image_url` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 업로드한 파일 위치 |
+| `image_id` | `BIGINT` | FK → `uploaded_image.id` | NOT NULL, UNIQUE | 붙인 사진. 사진 하나는 글 하나에만 붙는다 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 
-한 글에 최대 3장을 붙인다. 파일 저장소, 형식과 용량은 미정이다.
+한 글에 최대 3장을 붙인다. 사진은 먼저 올려 [`uploaded_image`](#uploaded_image)에 기록하고, 글을 쓰거나 고칠 때 이 표로 글에 붙인다.
+
+### `uploaded_image`
+
+올린 사진을 기록한다. 글에 붙이기 전에 먼저 올리므로 글과 따로 둔다.
+
+| 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
+| --- | --- | --- | --- | --- |
+| `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 사진 ID |
+| `uploader_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 사진을 올린 사용자 |
+| `image_url` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 업로드한 파일 위치 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 올린 시각 |
+
+형식은 JPEG, PNG, WebP이고 한 장에 5MB까지다([API 명세](../api/08-community.md#사진)). 올린 사람만 자기 사진을 글에 붙일 수 있다. 파일 저장소와, 어느 글에도 붙지 않은 사진이나 글에서 뗀 사진을 지우는 때는 미정이다.
 
 ### `post_interest`
 
@@ -310,7 +325,7 @@ A·B·C가 글을 신고해 가려진 뒤 관리자가 복구한다. D가 새로
 | 인기 점수와 이번 주 인기 글 TOP5 | `post.status`, `post.created_at`, `post_like.post_id`, `post_like.created_at`, `comment.post_id`, `comment.created_at`, `comment.status`, `post_bookmark.post_id`, `post_bookmark.created_at` | 공개 글마다 최근 7일에 생성된 글 좋아요·댓글/답글·저장의 개수를 각각 구해 합산한다. 점수 내림차순과 글 작성 시각 내림차순으로 상위 5개를 고른다. 삭제된 댓글은 제외한다. 숨긴 댓글의 집계와 일반 인기순 정렬에도 7일을 적용할지는 미정이다. |
 | 많이 이야기하는 관심사 | `post.id`, `post.status`, `post.created_at`, `post_interest.post_id`, `post_interest.interest_category_id` | 최근 7일에 작성된 공개 글에 붙은 태그를 대분류별로 묶어 서로 다른 글 ID를 센다. 글 수가 많은 상위 8개를 사용한다. |
 | 지금 보이는 제목과 본문 | `post_version.post_id`, `post_version.version`, `comment_version.comment_id`, `comment_version.version` | 글이나 댓글마다 `version`이 가장 큰 줄을 읽는다. 검색도 이 줄의 제목과 본문에서 한다. |
-| 본문 미리보기와 썸네일 | `post_version.content`, `post_image.post_id`, `post_image.sort_order`, `post_image.image_url` | 본문 앞부분을 잘라 미리보기로 쓴다. 글에 연결된 `sort_order = 1` 사진의 URL을 대표로 쓴다. 사진이 없으면 화면의 기본 그림을 사용한다. |
+| 본문 미리보기와 썸네일 | `post_version.content`, `post_image.post_id`, `post_image.sort_order`, `post_image.image_id`, `uploaded_image.image_url` | 본문 앞부분을 잘라 미리보기로 쓴다. 글에 연결된 `sort_order = 1` 사진의 URL을 대표로 쓴다. 사진이 없으면 화면의 기본 그림을 사용한다. |
 | 수정 여부와 상대 시간 | `post_version.version`, `comment_version.version`, `post.created_at`, `comment.created_at` | 버전이 둘 이상이면 수정 표시를 붙인다. 상대 시간은 현재 시각과 작성 시각의 차이로 계산한다. |
 | 내가 좋아요·저장했는지 | `post_like.post_id`, `post_like.user_id`, `comment_like.comment_id`, `comment_like.user_id`, `post_bookmark.post_id`, `post_bookmark.user_id` | 현재 사용자와 해당 글·댓글 ID의 조합으로 각 관계 행이 존재하는지 확인한다. |
 | 내 활동 건수 | `post.author_id`, `post.status`, `comment.author_id`, `comment.post_id`, `comment.status`, `post_bookmark.user_id`, `post_bookmark.post_id` | 내가 쓴 글은 삭제되지 않은 내 글을 센다. 댓글 단 글은 내 삭제되지 않은 댓글·답글이 달린 공개 글 ID를 중복 없이 센다. 저장한 글은 내 저장 행과 연결된 공개 글을 센다. |
