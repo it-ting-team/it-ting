@@ -23,6 +23,24 @@
 | `GET` | `/api/v1/password-resets/{token}` | 재설정 링크가 유효한지 확인한다 | 불필요 | 링크 만료 1 |
 | `POST` | `/api/v1/password-resets/{token}/complete` | 새 비밀번호를 저장한다 | 불필요 | 새 비밀번호 설정 3 |
 
+## 화면마다 부르는 API
+
+| 화면 | 부르는 때 | API |
+|---|---|---|
+| 회원가입 1 · 이메일 | 인증 코드를 처음 보낼 때와 "재전송" | `POST /api/v1/email-verifications` |
+| 회원가입 1 · 이메일 | "다음" | `POST /api/v1/email-verifications/check` |
+| 회원가입 2 · 비밀번호 | "다음" | `POST /api/v1/users` |
+| 회원가입 3 · SSAFY 인증 | 화면을 열 때 | [`GET /api/v1/generations`](00-common.md#get-apiv1generations), [`GET /api/v1/campuses`](00-common.md#get-apiv1campuses) |
+| 회원가입 3 · SSAFY 인증 | "코드 받기" | `POST /api/v1/me/ssafy-verifications` |
+| 회원가입 3 · SSAFY 인증 | "땅굴 파기" | `POST /api/v1/me/ssafy-verifications/complete` |
+| 로그인 | "로그인" | `POST /api/v1/sessions` |
+| 로그인 | "Google로 계속하기" | 브라우저가 `GET /api/v1/oauth/google`로 이동 |
+| 모든 화면 | 서비스를 처음 열 때 | `GET /api/v1/me` |
+| 비밀번호 찾기 · 재설정 메일 요청, 메일 보냄 | "링크 보내기", "다시 보내기" | `POST /api/v1/password-resets` |
+| 비밀번호 찾기 · 새 비밀번호 설정 | 메일의 링크로 들어올 때 | `GET /api/v1/password-resets/{token}` |
+| 비밀번호 찾기 · 새 비밀번호 설정 | "비밀번호 바꾸기" | `POST /api/v1/password-resets/{token}/complete` |
+| 설정 – 로그아웃 확인 | "로그아웃" | `DELETE /api/v1/sessions/current` |
+
 ## 영역 규칙
 
 ### 다음에 갈 화면
@@ -35,20 +53,46 @@
 | `ONBOARDING` | 온보딩을 마치지 않음 | 온보딩 1 |
 | `HOME` | 가입을 모두 마침 | 내 땅굴 |
 
+`nextStep`은 저장하지 않는다. 계정의 두 시각에서 계산한다.
+
+| `user.ssafy_verified_at` | `user.onboarded_at` | `nextStep` |
+|---|---|---|
+| 비어 있음 | 비어 있음 | `SSAFY_VERIFICATION` |
+| 있음 | 비어 있음 | `ONBOARDING` |
+| 있음 | 있음 | `HOME` |
+
 ### 가입을 마치지 않은 계정
 
-`nextStep`이 `HOME`이 아닌 계정은 이 문서의 API, 온보딩 API, [공통 API](00-common.md) 가운데 "가입 중에도"라고 적힌 것만 부를 수 있다. 다른 API를 부르면 `403`과 `SIGNUP_INCOMPLETE`로 답한다.
+`nextStep`이 `HOME`이 아닌 계정은 이 문서의 API, [온보딩 API](03-onboarding.md), [공통 API](00-common.md) 가운데 "가입 중에도"라고 적힌 것만 부를 수 있다. 다른 API를 부르면 `403`과 `SIGNUP_INCOMPLETE`로 답한다.
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "SIGNUP_INCOMPLETE",
+    "message": "가입을 마친 뒤에 이용할 수 있습니다.",
+    "fields": null,
+    "detail": null
+  }
+}
+```
 
 ### 인증 코드
 
 - 이메일 인증과 SSAFY 인증 모두 숫자 6자리다.
+- 코드는 DB가 아니라 임시 저장소(Redis)에 두고, 유효 시간이 지나면 저절로 사라진다([DB 설계](../db/account.md)).
 - 코드를 보내는 API는 코드가 만료되는 시각 `expiresAt`을 준다. 프론트엔드는 이 값으로 남은 시간을 표시한다.
 - 코드를 다시 보내는 API는 따로 없다. 같은 API를 다시 부르면 새 코드를 보내고 이전 코드는 쓸 수 없게 된다.
 - 재전송 간격 안에 다시 부르면 `429`와 `TOO_MANY_REQUESTS`로 답한다.
 
+### 세션 쿠키
+
+로그인시키는 API(`POST /api/v1/users`, `POST /api/v1/sessions`, Google 콜백)는 세션을 Redis에 만들고 응답 헤더로 세션 쿠키를 준다. 응답 본문에는 세션 값을 담지 않는다([API 공통 규칙](../api-convention.md)의 로그인).
+
 ## POST /api/v1/email-verifications
 
-가입할 이메일로 인증 코드를 보낸다. 처음 보낼 때와 다시 보낼 때 모두 이 API를 쓴다.
+가입할 이메일로 인증 코드를 보낸다. 회원가입 1에서 코드를 처음 보낼 때와 "재전송"을 누를 때 모두 이 API를 부른다.
 
 - 로그인: 불필요
 - 명세: 회원가입 1 · 3, 4
@@ -57,15 +101,43 @@
 
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
-| 본문 | `email` | 문자열 | ✓ | 가입할 이메일 |
+| 본문 | `email` | 문자열 | ✓ | 가입할 이메일. 이메일 형식이어야 한다 |
+
+```text
+POST /api/v1/email-verifications
+```
+
+```json
+{ "email": "mole@example.com" }
+```
+
+### 서버가 하는 일
+
+1. `email`이 이메일 형식인지 본다. 아니면 `400`과 `INVALID_INPUT`.
+2. `user.email`에 같은 이메일이 있으면 `409`와 `EMAIL_DUPLICATED`. 탈퇴한 계정은 이메일을 비워 두므로 걸리지 않는다.
+3. 이 이메일로 마지막으로 보낸 뒤 재전송 간격이 지나지 않았으면 `429`와 `TOO_MANY_REQUESTS`.
+4. 숫자 6자리 코드를 만들어 Redis에 이메일, 코드, 보낸 시각을 저장한다. 이 이메일의 이전 코드는 덮어쓴다.
+5. 그 이메일로 코드를 담은 메일을 보낸다.
+
+DB에는 아무것도 저장하지 않는다.
 
 ### 응답 `data`
 
 `201`로 답한다.
 
-| 이름 | 타입 | 설명 |
-|---|---|---|
-| `expiresAt` | 시각 | 인증 코드가 만료되는 시각 |
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `expiresAt` | 시각 | 인증 코드가 만료되는 시각 | 임시 저장소: 보낸 시각에 유효 시간을 더한 값 |
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": { "expiresAt": "2026-11-18T08:06:05Z" },
+  "error": null
+}
+```
 
 ### 에러
 
@@ -73,9 +145,22 @@
 |---|---|---|
 | `409` | `EMAIL_DUPLICATED` | 이미 가입한 이메일 |
 
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "EMAIL_DUPLICATED",
+    "message": "이미 가입한 이메일입니다.",
+    "fields": null,
+    "detail": null
+  }
+}
+```
+
 ## POST /api/v1/email-verifications/check
 
-입력한 인증 코드가 맞는지 확인한다. 코드는 계정을 만들 때 한 번 더 확인하므로 여기서는 없애지 않는다.
+입력한 인증 코드가 맞는지 확인한다. 회원가입 1의 "다음"을 누를 때 부르고, 성공하면 회원가입 2로 넘어간다.
 
 - 로그인: 불필요
 - 명세: 회원가입 1 · 5, 7
@@ -85,11 +170,37 @@
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
 | 본문 | `email` | 문자열 | ✓ | 코드를 받은 이메일 |
-| 본문 | `code` | 문자열 | ✓ | 숫자 6자리 |
+| 본문 | `code` | 문자열 | ✓ | 숫자 6자리. 앞자리 0을 지키려고 문자열로 보낸다 |
+
+```text
+POST /api/v1/email-verifications/check
+```
+
+```json
+{ "email": "mole@example.com", "code": "048213" }
+```
+
+### 서버가 하는 일
+
+1. `code`가 숫자 6자리인지 본다. 아니면 `400`과 `INVALID_INPUT`.
+2. Redis에서 그 이메일의 코드를 찾는다. 없으면(만료됐거나 보낸 적이 없음) `400`과 `VERIFICATION_CODE_EXPIRED`.
+3. 코드가 다르면 `400`과 `VERIFICATION_CODE_MISMATCH`.
+
+맞아도 코드를 지우지 않는다. 계정을 만드는 `POST /api/v1/users`가 같은 코드를 한 번 더 확인하기 때문이다. 이 API는 아무것도 저장하지 않는다.
 
 ### 응답 `data`
 
 `null`이다.
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
 
 ### 에러
 
@@ -100,7 +211,7 @@
 
 ## POST /api/v1/users
 
-이메일 계정을 만든다. 성공하면 세션 쿠키를 주어 로그인 상태가 된다. "비밀번호 확인" 칸은 프론트엔드가 비교하고 서버로 보내지 않는다.
+이메일 계정을 만든다. 회원가입 2의 "다음"을 누를 때 부른다. 성공하면 세션 쿠키를 주어 로그인 상태가 된다. "비밀번호 확인" 칸은 프론트엔드가 비교하고 서버로 보내지 않는다.
 
 - 로그인: 불필요
 - 명세: 회원가입 2 · 5
@@ -109,30 +220,76 @@
 
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
-| 본문 | `email` | 문자열 | ✓ | 인증한 이메일 |
-| 본문 | `code` | 문자열 | ✓ | 그 이메일로 받은 인증 코드 |
-| 본문 | `password` | 문자열 | ✓ | [00 공통](../spec/00-common.md) 9의 비밀번호 규칙을 따른다 |
+| 본문 | `email` | 문자열 | ✓ | 회원가입 1에서 인증한 이메일 |
+| 본문 | `code` | 문자열 | ✓ | 그 이메일로 받은 인증 코드. 회원가입 1에서 입력한 값을 그대로 보낸다 |
+| 본문 | `password` | 문자열 | ✓ | [00 공통](../spec/00-common.md) 9의 비밀번호 규칙을 따른다(8자 이상, 영문 · 숫자 · 특수기호 `!@#$%`를 각각 1개 이상) |
+
+```text
+POST /api/v1/users
+```
+
+```json
+{ "email": "mole@example.com", "code": "048213", "password": "mole1234!" }
+```
+
+### 서버가 하는 일
+
+1. `email`의 형식과 `password`의 규칙을 본다. 어긋나면 `400`과 `INVALID_INPUT`. `fields`에 어긋난 필드를 담는다.
+2. Redis의 코드와 비교한다. 없으면 `VERIFICATION_CODE_EXPIRED`, 다르면 `VERIFICATION_CODE_MISMATCH`.
+3. `user.email`에 같은 이메일이 있으면 `409`와 `EMAIL_DUPLICATED`.
+4. `user`에 한 줄을 만든다. `email`, `password_hash`(비밀번호를 해시한 값), `role`은 `USER`, `status`는 `ACTIVE`다. `ssafy_verified_at`과 `onboarded_at`은 비어 있다.
+5. Redis의 코드를 지운다.
+6. 세션을 만들고 세션 쿠키를 준다.
+
+`user_profile`은 아직 만들지 않는다. SSAFY 인증을 마칠 때 만든다.
 
 ### 응답 `data`
 
 `201`로 답한다.
 
-| 이름 | 타입 | 설명 |
-|---|---|---|
-| `userId` | 숫자 | 만든 계정의 id |
-| `nextStep` | enum | 항상 `SSAFY_VERIFICATION` |
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `userId` | 숫자 | 만든 계정의 id | `user.id` |
+| `nextStep` | enum | 항상 `SSAFY_VERIFICATION` | 계산: [다음에 갈 화면](#다음에-갈-화면) |
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": { "userId": 31, "nextStep": "SSAFY_VERIFICATION" },
+  "error": null
+}
+```
+
+비밀번호가 규칙에 맞지 않을 때:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "입력값이 올바르지 않습니다.",
+    "fields": [
+      { "field": "password", "message": "특수기호를 1개 이상 넣어야 합니다." }
+    ],
+    "detail": null
+  }
+}
+```
 
 ### 에러
 
 | 상태 | `code` | 때 |
 |---|---|---|
 | `400` | `VERIFICATION_CODE_MISMATCH` | 코드가 맞지 않음 |
-| `400` | `VERIFICATION_CODE_EXPIRED` | 코드가 만료됐거나 보낸 적이 없음 |
-| `409` | `EMAIL_DUPLICATED` | 이미 가입한 이메일 |
+| `400` | `VERIFICATION_CODE_EXPIRED` | 코드가 만료됐거나 보낸 적이 없음. 회원가입 2에서 오래 머물렀을 때다 |
+| `409` | `EMAIL_DUPLICATED` | 그 사이 다른 사람이 같은 이메일로 가입함 |
 
 ## POST /api/v1/me/ssafy-verifications
 
-고른 기수의 Mattermost로 인증 코드를 보낸다. 처음 보낼 때와 다시 보낼 때 모두 이 API를 쓴다. Mattermost ID가 틀려 메시지가 가지 않아도 같은 응답을 준다(명세는 화면 문구로 ID를 다시 확인하라고 안내한다).
+고른 기수의 Mattermost로 인증 코드를 보낸다. 회원가입 3에서 "코드 받기"를 누를 때와 다시 누를 때 모두 이 API를 부른다.
 
 - 로그인: 필요
 - 명세: 회원가입 3 · 4
@@ -141,16 +298,45 @@
 
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
-| 본문 | `generation` | 숫자 | ✓ | 기수 |
+| 본문 | `generation` | 숫자 | ✓ | 기수. [`GET /api/v1/generations`](00-common.md#get-apiv1generations)가 준 값 가운데 하나 |
 | 본문 | `mattermostId` | 문자열 | ✓ | SSAFY Mattermost ID |
+
+```text
+POST /api/v1/me/ssafy-verifications
+```
+
+```json
+{ "generation": 14, "mattermostId": "mole.kim" }
+```
+
+### 서버가 하는 일
+
+1. `generation`이 기수 목록에 있는지 본다. 없으면 `400`과 `INVALID_INPUT`.
+2. 이 계정이 이미 SSAFY 인증을 마쳤으면(`user.ssafy_verified_at`이 있음) `409`와 `SSAFY_ALREADY_VERIFIED`.
+3. 다른 계정의 `user.mattermost_id`에 같은 값이 있으면 `409`와 `MATTERMOST_ID_DUPLICATED`.
+4. 재전송 간격이 지나지 않았으면 `429`와 `TOO_MANY_REQUESTS`.
+5. 숫자 6자리 코드를 만들어 Redis에 계정, Mattermost ID, 기수, 코드, 보낸 시각을 저장한다. 이 계정의 이전 코드는 덮어쓴다.
+6. 그 기수의 Mattermost에서 그 ID로 코드를 담은 메시지를 보낸다.
+
+Mattermost ID가 틀려 메시지가 가지 않아도 같은 응답을 준다. 명세는 화면 문구로 ID를 다시 확인하라고 안내한다(회원가입 3 · 6). DB에는 아무것도 저장하지 않는다.
 
 ### 응답 `data`
 
 `201`로 답한다.
 
-| 이름 | 타입 | 설명 |
-|---|---|---|
-| `expiresAt` | 시각 | 인증 코드가 만료되는 시각 |
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `expiresAt` | 시각 | 인증 코드가 만료되는 시각 | 임시 저장소: 보낸 시각에 유효 시간을 더한 값 |
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": { "expiresAt": "2026-11-18T08:11:40Z" },
+  "error": null
+}
+```
 
 ### 에러
 
@@ -161,7 +347,7 @@
 
 ## POST /api/v1/me/ssafy-verifications/complete
 
-인증 코드를 확인하고, 기수 · 캠퍼스-층 · 약관 동의를 한 번에 저장한다. 기수와 Mattermost ID는 코드를 보낼 때 받은 값을 쓴다.
+인증 코드를 확인하고, 기수 · 캠퍼스-층 · 약관 동의를 한 번에 저장한다. 회원가입 3의 "땅굴 파기"를 누를 때 부른다. 기수와 Mattermost ID는 다시 받지 않고, 코드를 보낼 때 받아 둔 값을 쓴다.
 
 - 로그인: 필요
 - 명세: 회원가입 3 · 3, 5, 7, 8
@@ -171,16 +357,53 @@
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
 | 본문 | `code` | 문자열 | ✓ | Mattermost로 받은 숫자 6자리 |
-| 본문 | `campusFloorId` | 숫자 | ✓ | 고른 캠퍼스-층의 id |
+| 본문 | `campusFloorId` | 숫자 | ✓ | 고른 캠퍼스-층의 id. [`GET /api/v1/campuses`](00-common.md#get-apiv1campuses)의 `floors[].id` |
 | 본문 | `hasAgreedTerms` | 참/거짓 | ✓ | 이용약관 동의. `true`여야 한다 |
 | 본문 | `hasAgreedPrivacy` | 참/거짓 | ✓ | 개인정보 수집 · 이용 동의. `true`여야 한다 |
 
+```text
+POST /api/v1/me/ssafy-verifications/complete
+```
+
+```json
+{
+  "code": "730915",
+  "campusFloorId": 12,
+  "hasAgreedTerms": true,
+  "hasAgreedPrivacy": true
+}
+```
+
+### 서버가 하는 일
+
+1. `code`가 숫자 6자리인지, 두 동의가 모두 `true`인지 본다. 아니면 `400`과 `INVALID_INPUT`.
+2. 이 계정이 이미 SSAFY 인증을 마쳤으면 `409`와 `SSAFY_ALREADY_VERIFIED`.
+3. Redis에서 이 계정의 코드를 찾는다. 없으면 `VERIFICATION_CODE_EXPIRED`, 다르면 `VERIFICATION_CODE_MISMATCH`.
+4. `campusFloorId`가 지우지 않은 캠퍼스-층인지 본다. 아니면 `404`와 `CAMPUS_FLOOR_NOT_FOUND`.
+5. 아래를 한 트랜잭션으로 저장한다.
+   - `user`: `mattermost_id`(Redis에 둔 값), `ssafy_verified_at`과 `terms_agreed_at`(지금 시각)
+   - `user_profile`: 새 줄. `generation`(Redis에 둔 값), `campus_floor_id`. 닉네임과 두더지 아이템은 비워 둔다
+6. 저장하다 `mattermost_id`가 겹치면 모두 되돌리고 `409`와 `MATTERMOST_ID_DUPLICATED`.
+7. Redis의 코드를 지운다.
+
+땅굴과 땅굴 입구는 아직 만들지 않는다. 온보딩을 확정할 때 만든다([온보딩 API](03-onboarding.md)).
+
 ### 응답 `data`
 
-| 이름 | 타입 | 설명 |
-|---|---|---|
-| `userId` | 숫자 | 계정의 id |
-| `nextStep` | enum | 항상 `ONBOARDING` |
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `userId` | 숫자 | 계정의 id | `user.id` |
+| `nextStep` | enum | 항상 `ONBOARDING` | 계산: [다음에 갈 화면](#다음에-갈-화면) |
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": { "userId": 31, "nextStep": "ONBOARDING" },
+  "error": null
+}
+```
 
 ### 에러
 
@@ -206,14 +429,32 @@
 | 본문 | `email` | 문자열 | ✓ | 로그인 이메일 |
 | 본문 | `password` | 문자열 | ✓ | 비밀번호 |
 
+```text
+POST /api/v1/sessions
+```
+
+```json
+{ "email": "mole@example.com", "password": "mole1234!" }
+```
+
+### 서버가 하는 일
+
+1. `user.email`로 계정을 찾고 `user.password_hash`와 비밀번호를 비교한다. 계정이 없거나, 비밀번호가 다르거나, 비밀번호가 없는 계정(Google로만 가입)이면 `401`과 `LOGIN_FAILED`. 탈퇴한 계정은 이메일이 비어 있어 찾지 못한다.
+2. 지금 정지 중인지 본다. `user_suspension`에 시작 시각과 끝 시각 사이이고 해제(`lifted_at`)되지 않은 줄이 있으면 `403`과 `ACCOUNT_SUSPENDED`. 비밀번호가 맞은 뒤에만 정지 사실을 알린다.
+3. 세션을 만들고 세션 쿠키를 준다.
+
+가입을 마치지 않은 계정도 로그인된다. 어디로 갈지는 `nextStep`으로 알린다. DB에는 아무것도 저장하지 않는다.
+
 ### 응답 `data`
 
 `201`로 답한다.
 
-| 이름 | 타입 | 설명 |
-|---|---|---|
-| `userId` | 숫자 | 계정의 id |
-| `nextStep` | enum | [다음에 갈 화면](#다음에-갈-화면) |
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `userId` | 숫자 | 계정의 id | `user.id` |
+| `nextStep` | enum | `SSAFY_VERIFICATION`, `ONBOARDING`, `HOME` 가운데 하나 | 계산: [다음에 갈 화면](#다음에-갈-화면) |
+
+### 응답 예시
 
 ```json
 {
@@ -230,6 +471,13 @@
 | `401` | `LOGIN_FAILED` | 이메일이나 비밀번호가 맞지 않음. 어느 쪽이 틀렸는지는 알리지 않는다 |
 | `403` | `ACCOUNT_SUSPENDED` | 정지된 계정. `error.detail`에 사유와 끝나는 시각을 담는다 |
 
+`ACCOUNT_SUSPENDED`의 `detail`:
+
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `reason` | 문자열 | 정지 사유. 팝업에 보여 준다 | `user_suspension.reason` |
+| `endsAt` | 시각 | 정지가 끝나는 시각. 남은 기간은 프론트엔드가 계산한다 | `user_suspension.ends_at` |
+
 ```json
 {
   "success": false,
@@ -245,7 +493,7 @@
 
 ## DELETE /api/v1/sessions/current
 
-로그아웃한다. 지금 쓰는 세션을 지운다.
+로그아웃한다. 설정의 로그아웃 확인에서 "로그아웃"을 누를 때 부른다.
 
 - 로그인: 필요
 - 명세: 10 설정 – 로그아웃 확인 2
@@ -254,9 +502,28 @@
 
 없다.
 
+```text
+DELETE /api/v1/sessions/current
+```
+
+### 서버가 하는 일
+
+1. 요청에 실린 세션을 Redis에서 지운다. 다른 기기의 세션은 그대로 둔다.
+2. 세션 쿠키를 지우는 응답 헤더를 준다.
+
 ### 응답 `data`
 
 `null`이다.
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
 
 ### 에러
 
@@ -264,7 +531,7 @@
 
 ## GET /api/v1/me
 
-로그인한 계정과 다음에 갈 화면을 알려 준다. 프론트엔드는 처음 열릴 때 이 API로 로그인 여부를 확인한다. 로그인하지 않았으면 `401`과 `UNAUTHENTICATED`로 답한다.
+로그인한 계정과 다음에 갈 화면을 알려 준다. 프론트엔드는 서비스를 처음 열 때(새로 고침, Google 로그인에서 돌아온 직후 포함) 이 API로 로그인 여부를 확인한다.
 
 - 로그인: 필요
 - 명세: 영역 규칙 "로그인한 뒤 가는 곳"
@@ -273,12 +540,47 @@
 
 없다.
 
+```text
+GET /api/v1/me
+```
+
 ### 응답 `data`
 
-| 이름 | 타입 | 설명 |
-|---|---|---|
-| `userId` | 숫자 | 계정의 id |
-| `nextStep` | enum | [다음에 갈 화면](#다음에-갈-화면) |
+| 이름 | 타입 | 설명 | 값이 오는 곳 |
+|---|---|---|---|
+| `userId` | 숫자 | 로그인한 계정의 id | `user.id`. 세션에 든 계정 |
+| `nextStep` | enum | `SSAFY_VERIFICATION`, `ONBOARDING`, `HOME` 가운데 하나 | 계산: [다음에 갈 화면](#다음에-갈-화면) |
+
+### 주는 방식
+
+- 세션 쿠키로 계정을 찾아 그 계정 하나의 값만 준다.
+- 로그인하지 않았거나 세션이 만료됐으면 `401`과 `UNAUTHENTICATED`로 답한다. 프론트엔드는 이 응답을 "로그인하지 않음"으로 다룬다.
+- 닉네임, 두더지 같은 프로필 값은 담지 않는다. 프로필은 [내 땅굴 API](README.md)가 준다.
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": { "userId": 31, "nextStep": "HOME" },
+  "error": null
+}
+```
+
+로그인하지 않았을 때:
+
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "UNAUTHENTICATED",
+    "message": "로그인이 필요합니다.",
+    "fields": null,
+    "detail": null
+  }
+}
+```
 
 ### 에러
 
@@ -286,10 +588,31 @@
 
 ## GET /api/v1/oauth/google
 
-Google 로그인을 시작한다. JSON을 주고받는 API가 아니라 브라우저가 이 주소로 이동한다. 서버는 Google 로그인 화면으로 다시 보낸다. 응답 틀을 쓰지 않는다.
+Google 로그인을 시작한다. JSON을 주고받는 API가 아니라 브라우저가 이 주소로 이동한다. 응답 틀을 쓰지 않는다.
 
 - 로그인: 불필요
 - 명세: 로그인 5
+
+### 요청
+
+없다. "Google로 계속하기"를 누르면 프론트엔드가 브라우저의 주소를 이 주소로 바꾼다.
+
+```text
+GET /api/v1/oauth/google
+```
+
+### 서버가 하는 일
+
+1. 이 로그인 시도를 구분하는 값을 만들어 잠깐 기억해 둔다.
+2. 브라우저를 Google의 로그인 화면으로 보낸다(`302`). 돌아올 주소는 `/api/v1/oauth/google/callback`이다.
+
+### 응답 `data`
+
+본문이 없다. `302`와 `Location` 헤더로 답한다.
+
+### 에러
+
+응답 틀을 쓰지 않으므로 에러 코드가 없다.
 
 ## GET /api/v1/oauth/google/callback
 
@@ -298,17 +621,34 @@ Google이 로그인을 마친 브라우저를 돌려보내는 주소다. 프론�
 - 로그인: 불필요
 - 명세: 로그인 5
 
-서버가 하는 일:
+### 요청
 
-1. 처음 쓰는 Google 계정이면 계정을 만든다.
-2. 세션을 만들고 세션 쿠키를 준다.
-3. 프론트엔드의 정해진 주소로 브라우저를 보낸다. 프론트엔드는 `GET /api/v1/me`의 `nextStep`으로 갈 곳을 정한다.
+Google이 붙여 보내는 쿼리(`code`, `state`)를 받는다. 프론트엔드는 이 값을 다루지 않는다.
 
-로그인하지 못했으면(정지된 계정, Google에서 취소) 세션을 만들지 않고, 프론트엔드 주소에 `error=<code>`를 붙여 보낸다.
+### 서버가 하는 일
+
+1. 시작할 때 기억해 둔 값과 `state`가 같은지 보고, `code`로 Google에서 그 사람의 Google 식별자와 이메일을 받아 온다.
+2. `user.google_sub`에 같은 식별자가 있는 계정을 찾는다. 없으면 처음 쓰는 Google 계정이므로 `user`에 한 줄을 만든다. `google_sub`, `google_email`, `role`은 `USER`, `status`는 `ACTIVE`다. `email`과 `password_hash`는 비워 둔다.
+3. 그 계정이 지금 정지 중이면 세션을 만들지 않는다.
+4. 세션을 만들고 세션 쿠키를 준다.
+5. 브라우저를 프론트엔드의 정해진 주소로 보낸다(`302`).
+
+### 응답 `data`
+
+본문이 없다. `302`와 `Location` 헤더로 답한다.
+
+| 결과 | 브라우저가 가는 곳 | 그다음 프론트엔드가 하는 일 |
+|---|---|---|
+| 로그인됨 | 프론트엔드의 정해진 주소 | `GET /api/v1/me`를 불러 `nextStep`으로 이동한다. 처음 쓰는 Google 계정은 `SSAFY_VERIFICATION`이다 |
+| 로그인하지 못함(정지된 계정, Google에서 취소) | 같은 주소에 `error=<code>`를 붙인 주소 | 로그인 화면에 머물고, `ACCOUNT_SUSPENDED`면 정지 팝업을 띄운다 |
+
+### 에러
+
+응답 틀을 쓰지 않는다. 실패는 위 표처럼 주소의 `error`로 알린다.
 
 ## POST /api/v1/password-resets
 
-비밀번호 재설정 메일을 보낸다. 가입하지 않은 이메일이거나 Google로만 가입한 계정이어도 똑같이 성공으로 답한다. 다시 부르면 이전 링크는 쓸 수 없게 된다.
+비밀번호 재설정 메일을 보낸다. 재설정 메일 요청의 "링크 보내기"와 메일 보냄의 "다시 보내기"가 이 API를 부른다. 가입 여부가 드러나지 않도록 어떤 이메일을 넣어도 똑같이 성공으로 답한다.
 
 - 로그인: 불필요
 - 명세: 재설정 메일 요청 2, 메일 보냄 2
@@ -317,11 +657,38 @@ Google이 로그인을 마친 브라우저를 돌려보내는 주소다. 프론�
 
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
-| 본문 | `email` | 문자열 | ✓ | 가입한 이메일 |
+| 본문 | `email` | 문자열 | ✓ | 가입한 이메일. 이메일 형식이어야 한다 |
+
+```text
+POST /api/v1/password-resets
+```
+
+```json
+{ "email": "mole@example.com" }
+```
+
+### 서버가 하는 일
+
+1. `email`이 이메일 형식인지 본다. 아니면 `400`과 `INVALID_INPUT`.
+2. `user.email`로 계정을 찾는다. 계정이 없거나 비밀번호가 없는 계정(Google로만 가입)이면 아무것도 하지 않고 성공으로 답한다.
+3. 계정이 있으면 링크에 넣을 값(`token`)을 만들어 Redis에 계정과 함께 30분 동안 저장한다. 그 계정의 이전 링크는 지운다.
+4. 그 이메일로 재설정 링크를 담은 메일을 보낸다.
+
+DB에는 아무것도 저장하지 않는다.
 
 ### 응답 `data`
 
-`201`로 답한다. `data`는 `null`이다.
+`201`로 답한다. `data`는 `null`이다. 메일을 보냈는지는 알리지 않는다.
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
 
 ### 에러
 
@@ -340,9 +707,28 @@ Google이 로그인을 마친 브라우저를 돌려보내는 주소다. 프론�
 |---|---|---|---|---|
 | 경로 | `token` | 문자열 | ✓ | 메일의 링크에 든 값 |
 
+```text
+GET /api/v1/password-resets/3fa9c1d27b4e4f0a9c51
+```
+
 ### 응답 `data`
 
-`null`이다.
+`null`이다. 누구의 링크인지(이메일, 계정 id)는 알리지 않는다.
+
+### 주는 방식
+
+- Redis에 그 `token`이 남아 있으면 성공으로 답한다. 확인만 하고 링크를 지우지 않는다.
+- 30분이 지났거나, 이미 썼거나, 다시 보내서 지워진 링크는 Redis에 없으므로 `PASSWORD_RESET_LINK_INVALID`로 답한다.
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
 
 ### 에러
 
@@ -352,7 +738,7 @@ Google이 로그인을 마친 브라우저를 돌려보내는 주소다. 프론�
 
 ## POST /api/v1/password-resets/{token}/complete
 
-새 비밀번호를 저장하고 링크를 만료시킨다. 로그인시키지 않는다. 프론트엔드는 로그인 화면으로 보낸다.
+새 비밀번호를 저장하고 링크를 만료시킨다. 새 비밀번호 설정의 "비밀번호 바꾸기"를 누를 때 부른다. 로그인시키지 않는다. 프론트엔드는 로그인 화면으로 보낸다.
 
 - 로그인: 불필요
 - 명세: 새 비밀번호 설정 3
@@ -362,11 +748,37 @@ Google이 로그인을 마친 브라우저를 돌려보내는 주소다. 프론�
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
 | 경로 | `token` | 문자열 | ✓ | 메일의 링크에 든 값 |
-| 본문 | `password` | 문자열 | ✓ | [00 공통](../spec/00-common.md) 9의 비밀번호 규칙을 따른다 |
+| 본문 | `password` | 문자열 | ✓ | 새 비밀번호. [00 공통](../spec/00-common.md) 9의 비밀번호 규칙을 따른다 |
+
+```text
+POST /api/v1/password-resets/3fa9c1d27b4e4f0a9c51/complete
+```
+
+```json
+{ "password": "newmole5678@" }
+```
+
+### 서버가 하는 일
+
+1. `password`의 규칙을 본다. 어긋나면 `400`과 `INVALID_INPUT`. 이때는 링크를 지우지 않으므로 다시 시도할 수 있다.
+2. Redis에서 `token`으로 계정을 찾는다. 없으면 `404`와 `PASSWORD_RESET_LINK_INVALID`.
+3. 그 계정의 `user.password_hash`를 새 비밀번호의 해시로 바꾼다.
+4. Redis에서 링크를 지운다. 같은 링크는 다시 쓸 수 없다.
+5. 그 계정의 로그인 세션을 모두 지운다. 로그인돼 있던 기기는 모두 로그아웃된다.
 
 ### 응답 `data`
 
 `null`이다.
+
+### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
 
 ### 에러
 
@@ -379,9 +791,13 @@ Google이 로그인을 마친 브라우저를 돌려보내는 주소다. 프론�
 - **이미 가입한 이메일**: 인증 코드를 요청할 때 `EMAIL_DUPLICATED`로 알린다. 비밀번호 찾기와 달리 가입 여부가 드러난다.
 - **계정이 만들어지는 때**: 회원가입 2에서 비밀번호를 정할 때 만들고 바로 로그인 상태가 된다. DB 설계의 A4와 같다.
 - **비밀번호를 재설정한 뒤**: 그 계정의 로그인 세션을 모두 지운다.
+- **정지를 알리는 때**: 이메일 로그인은 비밀번호가 맞은 뒤에만 정지 사실을 알린다. 비밀번호를 모르는 사람이 남의 정지 여부를 알 수 없게 한다.
+- **로그아웃의 범위**: 지금 쓰는 기기의 세션만 지운다.
 
 ## 구현 단계로 넘기는 것
 
 - 인증 코드의 유효 시간과 재전송 간격(명세에서 제안 상태다)
+- 인증 코드를 틀릴 수 있는 횟수
+- 세션 쿠키의 이름
 - Google 로그인을 마친 뒤 돌아갈 프론트엔드 주소
 - 정지된 계정이 Google로 로그인했을 때 사유와 기간을 프론트엔드에 전하는 방법
