@@ -60,7 +60,7 @@ POST /api/v1/email-verifications/check
 - MUST NOT: 실패를 `200`으로 답하지 않는다.
 - MUST NOT: 본문이 없는 `204`를 쓰지 않는다.
 
-브라우저를 다른 주소로 보내는 것으로 답하는 주소(Google 로그인)는 이 틀을 쓰지 않는다.
+브라우저를 다른 주소로 보내는 것으로 답하는 주소(Google 로그인)는 이 틀을 쓰지 않는다. 실시간 소식을 보내는 연결도 이 틀을 쓰지 않는다([실시간 소식](#실시간-소식)).
 
 ## 상태 코드
 
@@ -218,6 +218,26 @@ Content-Type: multipart/form-data
 - MUST NOT: 파일을 글자로 바꿔(base64) JSON 본문에 담지 않는다.
 - 문서의 요청 표에는 파일의 위치를 "폼", 타입을 "파일"로 적는다.
 
+## 실시간 소식
+
+화면이 묻지 않아도 서버가 먼저 알려야 하는 것(새 메시지, 안 읽은 수, 알림 아이콘의 빨간 점)은 계정마다 연결 하나로 보낸다.
+
+```text
+GET /api/v1/me/event-stream
+Accept: text/event-stream
+
+event: NOTIFICATION_UNREAD_CHANGED
+data: {"unreadCount":4,"hasUnread":true}
+```
+
+- MUST: 서버가 브라우저로만 보내는 연결(SSE)을 쓴다. 로그인한 뒤 한 번 연결해 계속 열어 둔다.
+- MUST: 소식 한 건은 이름(`event`)과 값(`data`의 JSON)으로 이뤄진다. 이름은 enum이고 값의 필드는 `JSON 필드` 규칙을 따른다.
+- MUST: 값을 바꾸는 일은 이 연결이 아니라 일반 API로 한다. 메시지를 보내는 것도 일반 API다.
+- MUST: 끊긴 동안의 소식은 다시 보내지 않는다. 다시 연결하면 프론트엔드가 조회 API로 화면을 맞춘다.
+- MUST NOT: 영역마다 연결을 따로 열지 않는다. 새 소식은 같은 연결에 이름을 더한다.
+
+소식의 이름과 값은 그 소식을 만드는 영역의 문서에 적는다([채팅 API](api/06-chat.md#get-apiv1meevent-stream), [알림 API](api/09-notification.md#실시간-소식)).
+
 ## 로그인
 
 세션 방식을 쓴다. 로그인하면 서버가 세션을 만들어 Redis에 저장하고 세션 쿠키를 준다. 이메일 로그인과 Google 로그인 모두 같은 세션을 만든다.
@@ -280,6 +300,5 @@ POST   /api/v1/chat-requests/5/accept
 ## 이 문서가 다루지 않는 것
 
 - 영역별 개별 API. 각 영역을 구현하기 직전에 쓴다.
-- 실시간 통신(채팅, 알림).
 - 올린 파일을 두는 저장소와 파일 주소의 모양. 구현할 때 정한다.
 - 세션이 유지되는 기간, CSRF 방어 방법, 허용하는 출처(CORS). 백엔드 보안 설정을 할 때 정한다.
