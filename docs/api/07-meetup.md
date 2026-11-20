@@ -169,6 +169,8 @@
 | `PENDING` → `MEETUP_CANCELED` | 서버 | [모임 취소](#post-apiv1meetupsmeetupidcancel)에 딸려 일어난다 | 모임 취소 알림만 간다 |
 | `CONFIRMED` → `CANCELED` | 참여자 | [참여 취소](#post-apiv1meetupsmeetupidcancel-participation) | 모임 대화방에서 뺀다. 주최자에게 알림 |
 | `CONFIRMED` → `KICKED` | 주최자 | [내보내기](#post-apiv1meetup-applicationsmeetupapplicationidkick) | 모임 대화방에서 뺀다. 그 사람에게 알림 |
+| `PENDING` → `WITHDRAWN` | 서버 | [회원 탈퇴](10-settings.md#post-apiv1mewithdraw)에 딸려 일어난다. 예정 모임만이다 | 없음 |
+| `CONFIRMED` → `CANCELED` | 서버 | [회원 탈퇴](10-settings.md#post-apiv1mewithdraw)에 딸려 일어난다. 예정 모임만이고, 시작 24시간 전이 지났어도 바꾼다 | 모임 대화방에서 뺀다. 주최자에게 알림 |
 
 - 다시 신청할 수 있는 것은 줄이 없거나 `WITHDRAWN`일 때뿐이다. `REJECTED`, `CANCELED`, `KICKED`, `MEETUP_CANCELED`에서는 다시 신청할 수 없다.
 - 모집 마감 시각이 지난 `PENDING`은 예약 작업이 아직 바꾸지 않았더라도 `REJECTED`로 본다. 응답에 `REJECTED`로 담고, 수락과 신청 취소는 받지 않는다.
@@ -1791,5 +1793,4 @@ GET /api/v1/meetup-calendar?year=2026&month=11&scope=MINE
 - 모집 마감 때 대기 신청을 미승인으로 바꾸는 예약 작업의 실행 방법(DB 설계에서도 넘겼다)
 - 검색어를 찾는 방법의 세부(띄어쓰기, 여러 낱말)
 - 장소의 주소 찾기에 쓸 서비스
-- 탈퇴할 때 예정 모임의 신청과 주최한 모임을 처리하는 API(10 설정 · 계정에서 정한다)
 - 모임 만들기와 참여 신청을 짧은 시간에 너무 많이 하는 것을 막는 기준
