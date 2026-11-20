@@ -23,7 +23,7 @@
 | `POST` | `/api/v1/burrows/{burrowId}/guestbook-entries` | 방명록 글을 쓴다 | 필요 | 방문자 뷰 · 방명록 1 |
 | `POST` | `/api/v1/chat-requests` | 대화 요청을 보낸다 | 필요 | 대화 요청 팝업 1 ~ 3, 방문자 뷰 4 |
 
-방명록 글의 목록과 삭제는 [내 땅굴 API](04-my-burrow.md#get-apiv1burrowsburrowidguestbook-entries)의 것을 방문자도 함께 쓴다. 보낸 대화 요청을 수락, 거절, 취소하는 API는 [06 채팅](README.md)에서 다룬다.
+방명록 글의 목록과 삭제는 [내 땅굴 API](04-my-burrow.md#get-apiv1burrowsburrowidguestbook-entries)의 것을 방문자도 함께 쓴다. 보낸 대화 요청을 수락, 거절, 취소하는 API는 [채팅 API](06-chat.md)에서 다룬다.
 
 ## 화면마다 부르는 API
 
@@ -42,7 +42,7 @@
 | 추천 결과 · 답변 보기 | 열 때 | 없음. 탐색에 들어올 때 받은 값이나 "추천 받기"의 응답을 쓴다 | 카드 뒤집기 |
 | 방문자 뷰 · 방노트 | 열 때 | `GET /api/v1/users/{userId}/burrow` | 가구와 땅굴 무드, 겹치는 관심사 수, 가구의 체크 표시, 우체통의 깃발, 대화 버튼의 문구, 방노트 펼치기 |
 | 방문자 뷰 | "단골 추가" | `PUT /api/v1/burrows/{burrowId}/regular`. 다시 누르면 `DELETE` | 버튼의 모습 |
-| 대화 요청 팝업 | "요청 보내기" | `POST /api/v1/chat-requests` | 빠른 멘트, 완료 토스트 |
+| 대화 요청 팝업 | "요청 보내기" | `POST /api/v1/chat-requests` | 빠른 멘트, 완료 토스트. 대화방이 바로 열렸으면 그 대화방으로 가기 |
 | 방문자 뷰 · 방명록 | 열 때, 페이지 번호를 누를 때 | [`GET /api/v1/burrows/{burrowId}/guestbook-entries`](04-my-burrow.md#get-apiv1burrowsburrowidguestbook-entries) | 시간 표기, 글이 없을 때의 문구 |
 | 방문자 뷰 · 방명록 | "남기기" | `POST /api/v1/burrows/{burrowId}/guestbook-entries` | 목록 맨 위에 올리기 |
 | 방문자 뷰 · 방명록 | "삭제" | [`DELETE /api/v1/guestbook-entries/{guestbookEntryId}`](04-my-burrow.md#delete-apiv1guestbook-entriesguestbookentryid) | 확인 문구 |
@@ -83,19 +83,19 @@
 
 ### 대화 버튼의 상태
 
-방문자 뷰의 주인 두더지 위 버튼은 [남의 땅굴 조회](#get-apiv1usersuseridburrow)의 `chat.status`로 정한다. enum이고 값은 넷이다. 값의 종류는 임시다. 대화 요청의 수락, 거절, 취소 규칙과 함께 [06 채팅](README.md)에서 확정한다.
+방문자 뷰의 주인 두더지 위 버튼은 [남의 땅굴 조회](#get-apiv1usersuseridburrow)의 `chat.status`로 정한다. enum이고 값은 넷이다.
 
 | `chat.status` | 버튼 | 때 |
 |---|---|---|
 | `CHATTING` | "대화하기". 누르면 `chat.chatRoomId`의 대화방으로 간다 | 두 사람이 모두 나가지 않은 1:1 대화방이 있다 |
 | `REQUEST_SENT` | "요청 보냄". 누를 수 없다 | 내가 보낸 살아 있는 요청이 있다 |
-| `REQUEST_RECEIVED` | "대화 요청하기". 누르면 팝업 대신 "이미 나에게 요청한 사람입니다" 토스트를 띄운다 | 상대가 나에게 보낸 살아 있는 요청이 있다 |
+| `REQUEST_RECEIVED` | "대화 요청하기". 누르면 팝업 대신 "이미 나에게 요청한 사람입니다" 토스트를 띄운다 | 상대가 나에게 보낸 요청에 내가 아직 답하지 않았다(`PENDING`이고 5일이 지나지 않음) |
 | `NONE` | "대화 요청하기". 누르면 대화 요청 팝업을 연다 | 위의 어느 것도 아니다 |
 
 - 살아 있는 요청은 보낸 지 5일이 지나지 않았고 `chat_request.status`가 `PENDING`이거나 `REJECTED`인 요청이다([DB 설계](../db/chat.md)). 받은 사람이 거절해도 보낸 사람에게는 만료될 때까지 `REQUEST_SENT`다. 거절을 드러내지 않기 위해서다.
 - 위에서부터 차례로 본다. 대화방이 있으면 요청이 남아 있어도 `CHATTING`이다.
-- 수락, 거절, 취소, 만료는 [06 채팅](README.md)에서 다룬다.
-- 내가 거절한 요청이 만료되기 전에 그 사람에게 요청을 보내려 할 때의 버튼과 안내는 정하지 않았다. 지금은 `REQUEST_RECEIVED`로 온다. 06 채팅에서 정한다.
+- 내가 거절한 요청이 남아 있는 사람은 `NONE`으로 온다. 버튼을 누르면 대화 요청 팝업이 그대로 열린다. 그 사람에게 요청을 보내면 거절했던 요청을 수락한 것으로 처리해 바로 대화방이 열린다([대화 요청 보내기](#post-apiv1chat-requests)).
+- 수락, 거절, 취소, 만료는 [채팅 API](06-chat.md#대화-요청의-상태)에서 다룬다.
 
 ### 내 땅굴에는 할 수 없는 일
 
@@ -842,7 +842,7 @@ POST /api/v1/burrows/27/guestbook-entries
 
 ## POST /api/v1/chat-requests
 
-다른 사람에게 1:1 대화 요청을 보낸다. 대화 요청 팝업의 "요청 보내기"가 부른다. 상대가 수락해야 대화방이 생긴다.
+다른 사람에게 1:1 대화 요청을 보낸다. 대화 요청 팝업의 "요청 보내기"가 부른다. 상대가 수락해야 대화방이 생긴다. 내가 거절한 요청이 남아 있는 사람에게 보내면 요청을 만들지 않고 바로 대화방이 열린다.
 
 - 로그인: 필요
 - 명세: 대화 요청 팝업 1 ~ 3, 방문자 뷰 4
@@ -872,23 +872,25 @@ POST /api/v1/chat-requests
 3. 두 사람의 `user` 줄을 id가 작은 것부터 잠근 뒤 아래를 차례로 본다([DB 설계](../db/chat.md)).
 4. 두 사람이 모두 나가지 않은 1:1 대화방이 있으면 `409`와 `CHAT_ROOM_ALREADY_EXISTS`.
 5. 내가 그 사람에게 보낸 살아 있는 요청이 있으면 `409`와 `CHAT_REQUEST_ALREADY_SENT`.
-6. 그 사람이 나에게 보낸 살아 있는 요청이 있으면 `409`와 `CHAT_REQUEST_ALREADY_RECEIVED`. 요청을 새로 만들지 않는다.
-7. `chat_request`에 한 줄을 만든다. `sender_id`는 요청한 사람, `receiver_id`는 받을 사람, `message`는 인사(없으면 `NULL`), `status`는 `PENDING`이다.
-8. 받을 사람에게 대화 요청 알림을 만든다. 알림의 모양은 [09 알림](README.md)에서 다룬다.
+6. 그 사람이 나에게 보낸 살아 있는 요청이 `PENDING`이면 `409`와 `CHAT_REQUEST_ALREADY_RECEIVED`. 요청을 새로 만들지 않는다.
+7. 그 사람이 나에게 보낸 살아 있는 요청이 `REJECTED`면 내가 거절한 요청이다. 요청을 새로 만들지 않고 그 요청을 내가 수락한 것으로 처리한 뒤 끝낸다. 대화방과 참여자를 만들고, 요청을 `ACCEPTED`로 바꾸고, 수락 안내 메시지를 넣고, 그 사람에게 수락 알림을 만든다([대화 요청 수락](06-chat.md#post-apiv1chat-requestschatrequestidaccept)의 5 ~ 7, 9와 같다). 인사를 보냈으면 만든 대화방에 내가 보낸 첫 메시지로 넣는다.
+8. `chat_request`에 한 줄을 만든다. `sender_id`는 요청한 사람, `receiver_id`는 받을 사람, `message`는 인사(없으면 `NULL`), `status`는 `PENDING`이다.
+9. 받을 사람에게 대화 요청 알림을 만든다. 알림의 모양은 [09 알림](README.md)에서 다룬다.
 
-살아 있는 요청의 뜻은 [대화 버튼의 상태](#대화-버튼의-상태)에 있다. 두 사람이 같은 순간에 서로에게 보내도 하나만 만들어진다.
+살아 있는 요청의 뜻은 [대화 버튼의 상태](#대화-버튼의-상태)에 있다. 두 사람이 같은 순간에 서로에게 보내도 하나만 만들어진다. 7에서는 그 사람에게 거절됐던 것이 드러나지 않는다. 그 사람이 보기에는 기다리던 요청이 수락된 것이다.
 
 ### 응답 `data`
 
-`201`로 답한다.
+`201`로 답한다. 요청을 새로 만들었을 때와 대화방이 바로 열렸을 때 모두 같다.
 
 | 이름 | 타입 | 설명 | 값이 오는 곳 |
 |---|---|---|---|
-| `chatRequestId` | 숫자 | 만든 대화 요청의 id | `chat_request.id` |
-| `createdAt` | 시각 | 보낸 시각 | `chat_request.created_at` |
-| `expiresAt` | 시각 | 요청이 만료되는 시각 | 계산: `chat_request.created_at`에 5일을 더한 시각 |
+| `chatRequestId` | 숫자 | 만든 대화 요청의 id. 대화방이 바로 열렸으면 `null` | `chat_request.id` |
+| `createdAt` | 시각 | 보낸 시각. 대화방이 바로 열렸으면 `null` | `chat_request.created_at` |
+| `expiresAt` | 시각 | 요청이 만료되는 시각. 대화방이 바로 열렸으면 `null` | 계산: `chat_request.created_at`에 5일을 더한 시각 |
+| `chatRoomId` | 숫자 | 바로 열린 1:1 대화방의 id. 요청을 새로 만들었으면 `null` | `chat_room.id`. 서버가 하는 일 7에서 만든 대화방 |
 
-프론트엔드는 방문자 뷰의 버튼을 "요청 보냄"으로 바꾸고 완료 토스트를 띄운다.
+프론트엔드는 `chatRoomId`가 `null`이면 방문자 뷰의 버튼을 "요청 보냄"으로 바꾸고 완료 토스트를 띄운다. 값이 있으면 팝업을 닫고 그 대화방으로 간다.
 
 ### 응답 예시
 
@@ -898,13 +900,29 @@ POST /api/v1/chat-requests
   "data": {
     "chatRequestId": 88,
     "createdAt": "2026-11-20T06:45:10Z",
-    "expiresAt": "2026-11-25T06:45:10Z"
+    "expiresAt": "2026-11-25T06:45:10Z",
+    "chatRoomId": null
   },
   "error": null
 }
 ```
 
-상대가 먼저 나에게 요청을 보냈을 때:
+내가 거절한 요청이 남아 있는 사람에게 보내 대화방이 바로 열렸을 때:
+
+```json
+{
+  "success": true,
+  "data": {
+    "chatRequestId": null,
+    "createdAt": null,
+    "expiresAt": null,
+    "chatRoomId": 16
+  },
+  "error": null
+}
+```
+
+상대가 먼저 나에게 요청을 보냈고 내가 아직 답하지 않았을 때:
 
 ```json
 {
@@ -926,7 +944,7 @@ POST /api/v1/chat-requests
 | `404` | `USER_NOT_FOUND` | 없는 사람이거나, 탈퇴했거나, 가입을 마치지 않은 사람 |
 | `409` | `CHAT_ROOM_ALREADY_EXISTS` | 이미 대화 중인 사람 |
 | `409` | `CHAT_REQUEST_ALREADY_SENT` | 내가 보낸 살아 있는 요청이 있음 |
-| `409` | `CHAT_REQUEST_ALREADY_RECEIVED` | 상대가 보낸 살아 있는 요청이 있음 |
+| `409` | `CHAT_REQUEST_ALREADY_RECEIVED` | 상대가 보낸 요청에 내가 아직 답하지 않음 |
 
 ## 명세에 없어 이 문서에서 정한 것
 
@@ -941,7 +959,8 @@ POST /api/v1/chat-requests
 - **추천받은 뒤 탈퇴한 사람**: 결과에서 뺀다.
 - **남의 땅굴을 사람 id로 부르기**: `GET /api/v1/users/{userId}/burrow`다. "땅굴 놀러가기"가 있는 곳(안내판, 단골 목록, 추천 카드, 프로필 팝업, 채팅 요청, 모임 상세, 글 상세)이 모두 사용자 표시를 갖고 있어, 사람 id만으로 바로 부를 수 있다.
 - **방문자에게 주지 않는 값**: 단골 수, 겹치는 관심사 수다. 단골 수는 주인만 보고, 겹치는 수는 프론트엔드가 `isShared`를 센다.
-- **대화 버튼의 상태**: `chat.status` 네 가지 값으로 준다. 임시이고 06 채팅에서 확정한다.
+- **대화 버튼의 상태**: `chat.status` 네 가지 값으로 준다.
+- **내가 거절한 요청이 남아 있는 사람에게 보내는 요청**: 새 요청을 만들지 않고 거절했던 요청을 수락한 것으로 처리해 바로 대화방을 연다. 응답의 `chatRoomId`로 알린다. 쓴 인사는 그 대화방의 첫 메시지가 된다.
 - **대화 요청의 인사**: 비워도 보낼 수 있다. DB 설계에서 `chat_request.message`가 비울 수 있는 칼럼이다.
 - **방명록을 쓴 뒤의 응답**: 만든 글을 목록의 항목과 같은 모양으로 준다.
 - **내 땅굴에 할 수 없는 일의 에러**: 단골 담기와 방명록 쓰기 모두 `OWN_BURROW_NOT_ALLOWED`로 답한다.
@@ -953,5 +972,4 @@ POST /api/v1/chat-requests
 - 오늘의 추천 기준 날짜가 바뀌는 시각(DB 설계에서도 구현 단계로 넘겼다)
 - 캠퍼스 · 층이나 기수를 고르지 않고 전체에서 추천받을 수 있는지(명세의 보류한 결정이다)
 - 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
-- 대화 버튼의 상태 값과, 내가 거절한 요청이 남아 있는 사람에게 요청을 보내려 할 때의 처리(06 채팅에서 정한다)
 - 방명록 알림과 대화 요청 알림의 모양(09 알림에서 정한다)

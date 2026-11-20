@@ -32,18 +32,18 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | 조건 | 처리 |
 | --- | --- |
 | 생성 후 5일 미만의 `PENDING` | 받는 사람은 수락·거절 가능. 보낸 사람은 취소 가능 |
-| 생성 후 5일 미만의 `REJECTED` | 받는 사람의 목록·요청 수에서 제외. 보낸 사람에게는 대기로 표시하고 취소 허용 |
-| 위 두 상태가 만료 전인 동안 | 방향에 관계없이 같은 두 사람의 새 요청을 막음 |
+| 생성 후 5일 미만의 `REJECTED` | 받는 사람의 목록·요청 수에서 제외. 보낸 사람에게는 대기로 표시하고 취소 허용. 받는 사람이 보낸 사람에게 새 요청을 보내면 이 요청을 `ACCEPTED`로 바꾸고 대화방을 만듦 |
+| 위 두 상태가 만료 전인 동안 | 방향에 관계없이 같은 두 사람의 새 요청 행을 만들지 않음. 거절한 사람이 보내는 요청만 위 줄대로 수락으로 처리 |
 | 보낸 사람이 취소 | `PENDING` 또는 `REJECTED`를 `CANCELED`로 바꾸고 `responded_at` 갱신. 두 경우에 동일한 응답을 주고 알림은 생성하지 않음 |
 | 생성 후 5일 이상 또는 `CANCELED` | 활성 요청에서 제외. 두 사람이 활성 1:1 대화방에 없으면 새 요청 가능 |
 
-기존 `H1`대로 만료 여부를 `created_at`에서 계산한다. `responded_at`은 마지막 상태 변경 시각으로 사용한다. 수락은 만료 전 `PENDING`에서만 가능하며, 요청·방·참여자 두 명을 같은 트랜잭션에서 갱신한다.
+기존 `H1`대로 만료 여부를 `created_at`에서 계산한다. `responded_at`은 마지막 상태 변경 시각으로 사용한다. 수락은 만료 전 `PENDING`에서만 가능하다. 예외로, 거절한 사람이 만료 전에 보낸 사람에게 새 요청을 보내면 그 `REJECTED` 요청을 수락으로 처리한다. 보낸 사람에게는 거절됐던 사실이 드러나지 않고, 요청이 두 건이 되지도 않는다. 두 경우 모두 요청·방·참여자 두 명을 같은 트랜잭션에서 갱신한다.
 
 생성·수락·거절·취소 및 1:1 방 나가기는 해당 두 `user` 행을 ID 오름차순으로 잠근 뒤 상태를 확인한다. 요청 생성은 양방향의 활성 요청과 활성 1:1 방을 확인한 후 삽입한다. 잠금 아래 다시 읽은 시점을 기준으로 유효 기간을 검사한다. 두 사람이 동시에 요청해도 하나만 생성되며, 수락과 취소가 동시에 들어오면 먼저 처리된 유효한 상태 전이가 결과를 결정한다.
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 검증에서는 거절 전·후의 취소 응답이 같은지, 거절 후 B의 역방향 요청이 차단되는지, 취소 직후 또는 정확히 5일이 지난 시점에는 새 요청이 가능한지 확인한다. 양방향 동시 생성은 요청 1개, 동시 수락은 대화방 1개만 만들어야 한다.
+설계 검토에서 확인했다. 실행 검증에서는 거절 전·후의 취소 응답이 같은지, 거절 후 B가 A에게 요청을 보내면 새 요청 없이 A의 요청이 수락으로 바뀌고 대화방이 하나만 생기는지, 취소 직후 또는 정확히 5일이 지난 시점에는 새 요청이 가능한지 확인한다. 양방향 동시 생성은 요청 1개, 동시 수락은 대화방 1개만 만들어야 한다.
 
 ## 모임 참여 기록과 대화방 접근 권한 구분하기
 
@@ -147,7 +147,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | --- | --- | --- |
 | 요청 만료 여부 | `chat_request.created_at`, `chat_request.status` | `PENDING`, `REJECTED`에서 현재 시각이 `created_at + 5일` 이상이면 활성 요청에서 제외한다. |
 | 받은 요청 수와 보낸 요청 수 | `chat_request.receiver_id`, `chat_request.sender_id`, `chat_request.status`, `chat_request.created_at` | 받은 요청은 현재 사용자가 수신자인 만료 전 `PENDING`을 센다. 보낸 요청은 현재 사용자가 발신자인 만료 전 `PENDING`, `REJECTED`를 센다. |
-| 땅굴 방문자 화면의 대화 버튼 | `chat_room.type`, `chat_room_member.chat_room_id`, `chat_room_member.user_id`, `chat_room_member.left_at`, `chat_request.sender_id`, `chat_request.receiver_id`, `chat_request.status`, `chat_request.created_at`, `user.status` | 두 사람이 모두 활동 중이며 나가지 않은 `DIRECT` 방이 있으면 ‘대화하기’다. 그 외에 내가 보낸 활성 요청이 있으면 ‘요청 보냄’이다. 그 외에는 ‘대화 요청하기’를 표시하며, 상대의 활성 요청이 있으면 새 요청은 위의 양방향 규칙으로 차단한다. |
+| 땅굴 방문자 화면의 대화 버튼 | `chat_room.type`, `chat_room_member.chat_room_id`, `chat_room_member.user_id`, `chat_room_member.left_at`, `chat_request.sender_id`, `chat_request.receiver_id`, `chat_request.status`, `chat_request.created_at`, `user.status` | 두 사람이 모두 활동 중이며 나가지 않은 `DIRECT` 방이 있으면 ‘대화하기’다. 그 외에 내가 보낸 활성 요청이 있으면 ‘요청 보냄’이다. 그 외에는 ‘대화 요청하기’를 표시한다. 상대가 보낸 `PENDING` 요청이 있으면 새 요청을 막고, 내가 거절한 `REJECTED` 요청이 있으면 요청을 보낼 때 그 요청을 수락으로 처리한다. |
 | 안 읽은 메시지 수 | `chat_room_member.chat_room_id`, `chat_room_member.user_id`, `chat_room_member.last_read_message_id`, `chat_message.chat_room_id`, `chat_message.id`, `chat_message.type` | 같은 방의 `TEXT` 중 마지막으로 읽은 ID보다 큰 행을 센다. 읽은 ID가 NULL이면 하한을 적용하지 않는다. 안내 유형은 제외한다. 본인이 보낸 메시지를 별도로 제외할지는 미정이다. |
 | 대화 목록의 마지막 메시지와 시각 | `chat_message.chat_room_id`, `chat_message.id`, `chat_message.type`, `chat_message.content`, `chat_message.created_at` | 같은 방에서 ID가 가장 큰 행을 찾는다. `TEXT`면 본문, 안내 유형이면 해당 안내 문구를 만들고 `created_at`을 시각으로 사용한다. |
 | 대화 목록 이름과 그림 | `chat_room.type`, `chat_room.meetup_id`, `chat_room_member.user_id`, `user.status`, `user_profile.nickname`, `user_profile.mole_head`, `user_profile.mole_face`, `user_profile.mole_neck`, `user_profile.mole_hand`, `meetup.title` | 1:1은 참여 행에서 본인을 제외한 계정의 닉네임과 두더지 아이템으로 표시한다. 상대가 탈퇴했다면 탈퇴한 사용자 이름과 기본 두더지를 사용한다. 모임 방의 이름은 `meetup.title`을 읽는다. |
