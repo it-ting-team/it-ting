@@ -87,19 +87,19 @@ erDiagram
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 모임 ID |
 | `host_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 모임 주최자 |
-| `category` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, 스터디·프로젝트·운동·취미/문화·식사/카페·게임·기타에 대응하는 임시 코드 | 모임 카테고리 |
-| `title` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 이름. 검색 대상 |
-| `description` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음 | 소개. 검색 대상 |
+| `category` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `HOBBY`(취미/문화), `FOOD`(식사/카페), `STUDY`(스터디/프로젝트), `ETC`(기타), `GAME`(게임), `EXERCISE`(운동) | 모임 카테고리 |
+| `title` | `VARCHAR(30)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 30자 | 이름. 검색 대상 |
+| `description` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음, 최대 1,000자 | 소개. 검색 대상 |
 | `capacity` | `INT` | — | NOT NULL, 개별 UNIQUE 없음, 2–50명, 주최자 포함 | 모임 정원 |
-| `supplies` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 준비물 안내 |
+| `supplies` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 100자 | 준비물 안내 |
 | `accepts_message` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 신청 시 주최자에게 남길 말을 받을지 |
 | `starts_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 모임 시작 시각 |
 | `ends_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음, 값이 있으면 `starts_at`보다 뒤 | 모임 종료 시각 |
 | `recruit_deadline_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음, 등록 후 변경 불가 | 모집 마감 시각. NULL이면 시작 시각을 적용 |
 | `mode` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `OFFLINE`, `ONLINE` | 만나는 방식 |
-| `place` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음, `OFFLINE`일 때 필수 | 오프라인 장소 |
-| `place_detail` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 오프라인 상세 주소 |
-| `join_url` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 온라인 접속 링크. 접근 권한이 있는 사용자에게 제공 |
+| `place` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, `OFFLINE`일 때 필수, 최대 100자 | 오프라인 장소 |
+| `place_detail` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 100자 | 오프라인 상세 주소 |
+| `join_url` | `VARCHAR(500)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 500자 | 온라인 접속 링크. 접근 권한이 있는 사용자에게 제공 |
 | `canceled_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 주최자가 모임을 취소한 시각 |
 | `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 주최자가 모임을 삭제한 시각 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 모임 등록 시각. 최신등록순 정렬 기준 |
@@ -110,7 +110,7 @@ erDiagram
 - `join_url`은 참여 확정자에게만 내려준다.
 - 모임에 캠퍼스를 두지 않는다. 오프라인 모임이 열리는 곳은 `place`와 `place_detail`에 글로 적고, 캠퍼스로 모임을 거르지 않는다.
 - 온라인 플랫폼 이름은 따로 저장하지 않는다. 온라인 모임은 접속 링크만 갖는다.
-- 이름·소개·준비물·장소의 글자 수 제한은 명세에 없어 구현 단계에서 정한다.
+- 이름·소개·준비물·장소·접속 링크의 글자 수는 명세에 없어 [API 명세](../api/07-meetup.md)를 쓰며 정했다.
 
 ### `meetup_application`
 
@@ -122,7 +122,7 @@ erDiagram
 | `meetup_id` | `BIGINT` | FK → `meetup.id` | NOT NULL, 개별 UNIQUE 없음 | 신청한 모임 |
 | `user_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 신청자. 주최자는 이 테이블에 넣지 않음 |
 | `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PENDING`, `WITHDRAWN`, `REJECTED`, `CONFIRMED`, `CANCELED`, `KICKED`, `MEETUP_CANCELED` | 대기·신청 취소·미승인·확정·참여 취소·내보내짐·모임 취소로 종료 |
-| `message` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 신청 시 주최자에게 남길 말 |
+| `message` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 100자 | 신청 시 주최자에게 남길 말 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 신청을 기록한 시각 |
 | `status_changed_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 가장 최근 상태 변경 시각 |
 
@@ -157,8 +157,8 @@ erDiagram
 | 찜 수와 인기순 | `meetup_like.meetup_id` | 모임별 찜 행을 센다. 인기순에서는 찜 개수가 많은 모임이 먼저이며 목록에서는 모집 완료 모임을 뒤에 둔다. |
 | 대기 신청 수와 모임 참여 요청 배지 | `meetup_application.meetup_id`, `meetup_application.status`, `meetup.host_id`, `meetup.deleted_at`, `meetup.canceled_at`, `meetup.recruit_deadline_at`, `meetup.starts_at` | 모집 마감 전의 취소·삭제되지 않은 모임에서 `PENDING`을 센다. 모임별 숫자는 해당 모임만, 알림 팝업 숫자는 현재 사용자가 주최한 모임 전체를 집계한다. |
 | 보는 사람의 상태와 재신청 가능 여부 | `meetup.host_id`, `meetup.canceled_at`, `meetup.deleted_at`, `meetup.starts_at`, `meetup.recruit_deadline_at`, `meetup.capacity`, `meetup_application.user_id`, `meetup_application.status` | 주최 여부를 먼저 확인하고 나머지는 신청 상태를 매핑한다. 신청 행이 없거나 `WITHDRAWN`이면 미신청으로 표시한다. 이 두 경우에만 모집 중이고 빈자리가 있을 때 신청할 수 있다. |
-| 내 모임 탭과 건수 | `meetup.host_id`, `meetup.starts_at`, `meetup.canceled_at`, `meetup.deleted_at`, `meetup_application.user_id`, `meetup_application.status`, `meetup_like.user_id`, `meetup_like.meetup_id` | 예정 모임 중 내가 주최했거나 확정된 모임은 다가오는 모임, 모임 시작 전의 대기·미승인 신청은 신청 대기, 주최한 모임과 찜한 모임은 각각 해당 탭에 둔다. 시작이 지난 주최·확정 모임은 지난 모임으로 본다. 삭제된 모임을 제외하고 탭마다 서로 다른 모임 ID를 센다. 취소된 모임을 표시할 탭은 미정이다. |
-| 캘린더와 이번 달 요약 | `meetup.starts_at`, `meetup.category`, `meetup.host_id`, `meetup.deleted_at`, `meetup.canceled_at`, `meetup_application.user_id`, `meetup_application.status` | 선택 월의 `starts_at`을 날짜별로 묶는다. 내 모임 보기에는 사용자와 관련된 모임 조건을 적용하고 요약은 해당 월의 확정·대기·주최 모임 ID를 상태별로 센다. |
+| 내 모임 탭과 건수 | `meetup.host_id`, `meetup.starts_at`, `meetup.canceled_at`, `meetup.deleted_at`, `meetup_application.user_id`, `meetup_application.status`, `meetup_like.user_id`, `meetup_like.meetup_id` | 시작 전이고 취소되지 않은 모임 가운데 내가 주최했거나 확정된 모임은 다가오는 모임, 대기·미승인 신청은 신청 대기, 주최한 모임은 내가 연 모임, 찜한 모임은 찜한 모임 탭에 둔다. 시작이 지났거나 취소된 주최·확정 모임은 지난 모임으로 본다. 대기 중에 취소된 모임(`MEETUP_CANCELED`)은 어느 탭에도 두지 않는다. 삭제된 모임을 제외하고 탭마다 서로 다른 모임 ID를 센다. |
+| 캘린더와 이번 달 요약 | `meetup.starts_at`, `meetup.category`, `meetup.host_id`, `meetup.deleted_at`, `meetup.canceled_at`, `meetup_application.user_id`, `meetup_application.status` | 선택 월의 `starts_at`을 날짜별로 묶는다. 삭제·취소된 모임은 제외하고 지난 모임은 포함한다. 내 모임 보기에는 주최·확정·대기 모임만 두고, 요약은 보기와 관계없이 해당 월의 확정·대기·주최 모임 ID를 상태별로 센다. |
 | D-day 및 날짜 필터 | `meetup.starts_at`과 서비스 기준 날짜 | 시작 날짜에서 오늘 날짜를 빼 D-day를 구한다. 오늘은 같은 날짜, 이번 주는 오늘부터 일요일까지, 이번 주말은 해당 주의 토·일로 거른다. |
 | 관심사가 겹치는 참여자 수 | `meetup.host_id`, `meetup_application.user_id`, `meetup_application.status`, `user_interest.user_id`, `user_interest.interest_id` | 주최자와 `CONFIRMED` 신청자를 합치고 현재 사용자는 제외한다. 내 관심사와 같은 `interest_id`가 하나 이상 있는 참여자 ID를 중복 없이 센다. |
 | 빈자리 알림 대상 | `meetup.capacity`, `meetup.canceled_at`, `meetup.deleted_at`, `meetup.recruit_deadline_at`, `meetup.starts_at`, `meetup_application.status`, `meetup_like.vacancy_alert`, `meetup_like.user_id` | 모집 마감 전에 정원이 찬 상태에서 자리가 생겼는지 확인한다. 해당 모임에 `vacancy_alert`를 켠 사용자를 발송 후보로 삼고 알림 설정을 적용한다. |
@@ -171,6 +171,4 @@ erDiagram
 
 ## 명세에 없어 구현 단계로 넘기는 것
 
-- 제목·준비물·장소 등의 글자 수와 카테고리의 최종 코드
-- 취소된 모임을 표시할 내 모임 탭과 캘린더 범위
 - 일정 임박의 발송 시점과 내 모임 ‘확인 필요’ 알림의 새 항목 기준

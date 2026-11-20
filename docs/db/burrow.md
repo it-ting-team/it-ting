@@ -5,10 +5,10 @@
 ```mermaid
 erDiagram
     campus ||--o{ campus_floor : "층"
-    term ||--o{ burrow_entrance : "학기마다"
+    term ||--o{ burrow_entrance : "이 학기 들판에 놓임"
     campus_floor ||--o{ burrow_entrance : "이 층 들판에 놓임"
     user ||--o| burrow : "온보딩 확정 후 하나"
-    burrow ||--o{ burrow_entrance : "학기에 하나"
+    burrow ||--|| burrow_entrance : "한 들판에 하나"
     burrow ||--o{ guestbook_entry : "땅굴에 달린 글"
     user ||--o{ guestbook_entry : "쓴 사람"
     user ||--o{ regular_burrow : "담는다"
@@ -17,27 +17,31 @@ erDiagram
     daily_recommendation ||--o{ daily_recommendation_member : "0~3명"
 ```
 
-## 새 학기 안내를 탐색을 누를 때 표시하기
+## 새 학기에는 캠퍼스·층을 반드시 고르게 하기
 
 ### 기존 설계
 
-이번 학기의 `burrow_entrance` 유무로 새 학기 소속 확정 여부를 판단했다. ‘나중에 하기’를 선택한 사실을 담는 칼럼은 없었다. 이전 명세는 접속할 때마다 안내를 띄웠기 때문에, 같은 접속 안에서 안내가 반복되지 않도록 접속 단위 표시 기록을 두었다.
+이번 학기의 `burrow_entrance` 유무로 새 학기 소속 확정 여부를 판단했다. 안내에서 ‘나중에 하기’를 누르면 입구 없이 서비스를 계속 쓸 수 있었고, 안내를 이미 보여줬는지는 브라우저의 접속 단위 저장소에 기록했다. 입구는 학기마다 한 행씩 두어 지난 학기 들판에도 입구가 남았다.
 
 ### 바뀐 명세
 
-[05 탐색 · 방문](../spec/05-explore-visit.md)의 새 학기 안내 1 · 4는 안내를 접속할 때 저절로 띄우지 않는다. 이번 학기 캠퍼스·층을 고르기 전에는 내 땅굴의 탐색 버튼에 알림 점과 말풍선을 붙이고, 탐색을 누를 때 안내를 띄운다. ‘나중에 하기’와 닫기는 내 땅굴에 머물고, 다음에 탐색을 누르면 안내가 다시 뜬다.
+‘나중에 하기’를 누른 사람은 이번 학기 입구가 없는 채로 내 땅굴, 탐색, 내 정보 수정을 쓴다. 탐색으로 나갈 들판, 추천 후보, 내 정보 저장이 모두 이번 학기 입구가 없는 경우를 따로 처리해야 했다. 명세([05 탐색 · 방문](../spec/05-explore-visit.md)의 새 학기 안내 1 · 4)는 2026-11-20에 새 학기가 열리면 캠퍼스·층을 반드시 고르게 하도록 바뀌었다.
+
+### 원인
+
+소속을 확정하지 않은 상태를 허용해, 입구 유무와 안내 표시 여부를 따로 관리해야 했다.
 
 ### 해결 방법
 
-기존 `burrow_entrance` 구조를 유지하고, 접속 단위 표시 기록은 두지 않는다. 이번 학기 입구가 없으면 탐색 버튼에 알림 점을 보여주고, 탐색을 누를 때 안내를 띄운다. ‘나중에 하기’와 닫기는 입구 생성 없이 끝낸다. 안내는 사용자가 탐색을 누를 때만 뜨므로 새로고침이나 화면 이동으로 반복되지 않는다.
+‘나중에 하기’와 닫기를 없앤다. 접속한 사용자의 땅굴 입구가 이번 학기 들판에 있지 않으면 새 학기 안내를 띄우고, 고를 때까지 다른 기능을 쓸 수 없게 한다. 안내 표시 여부는 기록하지 않는다.
 
-‘이 층으로 정하기’ 또는 내 정보 수정에서 이번 학기 캠퍼스·층을 확정하면 `user_profile.campus_floor_id`와 이번 학기 입구를 함께 갱신한다. 그 뒤에는 알림 점과 안내가 사라진다. 지난 학기 입구는 유지한다.
+땅굴은 이사한다. ‘이 층으로 정하기’로 이번 학기 캠퍼스·층을 확정하면 `user_profile.campus_floor_id`를 바꾸고, 땅굴의 `burrow_entrance` 행을 이번 학기의 그 층 들판으로 옮긴다(`term_id`, `campus_floor_id`, `slot`을 바꾼다). 땅굴 하나에 입구는 하나이고 지난 학기 들판의 자리는 비운다. 방명록, 단골, 방의 모습은 땅굴에 딸려 있어 그대로다. 그 뒤 내 정보 수정에서 캠퍼스·층을 바꾸면 같은 행을 다시 옮긴다. 새 학기가 열린 뒤 아직 접속하지 않은 사용자의 입구는 지난 학기 들판에 그대로 있다.
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 시에는 이번 학기 입구가 없을 때 탐색 버튼에 알림 점이 보이는지, 탐색을 누를 때만 안내가 뜨는지, ‘나중에 하기’ 뒤 내 땅굴에 머물고 다시 탐색을 누르면 안내가 뜨는지, 소속을 확정한 뒤에는 알림 점과 안내가 모두 사라지는지 확인한다.
+설계 검토에서 확인했다. 실행 시에는 입구가 이번 학기 들판에 있지 않은 계정으로 접속하면 안내가 뜨고 닫을 수 없는지, 고르기 전에는 다른 기능이 막히는지, 확정한 뒤에는 어느 접속에서도 안내가 뜨지 않는지, 지난 학기 들판의 자리가 비고 방명록과 단골이 그대로인지 확인한다.
 
-## 추천은 캠퍼스와 기수만 골라 무작위로 뽑기
+## 추천은 캠퍼스·층과 기수만 골라 덜 추천된 사람부터 뽑기
 
 ### 기존 설계
 
@@ -53,19 +57,19 @@ erDiagram
 
 ### 해결 방법
 
-추천을 받는 시점에 캠퍼스와 기수만 고르게 하고, 그 안에서 무작위로 세 명을 뽑는다. 고른 캠퍼스와 기수는 저장하지 않는다. `recommend_setting`과 `recommend_setting_question`은 없앤다.
+추천을 받는 시점에 캠퍼스·층과 기수만 고르게 하고, 그 안에서 세 명을 뽑는다. 고른 캠퍼스·층과 기수는 저장하지 않는다. `recommend_setting`과 `recommend_setting_question`은 없앤다.
 
-후보는 이번 학기 입구가 있고 온보딩을 마친 활동 회원이며 본인은 제외한다. 고른 캠퍼스는 프로필의 캠퍼스-층이 속한 캠퍼스와, 고른 기수는 프로필의 기수와 비교한다. 맞는 사람이 세 명보다 적으면 있는 만큼만 추천한다. 날짜별 UNIQUE와 결과 순서는 그대로 써서, 같은 날 다시 요청하면 처음 확정한 결과를 읽는다. 결과가 0명이어도 그날의 `daily_recommendation`은 기록한다.
+후보는 입구가 이번 학기의 고른 캠퍼스·층 들판에 있고 프로필의 기수가 고른 기수와 같으며 온보딩을 마친 활동 회원이다. 본인과, 요청한 사람이 단골로 담은 땅굴의 주인은 제외한다. 후보마다 요청한 사람에게 추천된 횟수를 `daily_recommendation`과 `daily_recommendation_member`에서 세어, 횟수가 가장 적은 사람부터 뽑고 횟수가 같은 사람끼리는 무작위로 뽑는다. 아직 추천되지 않은 사람이 먼저 나오고, 모두 한 번씩 추천된 뒤에는 횟수가 같아져 다시 모두 같은 순위가 된다. 따로 초기화하지 않는다. 횟수를 세어야 하므로 지난 추천 결과는 지우지 않는다. 맞는 사람이 세 명보다 적으면 있는 만큼만 추천한다. 날짜별 UNIQUE와 결과 순서는 그대로 써서, 같은 날 다시 요청하면 처음 확정한 결과를 읽는다. 결과가 0명이어도 그날의 `daily_recommendation`은 기록한다.
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 시에는 고른 캠퍼스와 기수에 맞는 사람만 뽑히는지, 맞는 사람이 세 명보다 적으면 있는 만큼만 반환되는지, 같은 날 다시 요청하면 조건을 바꿔도 처음 결과가 그대로 나오는지 확인한다. 같은 날 동시 요청은 확정된 한 결과를 반환해야 한다.
+설계 검토에서 확인했다. 실행 시에는 고른 캠퍼스·층과 기수에 맞는 사람만 뽑히는지, 단골로 담은 땅굴의 주인이 빠지는지, 아직 추천되지 않은 사람이 먼저 뽑히고 모두 한 번씩 추천된 뒤에는 다시 고르게 뽑히는지, 맞는 사람이 세 명보다 적으면 있는 만큼만 반환되는지, 같은 날 다시 요청하면 조건을 바꿔도 처음 결과가 그대로 나오는지 확인한다. 같은 날 동시 요청은 확정된 한 결과를 반환해야 한다.
 
 ## 탈퇴자가 받은 방명록은 지우고 쓴 방명록은 남기기
 
 ### 기존 설계
 
-`guestbook_entry.author_id`는 작성자를, `guestbook_entry.burrow_id`는 받은 땅굴을 가리킨다. 일반 방명록은 작성 후 7일이 지나면 삭제한다. 명세([10 설정 · 계정](../spec/10-settings.md)의 회원 탈퇴 1)는 탈퇴하면 내 땅굴은 지우고, 내가 쓴 방명록 글은 남겨 작성자를 “탈퇴한 사용자”로 표시하도록 정한다.
+`guestbook_entry.author_id`는 작성자를, `guestbook_entry.burrow_id`는 받은 땅굴을 가리킨다. 방명록 글은 시간이 지나도 지우지 않는다. 명세([10 설정 · 계정](../spec/10-settings.md)의 회원 탈퇴 1)는 탈퇴하면 내 땅굴은 지우고, 내가 쓴 방명록 글은 남겨 작성자를 “탈퇴한 사용자”로 표시하도록 정한다.
 
 ### 문제와 재현 조건
 
@@ -77,7 +81,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 ### 해결 방법
 
-[회원 탈퇴](account.md)와 같은 트랜잭션에서 `burrow_id = 탈퇴 회원의 땅굴 ID`인 행을 삭제한다. `author_id = 탈퇴 회원 ID`인 행은 지우지 않는다. 이 행은 탈퇴 뒤에도 남는 `user` 행을 계속 가리키고, 화면에는 작성자를 “탈퇴한 사용자”로 보여준다. 남은 글에는 기존 7일 규칙을 그대로 적용한다.
+[회원 탈퇴](account.md)와 같은 트랜잭션에서 `burrow_id = 탈퇴 회원의 땅굴 ID`인 행을 삭제한다. `author_id = 탈퇴 회원 ID`인 행은 지우지 않는다. 이 행은 탈퇴 뒤에도 남는 `user` 행을 계속 가리키고, 화면에는 작성자를 “탈퇴한 사용자”로 보여준다. 남은 글은 다른 방명록 글처럼 계속 남는다.
 
 `regular_burrow`의 담은 회원·담긴 땅굴 기준 행과 땅굴 입구를 정리한 뒤 땅굴을 삭제한다. 방명록 작성과 탈퇴가 겹치면 작성 트랜잭션도 작성자와 땅굴 주인 계정 상태를 잠근 뒤 확인해, 탈퇴한 계정이 새 글을 쓰거나 탈퇴한 사람의 땅굴에 글이 다시 생기지 않게 한다.
 
@@ -85,7 +89,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 검증에서는 A의 땅굴에 달린 글이 사라지고, B의 땅굴에 A가 쓴 글은 “탈퇴한 사용자”의 글로 남았다가 작성 7일 뒤 지워지는지 확인한다. 방명록 쓰기와 A의 탈퇴가 동시에 실행돼도 A의 땅굴에 글이 남거나 탈퇴한 A의 새 글이 생기지 않아야 한다.
+설계 검토에서 확인했다. 실행 검증에서는 A의 땅굴에 달린 글이 사라지고, B의 땅굴에 A가 쓴 글은 “탈퇴한 사용자”의 글로 계속 남는지 확인한다. 방명록 쓰기와 A의 탈퇴가 동시에 실행돼도 A의 땅굴에 글이 남거나 탈퇴한 A의 새 글이 생기지 않아야 한다.
 
 ## 테이블 구조
 
@@ -104,7 +108,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-복합 UNIQUE는 `UNIQUE(year, half)`다. 지난 학기도 계속 탐색할 수 있다.
+복합 UNIQUE는 `UNIQUE(year, half)`다. 지난 학기도 계속 탐색할 수 있다. 지난 학기 들판에는 새 학기에 아직 접속하지 않은 사용자의 입구만 남는다.
 
 새 학기를 여는 방법(직접 / 날짜에 자동)은 [보류한 결정](../spec/open-issues.md)이다. 어느 쪽이든 `term`에 행이 생긴다.
 
@@ -152,25 +156,25 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 온보딩을 확정해 땅굴을 만든 시각 |
 
 - 방 안의 모습(가구, 벽 · 바닥)은 이 테이블에 저장하지 않는다. 주인의 관심사([계정 · 프로필](account.md)의 `user_interest`)로 그린다. 가구는 관심사마다 하나로 정해져 있다.
-- 들판에서의 자리는 학기마다 다르므로 `burrow_entrance`가 갖는다.
+- 들판에서의 자리는 `burrow_entrance`가 갖는다. 땅굴 하나에 입구는 하나다.
 
 ### `burrow_entrance`
 
-특정 학기와 캠퍼스·층의 들판에 놓인 땅굴 입구다.
+땅굴이 지금 놓인 들판과 자리다. 땅굴 하나에 한 행이다.
 
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 입구 ID |
-| `burrow_id` | `BIGINT` | FK → `burrow.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 연결된 땅굴 |
-| `term_id` | `BIGINT` | FK → `term.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 속한 학기 |
-| `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | NOT NULL, 개별 UNIQUE 없음 | 그 학기에 고른 캠퍼스·층 |
+| `burrow_id` | `BIGINT` | FK → `burrow.id` | NOT NULL, UNIQUE | 입구가 연결된 땅굴 |
+| `term_id` | `BIGINT` | FK → `term.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 놓인 들판의 학기 |
+| `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | NOT NULL, 개별 UNIQUE 없음 | 입구가 놓인 들판의 캠퍼스·층 |
 | `slot` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 그 들판에서 서버가 배정한 자리 번호 |
-| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 해당 학기의 입구를 처음 배치한 시각 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 입구를 처음 놓은 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-복합 UNIQUE는 `UNIQUE(burrow_id, term_id)`와 `UNIQUE(term_id, campus_floor_id, slot)`이다. 이번 학기에 캠퍼스·층을 옮길 때 그 학기 행의 층과 자리를 변경한다. 지난 학기 행은 보존한다.
+`burrow_id`는 UNIQUE다. 복합 UNIQUE는 `UNIQUE(term_id, campus_floor_id, slot)`이다. 새 학기에 이사하거나 캠퍼스·층을 옮길 때 이 행의 학기, 층, 자리를 바꾼다. 지난 자리의 행은 남기지 않는다.
 
-- 입구가 생기는 때는 온보딩 최종 확정, 새 학기 안내의 "이 층으로 정하기", 안내를 보류한 뒤 내 정보 수정에서 이번 학기 캠퍼스·층을 저장할 때다.
+- 입구가 생기는 때는 온보딩 최종 확정이다. 새 학기 안내의 "이 층으로 정하기"와 내 정보 수정의 캠퍼스·층 변경은 입구를 옮긴다. 새 학기 안내는 보류할 수 없다.
 - 자리 번호는 서버가 그 들판에 땅굴이 놓인 순서대로 준다. 같은 들판에서는 유지하고, 캠퍼스·층을 바꾸면 새 들판의 다음 자리 번호를 배정한다.
 - DB는 "어느 들판의 몇 번 자리"까지만 안다. 배치 좌표와 구멍을 그리는 일은 프론트엔드가 맡는다.
 
@@ -185,12 +189,12 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `author_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 작성자. 땅굴 주인은 자기 땅굴에 작성할 수 없음 |
 | `content` | `VARCHAR(50)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 50자 | 방명록 본문 |
 | `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PUBLIC`, `HIDDEN` | 공개·가려짐 상태 |
-| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순과 7일 만료의 기준 |
+| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 작성 시각. 최신순의 기준 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-본문을 수정할 수 없다. 삭제하거나 만료되면 행을 지운다. 탈퇴한 사용자가 받은 글은 탈퇴할 때 지우고, 쓴 글은 남겨 작성자를 “탈퇴한 사용자”로 보여준다. 범위는 위의 트러블슈팅을 따른다.
+본문을 수정할 수 없다. 삭제하면 행을 지운다. 시간이 지나도 지우지 않는다. 탈퇴한 사용자가 받은 글은 탈퇴할 때 지우고, 쓴 글은 남겨 작성자를 “탈퇴한 사용자”로 보여준다. 범위는 위의 트러블슈팅을 따른다.
 
-신고 대상이다(`report.target_type = GUESTBOOK`, [커뮤니티 · 신고](community.md)). 서로 다른 3명이 신고하면 `status`를 `HIDDEN`으로 바꿔 가린다. 가려지는 조건, 작성자 알림, 관리자 복구는 글·댓글과 같은 규칙을 따른다. 작성 후 7일이 지난 글은 가려졌는지와 관계없이 조회에서 빼고 정리한다.
+신고 대상이다(`report.target_type = GUESTBOOK`, [커뮤니티 · 신고](community.md)). 서로 다른 3명이 신고하면 `status`를 `HIDDEN`으로 바꿔 가린다. 가려지는 조건, 작성자 알림, 관리자 복구는 글·댓글과 같은 규칙을 따른다. 가려진 글은 방명록 목록과 글 수에서 빼고, 땅굴 주인·방문자·작성자 모두에게 보여주지 않는다. 가려진 글은 관리자가 복구하거나 지울 때까지 `HIDDEN`으로 남는다.
 
 ### `regular_burrow`
 
@@ -217,7 +221,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `recommended_on` | `DATE` | — | NOT NULL, 개별 UNIQUE 없음 | 추천 기준 날짜 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 
-복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다. 추천을 받을 때 고른 캠퍼스와 기수는 저장하지 않는다.
+복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다. 추천을 받을 때 고른 캠퍼스·층과 기수는 저장하지 않는다. 지난 날짜의 행은 지우지 않는다.
 
 ### `daily_recommendation_member`
 
@@ -231,7 +235,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 복합 기본키는 `PK(daily_recommendation_id, sort_order)`다. 일일 추천 기록 한 건에 결과 행은 0~3개이며, 각 결과 행은 반드시 일일 추천 기록 하나에 속한다.
 
-같은 날 다시 요청하면 저장한 같은 사람들을 보여준다. 카드의 관심사·질문·답변은 결과에 복사하지 않고 추천된 사람의 현재 프로필에서 읽는다.
+같은 날 다시 요청하면 저장한 같은 사람들을 보여준다. 지난 추천 결과도 지우지 않고, 후보마다 요청한 사람에게 추천된 횟수를 세는 데 쓴다. 카드의 관심사·질문·답변은 결과에 복사하지 않고 추천된 사람의 현재 프로필에서 읽는다.
 
 ## 저장하지 않는 것
 
@@ -241,23 +245,23 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | --- | --- | --- |
 | 이번 학기 | `term.id`, `term.opened_at` | 현재 시각까지 개설된 행 중 `opened_at`이 가장 최근인 학기를 고른다. 개설된 학기가 없으면 이번 학기가 비어 있다. |
 | 들판 입구 목록과 비어 있음 | `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id`, `burrow_entrance.slot`, `burrow_entrance.burrow_id` | 선택한 학기와 층이 모두 일치하는 입구를 `slot` 순으로 조회한다. 조회 결과가 0개면 비어 있음이다. |
-| 이번 학기 소속 확정 및 안내 여부 | `burrow.user_id`, `burrow_entrance.burrow_id`, `burrow_entrance.term_id` | 사용자 땅굴에 이번 학기 입구가 있는지 확인한다. 입구가 없으면 탐색 버튼에 알림 점을 보여주고, 탐색을 누를 때 안내한다. |
-| 땅굴에서 탐색으로 나갈 들판 | `burrow_entrance.burrow_id`, `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id`, `term.opened_at` | 현재 땅굴의 입구를 학기와 조인하고 개설 시각이 가장 최근인 학기의 캠퍼스·층을 사용한다. |
+| 이번 학기 소속 확정 및 안내 여부 | `burrow.user_id`, `burrow_entrance.burrow_id`, `burrow_entrance.term_id` | 사용자 땅굴의 입구가 이번 학기 들판에 있는지 확인한다. 아니면 새 학기 안내를 띄우고, 고를 때까지 다른 기능을 막는다. |
+| 땅굴에서 탐색으로 나갈 들판 | `burrow_entrance.burrow_id`, `burrow_entrance.term_id`, `burrow_entrance.campus_floor_id` | 현재 땅굴의 입구가 놓인 학기와 캠퍼스·층을 사용한다. |
 | 방노트 | `burrow.user_id`, `user_profile.intro`, `user_interest.interest_id`, `user_interest.sort_order`, `interest.name`, `user_answer.slot`, `user_answer.intro_question_id`, `user_answer.answer`, `intro_question.content` | 주인 ID로 프로필·관심사·답변을 조회한다. 관심사는 `sort_order`로, 질문과 답변은 `slot`으로 정렬한다. |
-| 남은 방명록 글 수 | `guestbook_entry.burrow_id`, `guestbook_entry.created_at` | 해당 땅굴에 달린 행 중 `created_at + 7일`이 현재 시각보다 뒤인 행을 센다. 이미 삭제된 행은 조회되지 않는다. |
+| 방명록 글 수 | `guestbook_entry.burrow_id`, `guestbook_entry.status` | 해당 땅굴에 달린 행 중 `status`가 `PUBLIC`인 행을 센다. 삭제된 행은 남아 있지 않다. |
 | 단골 수 | `regular_burrow.burrow_id` | 해당 땅굴을 담은 행을 `COUNT(*)`로 센다. 해제되거나 탈퇴 정리로 삭제된 관계는 제외된다. |
 | 오늘 추천을 이미 받았는지와 결과 | `daily_recommendation.user_id`, `daily_recommendation.recommended_on`, `daily_recommendation.id`, `daily_recommendation_member.daily_recommendation_id`, `daily_recommendation_member.sort_order`, `daily_recommendation_member.target_user_id` | 현재 사용자와 오늘의 추천 기준 날짜로 부모 행의 존재를 확인한다. 행이 있으면 결과를 `sort_order`순으로 읽는다. 결과가 없어도 부모 행이 있으면 추천을 받은 날이다. |
-| 추천 후보 | `burrow_entrance.term_id`, `burrow_entrance.burrow_id`, `burrow.id`, `burrow.user_id`, `user.status`, `user.onboarded_at` | 이번 학기의 입구에서 주인 계정을 찾는다. 본인을 제외하고 `ACTIVE`이면서 온보딩을 마친 사용자만 고른다. |
-| 고른 캠퍼스와 기수에 맞는지 | `user_profile.campus_floor_id`, `campus_floor.campus_id`, `user_profile.generation` | 후보 프로필의 캠퍼스-층이 고른 캠퍼스에 속하고 기수가 고른 기수와 같은지 비교한다. 맞는 후보 가운데 무작위로 최대 3명을 뽑는다. |
+| 추천 후보 | `burrow_entrance.term_id`, `burrow_entrance.burrow_id`, `burrow.id`, `burrow.user_id`, `user.status`, `user.onboarded_at`, `regular_burrow.user_id`, `regular_burrow.burrow_id` | 이번 학기의 입구에서 주인 계정을 찾는다. 본인과 요청한 사람이 단골로 담은 땅굴의 주인을 제외하고 `ACTIVE`이면서 온보딩을 마친 사용자만 고른다. |
+| 고른 캠퍼스·층과 기수에 맞는지 | `burrow_entrance.campus_floor_id`, `user_profile.generation` | 후보의 입구가 이번 학기의 고른 캠퍼스·층 들판에 있고 프로필의 기수가 고른 기수와 같은지 비교한다. |
+| 요청한 사람에게 추천된 횟수와 뽑는 순서 | `daily_recommendation.user_id`, `daily_recommendation_member.daily_recommendation_id`, `daily_recommendation_member.target_user_id` | 요청한 사람의 추천 기록에서 후보마다 결과 행 수를 센다. 횟수가 가장 적은 후보부터, 횟수가 같으면 무작위로 최대 3명을 뽑는다. |
 
 ### 프론트엔드가 관리하는 것
 
 - 들판 지도 그림과 자리 번호마다의 화면 위치, 구멍의 생김새, 들판에서 내 두더지가 서 있는 곳, 지금 보고 있는 들판
 - 우체통의 깃발과 편지 표현, 학기와 캠퍼스-층의 표기("2026 하반기 서울-2층"), 안내 문구
-- 탐색 버튼의 새 학기 알림 점과 말풍선
 
 ## 명세에 없어 구현 단계로 넘기는 것
 
 - 새 학기의 수동·자동 개설 방식과 빈 입구 자리의 재사용 기준
-- 추천 기준 날짜의 경계, 이전 추천 결과 보관 기간, 캠퍼스나 기수를 고르지 않고 전체에서 받을 수 있는지
-- 가려진 방명록 글을 땅굴 주인과 방문자에게 어떻게 보여줄지, 가려졌다는 알림을 눌렀을 때 갈 곳
+- 추천 기준 날짜의 경계, 캠퍼스·층이나 기수를 고르지 않고 전체에서 받을 수 있는지
+- 방명록 글이 가려졌다는 알림을 눌렀을 때 갈 곳

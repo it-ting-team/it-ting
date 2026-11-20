@@ -12,16 +12,18 @@
 
 - MUST: 모든 주소는 `/api/v1`로 시작한다.
 - MUST: 자원은 영어 소문자 복수형 명사로 쓴다. 낱말이 둘 이상이면 하이픈으로 잇는다(`chat-rooms`).
+- MUST: 하나뿐인 자원은 단수형으로 쓴다(`/me/profile`, `/posts/{postId}/bookmark`).
 - MUST: 딸린 자원은 부모 아래에 쓴다(`/api/v1/meetups/{meetupId}/applications`).
 - MUST: 로그인한 사용자 자신의 자원은 `/api/v1/me` 아래에 쓴다. 주소에 자기 id를 넣지 않는다.
 - MUST: 필터, 정렬, 검색은 쿼리 파라미터로 받는다. 이름은 camelCase다.
 - MUST NOT: 주소에 동사를 쓰지 않는다(`/getMeetup`, `/meetups/create`).
 
-수락, 거절, 취소처럼 자원의 상태를 바꾸는 행동은 예외로 `POST /<자원>/{id}/<행동>`을 쓴다.
+수락, 거절, 취소처럼 자원의 상태를 바꾸는 행동은 예외로 `POST /<자원>/{id}/<행동>`을 쓴다. 대상이 id로 정해지지 않으면 `{id}` 없이 쓴다.
 
 ```text
 POST /api/v1/chat-requests/{chatRequestId}/accept
 POST /api/v1/meetups/{meetupId}/cancel
+POST /api/v1/email-verifications/check
 ```
 
 ## 메서드
@@ -58,6 +60,8 @@ POST /api/v1/meetups/{meetupId}/cancel
 - MUST NOT: 실패를 `200`으로 답하지 않는다.
 - MUST NOT: 본문이 없는 `204`를 쓰지 않는다.
 
+브라우저를 다른 주소로 보내는 것으로 답하는 주소(Google 로그인)는 이 틀을 쓰지 않는다. 실시간 소식을 보내는 연결도 이 틀을 쓰지 않는다([실시간 소식](#실시간-소식)).
+
 ## 상태 코드
 
 | 코드 | 때 |
@@ -81,7 +85,8 @@ POST /api/v1/meetups/{meetupId}/cancel
   "error": {
     "code": "NICKNAME_DUPLICATED",
     "message": "이미 사용 중인 닉네임입니다.",
-    "fields": null
+    "fields": null,
+    "detail": null
   }
 }
 ```
@@ -91,6 +96,7 @@ POST /api/v1/meetups/{meetupId}/cancel
 | `code` | 프론트엔드가 실패 종류를 구분하는 값 |
 | `message` | 개발자가 읽는 한국어 설명 한 문장 |
 | `fields` | 입력 오류일 때만 어느 필드가 왜 틀렸는지의 목록. 그 밖에는 `null` |
+| `detail` | 화면에 보여 줄 값이 실패에 딸려 있을 때만 그 값을 담은 객체(예: 계정 정지의 사유와 끝나는 시각). 그 밖에는 `null` |
 
 - MUST: `code`는 영어 대문자와 밑줄로만 쓰고 `<대상>_<상태>` 모양으로 짓는다(`MEETUP_NOT_FOUND`, `MEETUP_FULL`). 숫자는 쓰지 않는다.
 - MUST: 같은 실패에는 어느 API에서나 같은 `code`를 쓴다.
@@ -98,7 +104,7 @@ POST /api/v1/meetups/{meetupId}/cancel
 - MUST NOT: 프론트엔드가 `message`의 글자로 실패를 구분하지 않는다.
 - MUST NOT: `message`에 스택 트레이스, SQL, 다른 사용자의 정보를 넣지 않는다.
 
-입력 오류는 `400`과 `INVALID_INPUT`으로 답하고 `fields`를 채운다. `field`는 요청 JSON의 필드 이름이다.
+입력 오류는 `400`과 `INVALID_INPUT`으로 답하고 `fields`를 채운다. `field`는 요청 JSON의 필드 이름이다. 객체나 목록 안의 값은 `mole.head`, `answers[1].answer`처럼 경로로 적고, 목록의 자리는 0부터 센다.
 
 ```json
 "error": {
@@ -106,9 +112,12 @@ POST /api/v1/meetups/{meetupId}/cancel
   "message": "입력값이 올바르지 않습니다.",
   "fields": [
     { "field": "nickname", "message": "12자를 넘을 수 없습니다." }
-  ]
+  ],
+  "detail": null
 }
 ```
+
+`detail`에 무엇을 담는지는 그 `code`를 쓰는 API의 문서에 적는다.
 
 ### 공통 에러 코드
 
@@ -126,13 +135,27 @@ POST /api/v1/meetups/{meetupId}/cancel
 ## JSON 필드
 
 - MUST: 필드 이름은 camelCase로 쓴다(`createdAt`, `hostId`). DB 칼럼은 snake_case이고 API에서 바꾼다.
-- MUST: id는 숫자로 준다.
+- MUST: id는 숫자로 준다. 자원 자신의 id는 `id`로, 다른 자원을 가리키는 id는 `<자원>Id`로 쓴다(`hostId`, `campusFloorId`).
 - MUST: 시각은 UTC의 ISO 8601 형식으로 주고 이름은 `…At`으로 끝낸다(`"createdAt": "2026-11-18T08:01:05Z"`).
 - MUST: 날짜만 있는 값은 `YYYY-MM-DD`로 준다.
-- MUST: 상태와 종류는 DB와 같은 대문자 코드 문자열로 준다(`"status": "PENDING"`).
+- MUST: 상태와 종류처럼 값이 정해진 목록인 필드는 enum으로 다룬다. 값은 DB와 같은 대문자 코드다(`"status": "PENDING"`).
+- MUST: enum인 필드는 문서의 타입에 `enum`이라고 적고 가능한 값을 모두 적는다.
+- MUST: 목록에 없는 enum 값을 받으면 `400`과 `INVALID_INPUT`으로 답한다.
+- MUST NOT: enum 값을 숫자나 순번으로 주고받지 않는다.
 - MUST: 참과 거짓은 `is`, `has`, `can`으로 시작한다(`isLiked`, `hasNext`).
 - MUST: 값이 없으면 필드를 빼지 않고 `null`로 준다. 빈 목록은 `[]`로 준다.
 - MUST NOT: "3분 전", "신청 대기" 같은 화면 표현을 서버가 만들어 주지 않는다. 시간대 변환과 문구는 프론트엔드가 맡는다.
+
+enum은 층마다 이렇게 다룬다.
+
+| 층 | 다루는 법 |
+|---|---|
+| DB | MySQL의 ENUM 타입으로 저장한다. 값의 목록이 아직 정해지지 않은 칼럼만 정해질 때까지 `VARCHAR`로 둔다([DB 설계](db/README.md)) |
+| 백엔드 | 코드의 enum으로 정의하고 이름 그대로 저장하고 내려 준다 |
+| API 문서 | 타입을 `enum`으로 적고 값을 모두 적는다. Swagger에도 enum으로 나온다 |
+| 프론트엔드 | Swagger에서 생성한 타입으로 받는다. 화면에 보여 줄 낱말은 값마다 프론트엔드가 정한다 |
+
+문서의 타입 칸에는 숫자, 문자열, enum, 참/거짓, 시각, 날짜, 객체, 목록 가운데 하나를 쓴다. 올리는 파일만 "파일"로 적는다([파일 올리기](#파일-올리기)).
 
 ## 목록
 
@@ -176,6 +199,45 @@ GET /api/v1/notifications?size=20&cursor=eyJpZCI6ODEyfQ
 - MUST: 더 받을 것이 없으면 `hasNext`는 `false`, `nextCursor`는 `null`이다.
 - MUST NOT: 프론트엔드가 `nextCursor`의 내용을 해석하거나 직접 만들지 않는다.
 
+## 파일 올리기
+
+사진 같은 파일은 먼저 올려 id를 받고, 그 파일을 쓰는 API에는 id를 보낸다.
+
+```text
+POST /api/v1/images
+Content-Type: multipart/form-data
+```
+
+```json
+{ "title": "한강 러닝 후기", "imageIds": [512, 513] }
+```
+
+- MUST: 파일은 `multipart/form-data`로, 한 요청에 하나씩 올린다. 응답은 다른 API와 같은 응답 틀이다.
+- MUST: 올리는 데 성공하면 `201`과 함께 그 파일의 id를 준다. 그 파일을 쓰는 API는 본문에 id를 받는다.
+- MUST: 서버는 파일의 형식을 파일 이름이 아니라 내용으로 검사한다.
+- MUST NOT: 파일을 글자로 바꿔(base64) JSON 본문에 담지 않는다.
+- 문서의 요청 표에는 파일의 위치를 "폼", 타입을 "파일"로 적는다.
+
+## 실시간 소식
+
+화면이 묻지 않아도 서버가 먼저 알려야 하는 것(새 메시지, 안 읽은 수, 알림 아이콘의 빨간 점)은 계정마다 연결 하나로 보낸다.
+
+```text
+GET /api/v1/me/event-stream
+Accept: text/event-stream
+
+event: NOTIFICATION_UNREAD_CHANGED
+data: {"unreadCount":4,"hasUnread":true}
+```
+
+- MUST: 서버가 브라우저로만 보내는 연결(SSE)을 쓴다. 로그인한 뒤 한 번 연결해 계속 열어 둔다.
+- MUST: 소식 한 건은 이름(`event`)과 값(`data`의 JSON)으로 이뤄진다. 이름은 enum이고 값의 필드는 `JSON 필드` 규칙을 따른다.
+- MUST: 값을 바꾸는 일은 이 연결이 아니라 일반 API로 한다. 메시지를 보내는 것도 일반 API다.
+- MUST: 끊긴 동안의 소식은 다시 보내지 않는다. 다시 연결하면 프론트엔드가 조회 API로 화면을 맞춘다.
+- MUST NOT: 영역마다 연결을 따로 열지 않는다. 새 소식은 같은 연결에 이름을 더한다.
+
+소식의 이름과 값은 그 소식을 만드는 영역의 문서에 적는다([채팅 API](api/06-chat.md#get-apiv1meevent-stream), [알림 API](api/09-notification.md#실시간-소식)).
+
 ## 로그인
 
 세션 방식을 쓴다. 로그인하면 서버가 세션을 만들어 Redis에 저장하고 세션 쿠키를 준다. 이메일 로그인과 Google 로그인 모두 같은 세션을 만든다.
@@ -188,7 +250,7 @@ GET /api/v1/notifications?size=20&cursor=eyJpZCI6ODEyfQ
 
 ## 영역별 API 목록
 
-구현한 API의 기준 문서는 Swagger(springdoc)가 만든 문서다. 구현하기 전의 설계는 영역을 구현하기 직전에 `docs/api/<영역>.md`로 쓴다. [템플릿](api/_template.md)을 복사해서 시작한다.
+구현한 API의 기준 문서는 Swagger(springdoc)가 만든 문서다. 구현하기 전의 설계는 `docs/api/<번호>-<영역>.md`로 쓴다. 번호는 서비스 명세의 문서 번호와 같다. [템플릿](api/_template.md)을 복사해서 시작하고, 문서 목록은 [API 명세](api/README.md)에 둔다.
 
 ## AI 에이전트 작업 절차
 
@@ -238,5 +300,5 @@ POST   /api/v1/chat-requests/5/accept
 ## 이 문서가 다루지 않는 것
 
 - 영역별 개별 API. 각 영역을 구현하기 직전에 쓴다.
-- 실시간 통신(채팅, 알림)과 파일 업로드 방식.
+- 올린 파일을 두는 저장소와 파일 주소의 모양. 구현할 때 정한다.
 - 세션이 유지되는 기간, CSRF 방어 방법, 허용하는 출처(CORS). 백엔드 보안 설정을 할 때 정한다.

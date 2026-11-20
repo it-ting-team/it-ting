@@ -8,12 +8,12 @@
 |---|---|
 | [계정 · 프로필 · 관심사 · 질문](account.md) | `user`, `user_withdrawal`, `user_profile`, `user_suspension`, `interest_category`, `interest`, `user_interest`, `intro_question`, `user_answer` |
 | [들판 · 땅굴 입구 · 방명록 · 단골 · 추천](burrow.md) | `term`, `campus`, `campus_floor`, `burrow`, `burrow_entrance`, `guestbook_entry`, `regular_burrow`, `daily_recommendation`, `daily_recommendation_member` |
-| [채팅](chat.md) | `chat_request`, `chat_room`, `chat_room_member`, `chat_message` |
+| [채팅](chat.md) | `chat_request`, `chat_room`, `chat_room_member`, `chat_message`, `chat_message_image` |
 | [모임](meetup.md) | `meetup`, `meetup_application`, `meetup_like` |
-| [커뮤니티 · 신고](community.md) | `post`, `post_version`, `post_image`, `post_interest`, `comment`, `comment_version`, `post_like`, `comment_like`, `post_bookmark`, `report`, `report_action` |
+| [커뮤니티 · 신고](community.md) | `post`, `post_version`, `post_image`, `uploaded_image`, `post_interest`, `comment`, `comment_version`, `post_like`, `comment_like`, `post_bookmark`, `report`, `report_action` |
 | [알림 · 공지](notification.md) | `notification`, `notification_setting`, `push_subscription`, `notice` |
 
-테이블은 모두 40개다. 인증 코드와 비밀번호 재설정 링크는 DB가 아니라 임시 저장소(Redis)에 둔다.
+테이블은 모두 42개다. 인증 코드와 비밀번호 재설정 링크, 가입 진행 기록, 잠깐 맡아 둔 닉네임은 DB가 아니라 임시 저장소(Redis)에 둔다.
 
 ## 설계 원칙: 저장하는 것과 화면에 그리는 것을 나눈다
 
@@ -35,7 +35,7 @@
 - PK는 `id`(BIGINT, 자동 증가)다. 다만 두 테이블을 잇기만 하는 테이블은 두 FK를 묶어 PK로 쓰고, 한 사람에 하나뿐인 테이블은 `user_id`를, 순서가 있는 딸린 테이블은 부모의 FK와 순번을 묶어 PK로 쓴다.
 - FK 칼럼은 `가리키는 테이블_id`로 쓴다(예: `user_id`). 뜻을 드러내야 하면 역할을 쓴다(예: `host_id`, `author_id`).
 - 시각은 DATETIME이고 이름은 `…_at`으로 끝난다. 줄이 만들어진 시각은 `created_at`, 마지막으로 바뀐 시각은 `updated_at`, 삭제한 시각은 `deleted_at`이다. 어느 테이블에 무엇을 두는지는 아래 [공통 날짜 칼럼](#공통-날짜-칼럼)에 있다. "했는지"는 참/거짓 대신 한 시각으로 저장한다(예: `canceled_at`이 있으면 취소됨).
-- 상태와 종류처럼 값이 정해진 칼럼은 MySQL의 ENUM 타입으로 두고, 값은 영어 대문자 코드로 쓴다(예: `PENDING`). 값의 목록이 아직 정해지지 않은 칼럼(`meetup.category`, `notification.type`, `user_withdrawal.reason`)은 정해질 때까지 VARCHAR로 둔다. 그림이 프론트엔드에 있는 값(두더지 아이템)은 코드만 VARCHAR로 저장한다.
+- 상태와 종류처럼 값이 정해진 칼럼은 MySQL의 ENUM 타입으로 두고, 값은 영어 대문자 코드로 쓴다(예: `PENDING`). 모임 카테고리(`meetup.category`)와 그림이 프론트엔드에 있는 값(두더지 아이템)은 코드만 VARCHAR로 저장한다.
 - 글자 수가 명세에 있는 칼럼은 그 길이를 쓴다(예: `VARCHAR(50)`). 명세에 없으면 길이를 미정으로 표시하고 구현할 때 정한다. 타입이나 NULL·UNIQUE 제약도 정해지지 않았다면 임의로 확정하지 않는다.
 - UNIQUE처럼 규칙을 지키는 제약과 원본에서 명시한 조회 인덱스 후보를 적었다. 나머지 조회 인덱스와 물리 FK 여부가 미정인 논리 참조는 구현하면서 정한다.
 
@@ -53,8 +53,8 @@
 
 - **켜고 끄는 관계**(`user_interest`, `regular_burrow`, `meetup_like`, `post_like`, `comment_like`, `post_bookmark`): 지운 줄이 남아 있으면 다시 켤 때 기본키에 걸린다. 끄면 줄을 지운다.
 - **상태나 다른 시각이 그 역할을 하는 테이블**: `user`는 `status`와 `user_withdrawal`, `chat_request`와 `meetup_application`은 `status`, `chat_room_member`는 `left_at`으로 안다.
-- **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`)과 **기간이 지나면 정리하는 줄**(`guestbook_entry`는 7일, `notification`은 30일).
-- **탈퇴하면 실제로 지우는 개인 정보**(`user_profile`, `user_answer`, `burrow`, `burrow_entrance`, `push_subscription`, `notification_setting`).
+- **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`, `daily_recommendation`, `daily_recommendation_member`), **기간이 지나면 정리하는 줄**(`notification`은 30일), **지우면 줄을 바로 지우는 글**(`guestbook_entry`. 시간이 지나도 지우지 않는다).
+- **탈퇴하면 실제로 지우는 개인 정보**(`user_profile`, `user_interest`, `user_answer`, `burrow`, `burrow_entrance`, `push_subscription`, `notification_setting`, 받은 `notification`).
 
 ## 전체 관계
 
@@ -101,11 +101,11 @@ erDiagram
     user ||--o{ notification : ""
 ```
 
-딸린 작은 테이블 9개(`user_withdrawal`, `user_suspension`, `daily_recommendation_member`, `post_version`, `comment_version`, `post_image`, `notification_setting`, `push_subscription`, `notice`)는 그림에서 뺐다. 영역별 그림은 각 문서에 있다.
+딸린 작은 테이블 11개(`user_withdrawal`, `user_suspension`, `daily_recommendation_member`, `chat_message_image`, `post_version`, `comment_version`, `post_image`, `uploaded_image`, `notification_setting`, `push_subscription`, `notice`)는 그림에서 뺐다. 영역별 그림은 각 문서에 있다.
 
 ## 설계하며 정한 것
 
-2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 2026-11-18에 서비스 명세와 대조해 탈퇴자가 쓴 방명록(G5, 남긴다)과 새 학기 안내를 다시 띄우는 때를 명세에 맞췄다(같은 날 디자인 확정에 따라 접속할 때마다 → 탐색을 누를 때로 바꿨다). 같은 날 공통 날짜 칼럼, ENUM 타입, 탈퇴 기록 테이블, 프로필 사진, 추천 단순화, 방명록 가림, 글 · 댓글 버전 관리를 반영했다(G6, G7, A5, A6, B5, B6, M5, C5, C6). 바꾸려면 이 표와 해당 문서를 함께 고친다.
+2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 2026-11-18에 서비스 명세와 대조해 탈퇴자가 쓴 방명록(G5, 남긴다)과 새 학기 안내를 다시 띄우는 때(접속할 때마다)를 명세에 맞췄다. 같은 날 공통 날짜 칼럼, ENUM 타입, 탈퇴 기록 테이블, 프로필 사진, 추천 단순화, 방명록 가림, 글 · 댓글 버전 관리를 반영했다(G6, G7, A5, A6, B5, B6, M5, C5, C6). 2026-11-20에 방명록 글을 기간으로 지우지 않게 하고, 새 학기 안내를 보류할 수 없게 바꿨다. 같은 날 오늘의 추천을 캠퍼스 · 층과 기수로 고르고 덜 추천된 사람부터 뽑게 바꿨다(B5). 새 학기에 캠퍼스 · 층을 고르면 땅굴이 이사하고 지난 학기 들판에 입구를 남기지 않게 바꿨다(B3). 바꾸려면 이 표와 해당 문서를 함께 고친다.
 
 | 번호 | 무엇을 | 정한 것 |
 |---|---|---|
@@ -124,9 +124,9 @@ erDiagram
 | A6 | 프로필 사진 | 선택 사항으로 `user_profile.profile_image_url`에 둔다. 올리지 않아도 두더지로 표시한다 |
 | B1 | 땅굴 | `burrow` 테이블을 둔다. 땅굴은 들판 위에 자리를 가진 장소다 |
 | B2 | 땅굴 무드 | 저장하지 않고 대표 관심사의 대분류에서 정한다 |
-| B3 | 프로필의 캠퍼스 · 층 | `user_profile`에 저장하고 기준으로 삼는다. 이번 학기 입구를 여기에 맞춘다 |
+| B3 | 프로필의 캠퍼스 · 층 | `user_profile`에 저장하고 기준으로 삼는다. 땅굴의 입구를 여기에 맞춘다. 땅굴 하나에 입구는 하나이고, 새 학기에 고르면 입구가 새 들판으로 옮겨진다 |
 | B4 | 들판에서 땅굴의 자리 | 자리 번호(`slot`)만 저장한다. 그 자리가 화면의 어디인지와 그리는 일은 프론트엔드가 맡는다 |
-| B5 | 오늘의 추천 | 받는 시점에 캠퍼스와 기수만 골라 무작위로 뽑는다. 고른 조건은 저장하지 않는다 |
+| B5 | 오늘의 추천 | 받는 시점에 캠퍼스 · 층과 기수만 고른다. 단골로 담은 땅굴의 주인은 빼고, 요청한 사람에게 덜 추천된 사람부터 뽑는다. 고른 조건은 저장하지 않고, 지난 추천 결과는 지우지 않는다 |
 | B6 | 방명록 글의 신고 | 서로 다른 3명이 신고하면 가린다. 글 · 댓글과 같은 규칙이다 |
 | H1 | 대화 요청의 만료(5일) | 상태로 저장하지 않고 보낸 시각에서 계산한다. 필요해지면 그때 바꾼다 |
 | H2 | 대화 안의 안내 줄 | 메시지로 저장한다(`chat_message.type`). 문구는 저장하지 않는다 |
