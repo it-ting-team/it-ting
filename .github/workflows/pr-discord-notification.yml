@@ -2,29 +2,41 @@ name: PR Discord 알림
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, closed]
 
 permissions: {}
 
 jobs:
   notify:
+    # 새 PR이 열렸을 때와 병합됐을 때만 알린다. 병합 없이 닫힌 PR은 알리지 않는다.
+    if: github.event.action == 'opened' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Discord로 새 PR 알림 전송
+      - name: Discord로 PR 알림 전송
         env:
           DISCORD_WEBHOOK_PR_URL: ${{ secrets.DISCORD_WEBHOOK_PR_URL }}
+          PR_ACTION: ${{ github.event.action }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
           PR_BASE: ${{ github.event.pull_request.base.ref }}
           PR_HEAD: ${{ github.event.pull_request.head.ref }}
           PR_LINK: ${{ github.event.pull_request.html_url }}
         run: |
-          payload=$(jq -n \
-            --arg content "🔔 **새 PR #${PR_NUMBER}**: ${PR_TITLE}
+          if [ "$PR_ACTION" = "opened" ]; then
+            content="🔔 **새 PR #${PR_NUMBER}**: ${PR_TITLE}
           작성자: ${PR_AUTHOR}
           브랜치: ${PR_HEAD} → ${PR_BASE}
-          ${PR_LINK}" \
+          ${PR_LINK}"
+          else
+            content="✅ **PR #${PR_NUMBER} 병합됨**: ${PR_TITLE}
+          작성자: ${PR_AUTHOR}
+          병합한 사람: ${PR_MERGED_BY}
+          브랜치: ${PR_HEAD} → ${PR_BASE}
+          ${PR_LINK}"
+          fi
+          payload=$(jq -n --arg content "$content" \
             '{content: $content, allowed_mentions: {parse: []}}')
           curl --fail-with-body --silent --show-error \
             -H "Content-Type: application/json" \
