@@ -88,18 +88,18 @@ erDiagram
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 모임 ID |
 | `host_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 모임 주최자 |
 | `category` | `VARCHAR(20)` | — | NOT NULL, 개별 UNIQUE 없음, `HOBBY`(취미/문화), `FOOD`(식사/카페), `STUDY`(스터디/프로젝트), `ETC`(기타), `GAME`(게임), `EXERCISE`(운동) | 모임 카테고리 |
-| `title` | `VARCHAR`(길이 미정) | — | NOT NULL, 개별 UNIQUE 없음 | 이름. 검색 대상 |
-| `description` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음 | 소개. 검색 대상 |
+| `title` | `VARCHAR(30)` | — | NOT NULL, 개별 UNIQUE 없음, 최대 30자 | 이름. 검색 대상 |
+| `description` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음, 최대 1,000자 | 소개. 검색 대상 |
 | `capacity` | `INT` | — | NOT NULL, 개별 UNIQUE 없음, 2–50명, 주최자 포함 | 모임 정원 |
-| `supplies` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 준비물 안내 |
+| `supplies` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 100자 | 준비물 안내 |
 | `accepts_message` | `BOOLEAN` | — | NOT NULL, 개별 UNIQUE 없음 | 신청 시 주최자에게 남길 말을 받을지 |
 | `starts_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 모임 시작 시각 |
 | `ends_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음, 값이 있으면 `starts_at`보다 뒤 | 모임 종료 시각 |
 | `recruit_deadline_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음, 등록 후 변경 불가 | 모집 마감 시각. NULL이면 시작 시각을 적용 |
 | `mode` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `OFFLINE`, `ONLINE` | 만나는 방식 |
-| `place` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음, `OFFLINE`일 때 필수 | 오프라인 장소 |
-| `place_detail` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 오프라인 상세 주소 |
-| `join_url` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 온라인 접속 링크. 접근 권한이 있는 사용자에게 제공 |
+| `place` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, `OFFLINE`일 때 필수, 최대 100자 | 오프라인 장소 |
+| `place_detail` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 100자 | 오프라인 상세 주소 |
+| `join_url` | `VARCHAR(500)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 500자 | 온라인 접속 링크. 접근 권한이 있는 사용자에게 제공 |
 | `canceled_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 주최자가 모임을 취소한 시각 |
 | `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 주최자가 모임을 삭제한 시각 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 모임 등록 시각. 최신등록순 정렬 기준 |
@@ -110,7 +110,7 @@ erDiagram
 - `join_url`은 참여 확정자에게만 내려준다.
 - 모임에 캠퍼스를 두지 않는다. 오프라인 모임이 열리는 곳은 `place`와 `place_detail`에 글로 적고, 캠퍼스로 모임을 거르지 않는다.
 - 온라인 플랫폼 이름은 따로 저장하지 않는다. 온라인 모임은 접속 링크만 갖는다.
-- 이름·소개·준비물·장소의 글자 수 제한은 명세에 없어 구현 단계에서 정한다.
+- 이름·소개·준비물·장소·접속 링크의 글자 수는 명세에 없어 [API 명세](../api/07-meetup.md)를 쓰며 정했다.
 
 ### `meetup_application`
 
@@ -122,7 +122,7 @@ erDiagram
 | `meetup_id` | `BIGINT` | FK → `meetup.id` | NOT NULL, 개별 UNIQUE 없음 | 신청한 모임 |
 | `user_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 신청자. 주최자는 이 테이블에 넣지 않음 |
 | `status` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `PENDING`, `WITHDRAWN`, `REJECTED`, `CONFIRMED`, `CANCELED`, `KICKED`, `MEETUP_CANCELED` | 대기·신청 취소·미승인·확정·참여 취소·내보내짐·모임 취소로 종료 |
-| `message` | `VARCHAR`(길이 미정) | — | NULL 허용, 개별 UNIQUE 없음 | 신청 시 주최자에게 남길 말 |
+| `message` | `VARCHAR(100)` | — | NULL 허용, 개별 UNIQUE 없음, 최대 100자 | 신청 시 주최자에게 남길 말 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 신청을 기록한 시각 |
 | `status_changed_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 가장 최근 상태 변경 시각 |
 
@@ -171,5 +171,4 @@ erDiagram
 
 ## 명세에 없어 구현 단계로 넘기는 것
 
-- 제목·준비물·장소 등의 글자 수
 - 일정 임박의 발송 시점과 내 모임 ‘확인 필요’ 알림의 새 항목 기준
