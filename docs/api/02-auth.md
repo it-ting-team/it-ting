@@ -17,7 +17,7 @@
 | `POST` | `/api/v1/users` | SSAFY 인증 코드를 확인하고 계정을 만들어 로그인한다 | 불필요(가입 진행 중) | 회원가입 2 · 3, 회원가입 3 · 3, 5, 7, 8 |
 | `POST` | `/api/v1/sessions` | 이메일과 비밀번호로 로그인한다 | 불필요 | 로그인 2 ~ 4 |
 | `DELETE` | `/api/v1/sessions/current` | 로그아웃한다 | 필요 | 10 설정 – 로그아웃 확인 2 |
-| `GET` | `/api/v1/me` | 로그인 상태와 다음에 갈 화면을 알려 준다 | 필요 | 영역 규칙 "로그인한 뒤 가는 곳" |
+| `GET` | `/api/v1/me` | 로그인 상태와 다음에 갈 화면, 소속을 알려 준다 | 필요 | 영역 규칙 "로그인한 뒤 가는 곳" |
 | `GET` | `/api/v1/oauth/google` | Google 로그인을 시작한다(브라우저 이동) | 불필요 | 로그인 5 |
 | `GET` | `/api/v1/oauth/google/callback` | Google이 돌려보내는 주소. 로그인시키거나 가입 진행을 시작하고 프론트엔드로 보낸다 | 불필요 | 로그인 5 |
 | `POST` | `/api/v1/password-resets` | 비밀번호 재설정 메일을 보낸다 | 불필요 | 재설정 메일 요청 2, 메일 보냄 2 |
@@ -534,7 +534,7 @@ DELETE /api/v1/sessions/current
 
 ## GET /api/v1/me
 
-로그인한 계정과 다음에 갈 화면을 알려 준다. 프론트엔드는 서비스를 처음 열 때(새로 고침, Google 로그인에서 돌아온 직후 포함) 이 API로 로그인 여부를 확인한다.
+로그인한 계정과 다음에 갈 화면, 소속(캠퍼스 · 기수 · 층)을 알려 준다. 프론트엔드는 서비스를 처음 열 때(새로 고침, Google 로그인에서 돌아온 직후 포함) 이 API로 로그인 여부를 확인한다.
 
 - 로그인: 필요
 - 명세: 영역 규칙 "로그인한 뒤 가는 곳"
@@ -553,19 +553,47 @@ GET /api/v1/me
 |---|---|---|---|
 | `userId` | 숫자 | 로그인한 계정의 id | `user.id`. 세션에 든 계정 |
 | `nextStep` | enum | `ONBOARDING`, `HOME` 가운데 하나 | 계산: [다음에 갈 화면](#다음에-갈-화면) |
+| `campusName` | 문자열 | 캠퍼스 이름 | `campus.name`. `user_profile.campus_floor_id`가 가리키는 층의 캠퍼스 |
+| `generation` | 숫자 | 기수 | `user_profile.generation` |
+| `floor` | 숫자 | 층 | `campus_floor.floor`. `user_profile.campus_floor_id`가 가리키는 층 |
 
 ### 주는 방식
 
 - 세션 쿠키로 계정을 찾아 그 계정 하나의 값만 준다.
 - 로그인하지 않았거나 세션이 만료됐으면 `401`과 `UNAUTHENTICATED`로 답한다. 프론트엔드는 이 응답을 "로그인하지 않음"으로 다룬다.
-- 닉네임, 두더지 같은 프로필 값은 담지 않는다. 프로필은 [내 땅굴 API](README.md)가 준다.
+- 캠퍼스 · 기수 · 층은 가입할 때 SSAFY 인증에서 정한 값이다. 계정을 만들 때 프로필도 함께 만들므로 로그인한 계정에는 항상 값이 있다. 온보딩 4의 땅굴 정보 카드가 이 값을 쓴다([온보딩 API](03-onboarding.md#화면마다-부르는-api)).
+- 닉네임, 두더지 같은 나머지 프로필 값은 담지 않는다. 프로필은 [내 땅굴 API](README.md)가 준다.
 
 ### 응답 예시
+
+온보딩까지 마친 계정:
 
 ```json
 {
   "success": true,
-  "data": { "userId": 31, "nextStep": "HOME" },
+  "data": {
+    "userId": 31,
+    "nextStep": "HOME",
+    "campusName": "서울",
+    "generation": 14,
+    "floor": 2
+  },
+  "error": null
+}
+```
+
+온보딩을 마치지 않은 계정:
+
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 31,
+    "nextStep": "ONBOARDING",
+    "campusName": "서울",
+    "generation": 14,
+    "floor": 2
+  },
   "error": null
 }
 ```
@@ -805,6 +833,7 @@ POST /api/v1/password-resets/3fa9c1d27b4e4f0a9c51/complete
 - **비밀번호를 재설정한 뒤**: 그 계정의 로그인 세션을 모두 지운다.
 - **정지를 알리는 때**: 이메일 로그인은 비밀번호가 맞은 뒤에만 정지 사실을 알린다. 비밀번호를 모르는 사람이 남의 정지 여부를 알 수 없게 한다.
 - **로그아웃의 범위**: 지금 쓰는 기기의 세션만 지운다.
+- **내 계정 조회가 주는 소속**: `GET /api/v1/me`가 캠퍼스 · 기수 · 층을 함께 준다. 온보딩 4의 땅굴 정보 카드가 이 값을 보여 주는데, 온보딩 도중에 나갔다 돌아온 사람은 프론트엔드에 이 값이 없기 때문이다.
 
 ## 구현 단계로 넘기는 것
 
