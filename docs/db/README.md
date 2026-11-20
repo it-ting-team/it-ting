@@ -53,7 +53,7 @@
 
 - **켜고 끄는 관계**(`user_interest`, `regular_burrow`, `meetup_like`, `post_like`, `comment_like`, `post_bookmark`): 지운 줄이 남아 있으면 다시 켤 때 기본키에 걸린다. 끄면 줄을 지운다.
 - **상태나 다른 시각이 그 역할을 하는 테이블**: `user`는 `status`와 `user_withdrawal`, `chat_request`와 `meetup_application`은 `status`, `chat_room_member`는 `left_at`으로 안다.
-- **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`), **기간이 지나면 정리하는 줄**(`notification`은 30일), **지우면 줄을 바로 지우는 글**(`guestbook_entry`. 시간이 지나도 지우지 않는다).
+- **지우지 않는 기록**(`post_version`, `comment_version`, `report`, `report_action`, `user_suspension`, `user_withdrawal`, `chat_message`, `intro_question`, `daily_recommendation`, `daily_recommendation_member`), **기간이 지나면 정리하는 줄**(`notification`은 30일), **지우면 줄을 바로 지우는 글**(`guestbook_entry`. 시간이 지나도 지우지 않는다).
 - **탈퇴하면 실제로 지우는 개인 정보**(`user_profile`, `user_answer`, `burrow`, `burrow_entrance`, `push_subscription`, `notification_setting`).
 
 ## 전체 관계
@@ -105,7 +105,7 @@ erDiagram
 
 ## 설계하며 정한 것
 
-2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 2026-11-18에 서비스 명세와 대조해 탈퇴자가 쓴 방명록(G5, 남긴다)과 새 학기 안내를 다시 띄우는 때(접속할 때마다)를 명세에 맞췄다. 같은 날 공통 날짜 칼럼, ENUM 타입, 탈퇴 기록 테이블, 프로필 사진, 추천 단순화, 방명록 가림, 글 · 댓글 버전 관리를 반영했다(G6, G7, A5, A6, B5, B6, M5, C5, C6). 2026-11-20에 방명록 글을 기간으로 지우지 않게 하고, 새 학기 안내를 보류할 수 없게 바꿨다. 바꾸려면 이 표와 해당 문서를 함께 고친다.
+2026-11-15의 설계 결정을 바탕으로 2026-11-16에 IT-TING-DB의 테이블 구조와 처리 규칙을 반영했다. 2026-11-18에 서비스 명세와 대조해 탈퇴자가 쓴 방명록(G5, 남긴다)과 새 학기 안내를 다시 띄우는 때(접속할 때마다)를 명세에 맞췄다. 같은 날 공통 날짜 칼럼, ENUM 타입, 탈퇴 기록 테이블, 프로필 사진, 추천 단순화, 방명록 가림, 글 · 댓글 버전 관리를 반영했다(G6, G7, A5, A6, B5, B6, M5, C5, C6). 2026-11-20에 방명록 글을 기간으로 지우지 않게 하고, 새 학기 안내를 보류할 수 없게 바꿨다. 같은 날 오늘의 추천을 캠퍼스 · 층과 기수로 고르고 덜 추천된 사람부터 뽑게 바꿨다(B5). 바꾸려면 이 표와 해당 문서를 함께 고친다.
 
 | 번호 | 무엇을 | 정한 것 |
 |---|---|---|
@@ -126,7 +126,7 @@ erDiagram
 | B2 | 땅굴 무드 | 저장하지 않고 대표 관심사의 대분류에서 정한다 |
 | B3 | 프로필의 캠퍼스 · 층 | `user_profile`에 저장하고 기준으로 삼는다. 이번 학기 입구를 여기에 맞춘다 |
 | B4 | 들판에서 땅굴의 자리 | 자리 번호(`slot`)만 저장한다. 그 자리가 화면의 어디인지와 그리는 일은 프론트엔드가 맡는다 |
-| B5 | 오늘의 추천 | 받는 시점에 캠퍼스와 기수만 골라 무작위로 뽑는다. 고른 조건은 저장하지 않는다 |
+| B5 | 오늘의 추천 | 받는 시점에 캠퍼스 · 층과 기수만 고른다. 단골로 담은 땅굴의 주인은 빼고, 요청한 사람에게 덜 추천된 사람부터 뽑는다. 고른 조건은 저장하지 않고, 지난 추천 결과는 지우지 않는다 |
 | B6 | 방명록 글의 신고 | 서로 다른 3명이 신고하면 가린다. 글 · 댓글과 같은 규칙이다 |
 | H1 | 대화 요청의 만료(5일) | 상태로 저장하지 않고 보낸 시각에서 계산한다. 필요해지면 그때 바꾼다 |
 | H2 | 대화 안의 안내 줄 | 메시지로 저장한다(`chat_message.type`). 문구는 저장하지 않는다 |

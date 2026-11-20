@@ -41,7 +41,7 @@ erDiagram
 
 설계 검토에서 확인했다. 실행 시에는 이번 학기 입구가 없는 계정으로 접속하면 안내가 뜨고 닫을 수 없는지, 고르기 전에는 다른 기능이 막히는지, 확정한 뒤에는 어느 접속에서도 안내가 뜨지 않는지, 지난 학기 입구가 그대로 남는지 확인한다.
 
-## 추천은 캠퍼스와 기수만 골라 무작위로 뽑기
+## 추천은 캠퍼스·층과 기수만 골라 덜 추천된 사람부터 뽑기
 
 ### 기존 설계
 
@@ -57,13 +57,13 @@ erDiagram
 
 ### 해결 방법
 
-추천을 받는 시점에 캠퍼스와 기수만 고르게 하고, 그 안에서 무작위로 세 명을 뽑는다. 고른 캠퍼스와 기수는 저장하지 않는다. `recommend_setting`과 `recommend_setting_question`은 없앤다.
+추천을 받는 시점에 캠퍼스·층과 기수만 고르게 하고, 그 안에서 세 명을 뽑는다. 고른 캠퍼스·층과 기수는 저장하지 않는다. `recommend_setting`과 `recommend_setting_question`은 없앤다.
 
-후보는 이번 학기 입구가 있고 온보딩을 마친 활동 회원이며 본인은 제외한다. 고른 캠퍼스는 프로필의 캠퍼스-층이 속한 캠퍼스와, 고른 기수는 프로필의 기수와 비교한다. 맞는 사람이 세 명보다 적으면 있는 만큼만 추천한다. 날짜별 UNIQUE와 결과 순서는 그대로 써서, 같은 날 다시 요청하면 처음 확정한 결과를 읽는다. 결과가 0명이어도 그날의 `daily_recommendation`은 기록한다.
+후보는 입구가 이번 학기의 고른 캠퍼스·층 들판에 있고 프로필의 기수가 고른 기수와 같으며 온보딩을 마친 활동 회원이다. 본인과, 요청한 사람이 단골로 담은 땅굴의 주인은 제외한다. 후보마다 요청한 사람에게 추천된 횟수를 `daily_recommendation`과 `daily_recommendation_member`에서 세어, 횟수가 가장 적은 사람부터 뽑고 횟수가 같은 사람끼리는 무작위로 뽑는다. 아직 추천되지 않은 사람이 먼저 나오고, 모두 한 번씩 추천된 뒤에는 횟수가 같아져 다시 모두 같은 순위가 된다. 따로 초기화하지 않는다. 횟수를 세어야 하므로 지난 추천 결과는 지우지 않는다. 맞는 사람이 세 명보다 적으면 있는 만큼만 추천한다. 날짜별 UNIQUE와 결과 순서는 그대로 써서, 같은 날 다시 요청하면 처음 확정한 결과를 읽는다. 결과가 0명이어도 그날의 `daily_recommendation`은 기록한다.
 
 ### 검증 결과
 
-설계 검토에서 확인했다. 실행 시에는 고른 캠퍼스와 기수에 맞는 사람만 뽑히는지, 맞는 사람이 세 명보다 적으면 있는 만큼만 반환되는지, 같은 날 다시 요청하면 조건을 바꿔도 처음 결과가 그대로 나오는지 확인한다. 같은 날 동시 요청은 확정된 한 결과를 반환해야 한다.
+설계 검토에서 확인했다. 실행 시에는 고른 캠퍼스·층과 기수에 맞는 사람만 뽑히는지, 단골로 담은 땅굴의 주인이 빠지는지, 아직 추천되지 않은 사람이 먼저 뽑히고 모두 한 번씩 추천된 뒤에는 다시 고르게 뽑히는지, 맞는 사람이 세 명보다 적으면 있는 만큼만 반환되는지, 같은 날 다시 요청하면 조건을 바꿔도 처음 결과가 그대로 나오는지 확인한다. 같은 날 동시 요청은 확정된 한 결과를 반환해야 한다.
 
 ## 탈퇴자가 받은 방명록은 지우고 쓴 방명록은 남기기
 
@@ -221,7 +221,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | `recommended_on` | `DATE` | — | NOT NULL, 개별 UNIQUE 없음 | 추천 기준 날짜 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 
-복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다. 추천을 받을 때 고른 캠퍼스와 기수는 저장하지 않는다.
+복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다. 추천을 받을 때 고른 캠퍼스·층과 기수는 저장하지 않는다. 지난 날짜의 행은 지우지 않는다.
 
 ### `daily_recommendation_member`
 
@@ -235,7 +235,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 
 복합 기본키는 `PK(daily_recommendation_id, sort_order)`다. 일일 추천 기록 한 건에 결과 행은 0~3개이며, 각 결과 행은 반드시 일일 추천 기록 하나에 속한다.
 
-같은 날 다시 요청하면 저장한 같은 사람들을 보여준다. 카드의 관심사·질문·답변은 결과에 복사하지 않고 추천된 사람의 현재 프로필에서 읽는다.
+같은 날 다시 요청하면 저장한 같은 사람들을 보여준다. 지난 추천 결과도 지우지 않고, 후보마다 요청한 사람에게 추천된 횟수를 세는 데 쓴다. 카드의 관심사·질문·답변은 결과에 복사하지 않고 추천된 사람의 현재 프로필에서 읽는다.
 
 ## 저장하지 않는 것
 
@@ -251,8 +251,9 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | 방명록 글 수 | `guestbook_entry.burrow_id`, `guestbook_entry.status` | 해당 땅굴에 달린 행 중 `status`가 `PUBLIC`인 행을 센다. 삭제된 행은 남아 있지 않다. |
 | 단골 수 | `regular_burrow.burrow_id` | 해당 땅굴을 담은 행을 `COUNT(*)`로 센다. 해제되거나 탈퇴 정리로 삭제된 관계는 제외된다. |
 | 오늘 추천을 이미 받았는지와 결과 | `daily_recommendation.user_id`, `daily_recommendation.recommended_on`, `daily_recommendation.id`, `daily_recommendation_member.daily_recommendation_id`, `daily_recommendation_member.sort_order`, `daily_recommendation_member.target_user_id` | 현재 사용자와 오늘의 추천 기준 날짜로 부모 행의 존재를 확인한다. 행이 있으면 결과를 `sort_order`순으로 읽는다. 결과가 없어도 부모 행이 있으면 추천을 받은 날이다. |
-| 추천 후보 | `burrow_entrance.term_id`, `burrow_entrance.burrow_id`, `burrow.id`, `burrow.user_id`, `user.status`, `user.onboarded_at` | 이번 학기의 입구에서 주인 계정을 찾는다. 본인을 제외하고 `ACTIVE`이면서 온보딩을 마친 사용자만 고른다. |
-| 고른 캠퍼스와 기수에 맞는지 | `user_profile.campus_floor_id`, `campus_floor.campus_id`, `user_profile.generation` | 후보 프로필의 캠퍼스-층이 고른 캠퍼스에 속하고 기수가 고른 기수와 같은지 비교한다. 맞는 후보 가운데 무작위로 최대 3명을 뽑는다. |
+| 추천 후보 | `burrow_entrance.term_id`, `burrow_entrance.burrow_id`, `burrow.id`, `burrow.user_id`, `user.status`, `user.onboarded_at`, `regular_burrow.user_id`, `regular_burrow.burrow_id` | 이번 학기의 입구에서 주인 계정을 찾는다. 본인과 요청한 사람이 단골로 담은 땅굴의 주인을 제외하고 `ACTIVE`이면서 온보딩을 마친 사용자만 고른다. |
+| 고른 캠퍼스·층과 기수에 맞는지 | `burrow_entrance.campus_floor_id`, `user_profile.generation` | 후보의 입구가 이번 학기의 고른 캠퍼스·층 들판에 있고 프로필의 기수가 고른 기수와 같은지 비교한다. |
+| 요청한 사람에게 추천된 횟수와 뽑는 순서 | `daily_recommendation.user_id`, `daily_recommendation_member.daily_recommendation_id`, `daily_recommendation_member.target_user_id` | 요청한 사람의 추천 기록에서 후보마다 결과 행 수를 센다. 횟수가 가장 적은 후보부터, 횟수가 같으면 무작위로 최대 3명을 뽑는다. |
 
 ### 프론트엔드가 관리하는 것
 
@@ -262,5 +263,5 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 ## 명세에 없어 구현 단계로 넘기는 것
 
 - 새 학기의 수동·자동 개설 방식과 빈 입구 자리의 재사용 기준
-- 추천 기준 날짜의 경계, 이전 추천 결과 보관 기간, 캠퍼스나 기수를 고르지 않고 전체에서 받을 수 있는지
+- 추천 기준 날짜의 경계, 캠퍼스·층이나 기수를 고르지 않고 전체에서 받을 수 있는지
 - 방명록 글이 가려졌다는 알림을 눌렀을 때 갈 곳
