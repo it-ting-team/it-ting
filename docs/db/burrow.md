@@ -119,13 +119,13 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 캠퍼스 ID |
-| `name` | 미정 (문자열) | — | NULL 허용·개별 UNIQUE 여부 미정 | 캠퍼스의 표시 이름 |
-| `sort_order` | 미정 (정수형) | — | NULL 허용·개별 UNIQUE 여부 미정 | 캠퍼스 목록의 표시 순서 |
+| `name` | `VARCHAR(20)` | — | NOT NULL, UNIQUE | 캠퍼스의 표시 이름 |
+| `sort_order` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 캠퍼스 목록의 표시 순서. 작은 것이 먼저이고, 같으면 id 순 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 | `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
 
-목록 값은 임시이며, 예시는 서울 · 대전 · 부울경 · 구미 · 광주다. 운영자가 DB에서 직접 관리한다(관리 화면 없음).
+목록 값은 임시이며, 마이그레이션 `V2__create_campus.sql`이 서울 · 대전 · 부울경 · 구미 · 광주와 캠퍼스마다 1 ~ 20층을 넣는다. 실제 값이 정해지면 새 마이그레이션으로 고친다. 운영자가 DB에서 직접 관리한다(관리 화면 없음).
 
 ### `campus_floor`
 
@@ -135,7 +135,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 캠퍼스·층 ID |
 | `campus_id` | `BIGINT` | FK → `campus.id` | NOT NULL, 개별 UNIQUE 없음 | 층이 속한 캠퍼스 |
-| `floor` | 미정 (정수형) | — | NOT NULL, 개별 UNIQUE 없음 | 캠퍼스 안의 층 번호 |
+| `floor` | `INT` | — | NOT NULL, 개별 UNIQUE 없음 | 캠퍼스 안의 층 번호 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 | `deleted_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
