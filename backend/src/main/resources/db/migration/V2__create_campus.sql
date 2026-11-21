@@ -32,7 +32,7 @@ VALUES ('서울', 1, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6)),
        ('구미', 4, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6)),
        ('광주', 5, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6));
 
--- 캠퍼스마다 1 ~ 20층
+-- 캠퍼스마다 1 ~ 20층. id가 캠퍼스 순, 층 순으로 매겨지게 정렬해 넣는다(서울 1층 = 1, 대전 1층 = 21).
 INSERT INTO campus_floor (campus_id, floor, created_at, updated_at)
 WITH RECURSIVE floors (n) AS (
     SELECT 1
@@ -41,4 +41,5 @@ WITH RECURSIVE floors (n) AS (
 )
 SELECT campus.id, floors.n, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6)
 FROM campus
-CROSS JOIN floors;
+CROSS JOIN floors
+ORDER BY campus.id, floors.n;
