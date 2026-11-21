@@ -1,0 +1,6 @@
+# 내 PC에서 개발할 때
+
+management:
+  endpoint:
+    health:
+      show-details: always
