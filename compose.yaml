@@ -1,0 +1,40 @@
+# 로컬 개발용 MySQL과 Redis
+# 실행: docker compose up -d
+# 값은 .env에서 읽는다. 처음이면 .env.example을 .env로 복사한다.
+
+name: it-ting
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?.env에 MYSQL_ROOT_PASSWORD가 필요합니다}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?.env에 MYSQL_DATABASE가 필요합니다}
+      MYSQL_USER: ${MYSQL_USER:?.env에 MYSQL_USER가 필요합니다}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?.env에 MYSQL_PASSWORD가 필요합니다}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  redis:
+    image: redis:7.4
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql-data:
+  redis-data:

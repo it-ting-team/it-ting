@@ -1,0 +1,18 @@
+# 비밀값
+.env
+.env.*
+!.env.example
+
+# 운영체제
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+
+# 로그
+*.log
