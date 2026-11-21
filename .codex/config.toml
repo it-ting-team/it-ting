@@ -1,0 +1,13 @@
+# 이 저장소에서 Codex가 쓰는 설정. 프로젝트를 신뢰(trust)해야 읽힌다.
+# Claude Code용 같은 설정은 .mcp.json에 있다. 고칠 때는 두 파일을 함께 고친다.
+
+[mcp_servers.playwright]
+command = "npx"
+args = [
+  "-y",
+  "@playwright/mcp@0.0.86",
+  "--browser", "chrome",
+  "--user-data-dir", ".playwright-mcp/profile",
+  "--output-dir", ".playwright-mcp/output",
+  "--viewport-size", "1280x800",
+]
