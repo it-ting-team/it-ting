@@ -18,6 +18,13 @@ spring:
         # 시각은 Instant로 다뤄 UTC로 저장한다. Instant가 아닌 시각 타입을 쓰더라도 UTC로 저장되게 맞춘다.
         jdbc:
           time_zone: UTC
+  web:
+    # 검증 오류의 설명(error.fields[].message)을 요청의 Accept-Language와 상관없이 한국어로 준다.
+    locale: ko_KR
+    locale-resolver: fixed
+    resources:
+      # 정적 파일을 주지 않는 API 서버다. 끄면 없는 주소가 메서드와 상관없이 404로 답한다(켜 두면 POST가 405가 된다).
+      add-mappings: false
 
 management:
   endpoints:
