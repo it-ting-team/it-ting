@@ -7,6 +7,11 @@ name: it-ting
 services:
   mysql:
     image: mysql:8.4
+    # 문자셋은 utf8mb4, 시간대는 UTC. 테스트 컨테이너(TestcontainersConfiguration)와 같게 맞춘다.
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?.env에 MYSQL_ROOT_PASSWORD가 필요합니다}
       MYSQL_DATABASE: ${MYSQL_DATABASE:?.env에 MYSQL_DATABASE가 필요합니다}

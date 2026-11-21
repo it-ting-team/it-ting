@@ -1,5 +1,6 @@
 # 테스트 서버
 # 서버 주소, DB 접속 값 같은 것은 배포 환경을 정한 뒤 환경 변수로 넣는다.
+# DB: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
 
 management:
   endpoint:

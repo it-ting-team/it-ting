@@ -6,7 +6,8 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 
 | 경로 | 내용 |
 |---|---|
-| `backend/` | Spring Boot 4.2, Java 25, Gradle. 실행 방법은 `README.md`의 백엔드 절 |
+| `backend/` | Spring Boot 4.2, Java 25, Gradle, Spring Data JPA. 실행 방법은 `README.md`의 백엔드 절 |
+| `backend/src/main/resources/db/migration/` | Flyway 마이그레이션. DB 테이블은 여기서만 만든다 |
 | `frontend/` | Next.js (KAN-25에서 추가) |
 | `docs/spec/` | 서비스 명세. 무엇을 만드는가 |
 | `docs/db/` | DB 설계. 무엇을 저장하는가 |
@@ -36,6 +37,16 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 - MUST: 명세와 다르게 구현해야 하면 코드를 바꾸기 전에 사용자에게 묻는다.
 - MUST: 구현하면서 API의 주소, 요청, 응답, 에러 코드가 `docs/api/`와 달라지면 같은 PR에서 `docs/api/`도 고친다.
 - MUST: 커밋, 푸시, PR 생성, 병합은 사용자가 요청한 경우에만 한다.
+
+### DB
+
+- MUST: 테이블은 그 기능을 만드는 PR에서 Flyway 마이그레이션 `V<번호>__<설명>.sql`로 만든다. 번호는 dev에 있는 가장 큰 번호의 다음이다.
+- MUST: 테이블을 만들거나 바꾸면 `docs/db/<영역>.md`와 맞춘다. 문서에 "미정"인 칸은 그 PR에서 정하고 문서에도 적는다.
+- MUST: 시각은 `java.time.Instant`로 다루고 칼럼은 `DATETIME(6)`으로 만든다. DB에는 UTC로 저장된다.
+- MUST: `created_at`, `updated_at`이 있는 엔티티는 `BaseTimeEntity`를, `created_at`만 있는 엔티티는 `BaseCreatedTimeEntity`를 상속한다. 어느 테이블에 무엇을 두는지는 `docs/db/README.md`의 공통 날짜 칼럼을 따른다.
+- MUST NOT: dev에 병합된 마이그레이션 파일을 고치지 않는다. 고칠 것이 있으면 새 번호의 마이그레이션을 더한다.
+- MUST NOT: `ddl-auto`를 `create`, `update`로 바꾸지 않는다. 모든 프로필에서 `validate`다.
+- 테스트에만 필요한 테이블은 `backend/src/test/resources/db/migration/`에 1000번부터 둔다.
 - MUST NOT: 비밀값(비밀번호, API 키, 토큰, 웹후크 URL)을 커밋하거나 파일에 적지 않는다. `.env`는 사용자가 채운다.
 - MUST NOT: `main`, `dev`에 직접 푸시하거나 강제 푸시하지 않는다. 작업 브랜치의 강제 푸시도 사용자가 요청한 경우에만 한다.
 - MUST NOT: 사용자의 git 설정(`user.name`, `user.email`, 서명)을 바꾸지 않고, `--no-gpg-sign`, `--no-verify`를 쓰지 않는다.
@@ -57,7 +68,8 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 ### 코드를 바꾼 모든 작업
 
 - MUST: PR을 올리기 전에 스킬 `code-review`로 로컬 리뷰를 하고, P0과 P1 지적을 모두 고친다.
-- MUST: `backend/`를 바꿨으면 `./gradlew build`가 통과한다.
+- MUST: `backend/`를 바꿨으면 `./gradlew build`가 통과한다. 테스트는 Testcontainers로 MySQL을 띄우므로 Docker가 켜져 있어야 한다.
+- MUST: DB를 쓰는 테스트는 `@Import(TestcontainersConfiguration.class)`로 실제 MySQL에서 돌린다. H2 같은 대체 DB를 쓰지 않는다.
 
 PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 번 더 리뷰한다. AI 리뷰는 병합 조건이 아니다. 병합은 사람이 Codex 리뷰의 P0, P1 지적이 처리됐는지 확인하고 한다.
 
@@ -120,6 +132,8 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 - `docs/api-convention.md`의 MUST를 어긴다(응답 틀, 상태 코드, 에러 `code`, JSON 필드 이름, 주소 모양).
 - API가 자기 영역이 아닌 데이터를 바꾼다. 예외는 문서에 이유가 적힌 경우뿐이다(예: 탈퇴 API, `docs/api/10-settings.md`).
 - 여러 테이블을 바꾸는데 하나의 트랜잭션으로 묶이지 않아 중간에 실패하면 데이터가 어긋난다.
+- dev에 병합된 마이그레이션 파일을 고쳤다. 또는 테이블을 마이그레이션이 아닌 방법으로 만들거나 바꿨다.
+- 마이그레이션의 테이블 · 칼럼이 `docs/db/`와 다르고, 문서도 고치지 않았다.
 - API를 추가하거나 바꿨는데 정상과 실패 경우의 통합 테스트가 없다.
 - 테스트가 실제로 검증하지 않는다(단언이 없거나 항상 통과한다).
 
