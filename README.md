@@ -34,6 +34,39 @@ docker compose down -v   # 종료하고 데이터까지 지움
 
 값은 `.env`에 적은 것을 따른다.
 
+## 백엔드
+
+Spring Boot 4.2, Java 25, Gradle. 코드는 `backend/`에 있다.
+
+### 준비
+
+- JDK 25. IntelliJ의 Project Structure → SDK → Download JDK에서 받거나 [Temurin](https://adoptium.net/)을 설치한다.
+- 터미널에서 실행하면 `JAVA_HOME`이 JDK 25를 가리켜야 한다.
+
+### 실행
+
+```bash
+cd backend
+./gradlew bootRun                                   # local 프로필로 실행
+./gradlew bootRun --args='--spring.profiles.active=test'   # 다른 프로필로 실행
+./gradlew build                                     # 빌드와 테스트
+```
+
+| 주소 | 내용 |
+|---|---|
+| http://localhost:8080/swagger-ui.html | API 문서(Swagger). `prod` 프로필에서는 열리지 않는다 |
+| http://localhost:8080/actuator/health | 헬스체크 |
+
+### 프로필
+
+| 프로필 | 쓰는 곳 | 설정 파일 |
+|---|---|---|
+| `local` | 내 PC. 프로필을 고르지 않으면 이것으로 뜬다 | `application-local.yml` |
+| `test` | 테스트 서버 | `application-test.yml` |
+| `prod` | 운영 서버 | `application-prod.yml` |
+
+모든 프로필에 같은 설정은 `application.yml`에 둔다.
+
 ## 문서
 
 - [브랜치 전략](docs/branch-strategy.md)

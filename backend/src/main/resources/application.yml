@@ -1,0 +1,19 @@
+# 모든 프로필에 공통인 설정
+# 프로필: local(내 PC), test(테스트 서버), prod(운영 서버)
+# 프로필을 고르지 않고 실행하면 local로 뜬다.
+
+spring:
+  application:
+    name: it-ting
+  profiles:
+    default: local
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
