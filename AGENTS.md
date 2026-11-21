@@ -38,6 +38,27 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 - MUST: 구현하면서 API의 주소, 요청, 응답, 에러 코드가 `docs/api/`와 달라지면 같은 PR에서 `docs/api/`도 고친다.
 - MUST: 커밋, 푸시, PR 생성, 병합은 사용자가 요청한 경우에만 한다.
 
+### 백엔드 코드
+
+패키지는 영역별로 나누고, 영역 안을 계층으로 나눈다. 영역 이름은 `docs/api/`의 영역을 따른다(`campus`, `meetup`, `chat` 등).
+
+```text
+com.itting
+├─ global/        여러 영역이 함께 쓰는 것(응답 틀, 예외, 설정, 부모 엔티티)
+└─ <영역>/
+   ├─ controller/  <대상>Controller
+   ├─ service/     <대상>Service
+   ├─ repository/  <대상>Repository
+   ├─ domain/      엔티티, enum
+   └─ dto/         <무엇>Request, <무엇>Response
+```
+
+- MUST: 요청 · 응답 DTO는 `record`로 만들고 이름은 `<무엇>Request`, `<무엇>Response`로 끝낸다. 엔티티를 응답으로 그대로 내보내지 않는다.
+- MUST: 컨트롤러는 `ApiResult<T>`를 돌려준다. 성공은 `ApiResult.ok(data)`, 돌려줄 값이 없으면 `ApiResult.ok()`다.
+- MUST: 실패는 `BusinessException`을 던져 알린다. 영역의 에러 코드는 `ErrorCode`를 구현한 `<영역>ErrorCode` enum에 두고, 상수 이름이 응답의 `code`다. 공통 코드는 `CommonErrorCode`에 있다.
+- MUST NOT: 컨트롤러나 서비스에서 실패 응답 본문을 직접 만들지 않는다. 응답 틀로 바꾸는 일은 `GlobalExceptionHandler`가 한다.
+- 입력 검증은 DTO와 메서드 인자에 Bean Validation(`@NotBlank`, `@Size`, `@Max` 등)으로 붙인다. 실패하면 `400 INVALID_INPUT`과 `fields`가 자동으로 나간다.
+
 ### DB
 
 - MUST: 테이블은 그 기능을 만드는 PR에서 Flyway 마이그레이션 `V<번호>__<설명>.sql`로 만든다. 번호는 dev에 있는 가장 큰 번호의 다음이다.
@@ -122,7 +143,8 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 
 - 비밀값(비밀번호, API 키, 토큰, 웹후크 URL)이 코드, 설정, 테스트, 로그에 들어 있다.
 - 로그인한 사용자가 다른 사용자의 자원을 조회하거나 바꿀 수 있다(권한 검사 누락).
-- 응답이나 로그에 다른 사용자의 개인 정보, 스택 트레이스, SQL이 나간다.
+- 응답에 다른 사용자의 개인 정보, 스택 트레이스, SQL이 나간다.
+- 로그에 비밀값이나 다른 사용자의 개인 정보가 남는다. 서버 오류의 원인을 찾으려고 서버 로그에 스택 트레이스를 남기는 것은 지적하지 않는다.
 - `prod` 프로필에서 Swagger, 상세 헬스체크처럼 내부 정보를 여는 설정이 켜진다.
 - 데이터를 지우거나 덮어쓰는 동작이 명세에 없는데 들어 있다.
 
@@ -139,7 +161,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 
 ### 지적하지 않는 것
 
-- 들여쓰기, 이름 짓기, 패키지 구조 같은 코드 스타일. 코드 규칙(KAN-4)을 정하기 전까지는 지적하지 않는다.
+- 들여쓰기, 이름 짓기 같은 코드 스타일. 위 "백엔드 코드"에 적은 규칙만 지적하고, 나머지는 코드 규칙(KAN-4)을 정하기 전까지 지적하지 않는다.
 - 취향 차이일 뿐인 다른 구현 방법.
 
 ## 브라우저 도구
