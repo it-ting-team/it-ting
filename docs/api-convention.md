@@ -72,7 +72,9 @@ POST /api/v1/email-verifications/check
 | `401` | 로그인하지 않았거나 로그인이 만료됨 |
 | `403` | 로그인했지만 할 수 없는 일임 |
 | `404` | 주소나 대상이 없음 |
+| `405` | 주소는 있지만 그 메서드를 허용하지 않음 |
 | `409` | 지금 상태에서는 할 수 없음(중복, 정원 참, 이미 처리됨) |
+| `415` | 본문의 형식(`Content-Type`)을 받지 않음 |
 | `429` | 너무 자주 요청함 |
 | `500` | 서버 오류 |
 
@@ -127,10 +129,14 @@ POST /api/v1/email-verifications/check
 | `401` | `UNAUTHENTICATED` | 로그인하지 않았거나 로그인이 만료됨 |
 | `403` | `FORBIDDEN` | 로그인했지만 할 수 없는 일임 |
 | `404` | `NOT_FOUND` | 없는 주소임 |
+| `405` | `METHOD_NOT_ALLOWED` | 그 주소에서 허용하지 않는 메서드임. 응답의 `Allow` 헤더에 허용하는 메서드를 적는다 |
+| `415` | `UNSUPPORTED_MEDIA_TYPE` | 본문의 `Content-Type`을 받지 않음(JSON을 받는 API에 폼을 보냄 등) |
 | `429` | `TOO_MANY_REQUESTS` | 너무 자주 요청함 |
 | `500` | `INTERNAL_ERROR` | 서버 오류 |
 
 대상이 없을 때는 `NOT_FOUND` 대신 `<대상>_NOT_FOUND`를 쓴다. 영역마다의 코드는 그 영역의 API 목록에 적는다.
+
+없는 주소는 메서드와 상관없이 `404`다. 위 표에 없는 `4xx`가 나면(서버나 프레임워크가 거절한 요청) `400`과 `INVALID_INPUT`으로 답한다.
 
 ## JSON 필드
 

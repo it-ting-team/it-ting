@@ -40,6 +40,12 @@ class ItTingApplicationTests {
 					.andExpect(jsonPath("$.info.title").value("it-ting API"));
 		}
 
+		@Test
+		void Swagger_화면을_준다() throws Exception {
+			mockMvc.perform(get("/swagger-ui/index.html"))
+					.andExpect(status().isOk());
+		}
+
 	}
 
 	@Nested
