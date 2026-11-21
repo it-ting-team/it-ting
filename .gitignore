@@ -16,3 +16,7 @@ desktop.ini
 
 # 로그
 *.log
+
+# AI 에이전트
+.playwright-mcp/
+.claude/settings.local.json
