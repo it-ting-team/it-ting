@@ -36,14 +36,17 @@ docker compose down -v   # 종료하고 데이터까지 지움
 
 ## 백엔드
 
-Spring Boot 4.2, Java 25, Gradle. 코드는 `backend/`에 있다.
+Spring Boot 4.2, Java 25, Gradle, Spring Data JPA, Flyway. 코드는 `backend/`에 있다.
 
 ### 준비
 
 - JDK 25. IntelliJ의 Project Structure → SDK → Download JDK에서 받거나 [Temurin](https://adoptium.net/)을 설치한다.
 - 터미널에서 실행하면 `JAVA_HOME`이 JDK 25를 가리켜야 한다.
+- Docker Desktop. 서버는 로컬 MySQL에, 테스트는 Testcontainers가 띄우는 MySQL에 붙는다.
 
 ### 실행
+
+먼저 [로컬 개발 환경](#로컬-개발-환경)대로 `docker compose up -d`로 MySQL을 띄운다. `local` 프로필은 저장소 루트의 `.env`에서 DB 접속 값을 읽는다.
 
 ```bash
 cd backend
@@ -65,7 +68,17 @@ cd backend
 | `test` | 테스트 서버 | `application-test.yml` |
 | `prod` | 운영 서버 | `application-prod.yml` |
 
-모든 프로필에 같은 설정은 `application.yml`에 둔다.
+모든 프로필에 같은 설정은 `application.yml`에 둔다. `test`, `prod` 프로필의 DB 접속 값은 환경 변수(`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`)로 넣는다.
+
+### DB 마이그레이션
+
+테이블은 Flyway가 `backend/src/main/resources/db/migration/`의 SQL을 번호 순서대로 적용해 만든다. 서버가 뜰 때 아직 적용하지 않은 파일만 적용한다.
+
+- 새 테이블은 그 기능의 PR에서 `V<번호>__<설명>.sql`로 더한다. 예: `V2__create_meetup_tables.sql`
+- 이미 dev에 들어간 파일은 고치지 않는다. 바꿀 것이 있으면 새 번호의 파일을 더한다.
+- 엔티티와 테이블이 다르면 서버가 뜨지 않는다(`ddl-auto: validate`).
+
+로컬 DB를 처음 상태로 되돌리려면 `docker compose down -v` 후 다시 띄운다. 데이터가 모두 지워진다.
 
 ## AI 에이전트
 

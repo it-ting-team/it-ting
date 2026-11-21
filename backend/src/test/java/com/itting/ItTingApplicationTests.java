@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.itting.support.TestcontainersConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -17,6 +19,7 @@ class ItTingApplicationTests {
 	@Nested
 	@SpringBootTest
 	@AutoConfigureMockMvc
+	@Import(TestcontainersConfiguration.class)
 	@ActiveProfiles("local")
 	class Local {
 
@@ -42,6 +45,7 @@ class ItTingApplicationTests {
 	@Nested
 	@SpringBootTest
 	@AutoConfigureMockMvc
+	@Import(TestcontainersConfiguration.class)
 	@ActiveProfiles("prod")
 	class Prod {
 
