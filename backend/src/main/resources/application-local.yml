@@ -12,6 +12,13 @@ spring:
     # 사용자와 비밀번호는 기본값 없이 .env에서만 읽는다.
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      port: ${REDIS_PORT:6379}
+
+itting:
+  cors:
+    allowed-origins: http://localhost:3000
 
 management:
   endpoint:

@@ -1,0 +1,56 @@
+package com.itting.auth.service;
+
+import com.itting.user.domain.UserRole;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.stereotype.Service;
+
+/**
+ * 로그인 세션을 만들고 지운다. 세션은 Spring Session이 Redis에 두고, 쿠키 {@code ITTING_SESSION}으로 가리킨다.
+ *
+ * <p>세션에는 계정 id만 넣는다. 인증의 주인(principal)이 계정 id라서, 컨트롤러는
+ * {@code @AuthenticationPrincipal Long userId}로 받는다. Spring Session은 이 값으로 세션을 색인하므로
+ * 한 계정의 세션을 모두 찾아 지울 수 있다.
+ */
+@Service
+public class SessionService {
+
+	private final SecurityContextRepository securityContextRepository;
+
+	public SessionService(SecurityContextRepository securityContextRepository) {
+		this.securityContextRepository = securityContextRepository;
+	}
+
+	/**
+	 * 새 세션을 만들어 로그인시킨다. 요청에 이전 세션이 있으면 버리고 새 id로 만든다(세션 고정 공격 방지).
+	 */
+	public void start(HttpServletRequest request, HttpServletResponse response, Long userId, UserRole role) {
+		HttpSession previous = request.getSession(false);
+		if (previous != null) {
+			previous.invalidate();
+		}
+		request.getSession(true);
+
+		SecurityContext context = SecurityContextHolder.createEmptyContext();
+		context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+				userId, null, AuthorityUtils.createAuthorityList("ROLE_" + role.name())));
+		SecurityContextHolder.setContext(context);
+		securityContextRepository.saveContext(context, request, response);
+	}
+
+	/** 지금 요청의 세션만 지운다. 다른 기기의 세션은 그대로다. 쿠키는 Spring Session이 지운다. */
+	public void end(HttpServletRequest request) {
+		HttpSession session = request.getSession(false);
+		if (session != null) {
+			session.invalidate();
+		}
+		SecurityContextHolder.clearContext();
+	}
+
+}

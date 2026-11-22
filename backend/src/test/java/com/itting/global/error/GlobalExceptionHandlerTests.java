@@ -14,16 +14,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * 모든 응답이 API 공통 규칙의 응답 틀과 에러 모양을 지키는지 검증한다.
  * 호출 대상은 테스트 전용 {@link com.itting.support.ErrorSampleController}다.
+ * 로그인이 필요한 주소라 로그인한 사용자로 부른다. 로그인하지 않았을 때는 {@code SecurityConfigTests}가 본다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
+@WithMockUser
 class GlobalExceptionHandlerTests {
 
 	private static final String SAMPLES = "/api/v1/error-samples";
