@@ -84,6 +84,81 @@
 
 ## 결과
 
+### 한눈에 보기
+
+요청이 서버에 들어와 지나가는 길이다. 응답이 갈리는 곳은 마름모다.
+
+```mermaid
+flowchart TD
+    A["브라우저 요청<br/>Cookie: ITTING_SESSION"] --> B["SessionRepositoryFilter<br/>쿠키 값으로 Redis에서 세션을 찾는다"]
+    B --> C["SessionCookieRefreshFilter<br/>세션이 살아 있으면 쿠키를 다시 14일로 준다"]
+    C --> D{"CorsFilter<br/>Origin이 허용 목록에 있나"}
+    D -- "없음" --> E["403 FORBIDDEN"]
+    D -- "있음 또는 Origin 헤더 없음" --> F{"주소가 어디인가"}
+    F -- "PUBLIC_API<br/>campuses, generations, sessions" --> H["컨트롤러"]
+    F -- "Swagger, 헬스체크, /error" --> H
+    F -- "그 밖의 /api/**" --> G{"세션에 로그인 정보가 있나"}
+    G -- "없음" --> I["401 UNAUTHENTICATED"]
+    G -- "있음" --> H
+```
+
+로그인(`POST /api/v1/sessions`)의 순서다.
+
+```mermaid
+sequenceDiagram
+    participant B as 브라우저
+    participant C as SessionController
+    participant L as LoginService
+    participant DB as MySQL
+    participant S as SessionService
+    participant R as Redis
+    B->>C: POST /api/v1/sessions (email, password)
+    C->>L: login
+    L->>DB: 이메일로 계정 찾기 (탈퇴 제외)
+    L->>L: BCrypt 비교. 계정이 없어도 한 번 비교한다
+    alt 계정이 없거나 비밀번호가 다름
+        L-->>B: 401 LOGIN_FAILED
+    end
+    L->>DB: 지금 정지 중인 기록 찾기
+    alt 정지 중
+        L-->>B: 403 ACCOUNT_SUSPENDED (사유, 끝 시각)
+    end
+    C->>S: start(userId)
+    S->>R: 이전 세션 지우기, 새 세션 저장 (계정 id, 14일)
+    C-->>B: 201 (userId, nextStep) + Set-Cookie ITTING_SESSION
+```
+
+로그아웃은 Redis에서 지금 세션만 지우고 `Max-Age=0` 쿠키를 준다. `GET /api/v1/me`는 세션의 계정 id로 아래 테이블을 읽는다. 계정이 없거나 탈퇴했으면 세션을 지우고 `401`이다.
+
+이번에 만든 테이블은 `user`, `user_profile`, `user_suspension`이다. `campus`, `campus_floor`는 V2에서 만든 것을 읽기만 한다.
+
+```mermaid
+erDiagram
+    user ||--|| user_profile : "계정을 만들 때 함께 만든다"
+    user ||--o{ user_suspension : "정지 기록"
+    campus_floor ||--o{ user_profile : "소속 층"
+    campus ||--o{ campus_floor : "V2에서 만듦"
+    user {
+        BIGINT id PK
+        VARCHAR254 email UK
+        VARCHAR100 password_hash
+        DATETIME onboarded_at "비면 ONBOARDING"
+        ENUM status "ACTIVE, WITHDRAWN"
+    }
+    user_profile {
+        BIGINT user_id PK
+        SMALLINT generation
+        BIGINT campus_floor_id FK
+    }
+    user_suspension {
+        BIGINT user_id FK
+        VARCHAR200 reason
+        DATETIME starts_at
+        DATETIME ends_at
+        DATETIME lifted_at "차면 해제됨"
+    }
+```
+
 ### 바꾼 것
 
 | 파일 | 내용 |
