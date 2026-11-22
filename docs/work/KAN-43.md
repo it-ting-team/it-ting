@@ -162,7 +162,9 @@ erDiagram
 
 | 파일 | 내용 |
 |---|---|
-| `db/migration/V20261123_0012__create_term_interest_question.sql` | 테이블 5개, 학기 2026 하반기, 대분류 12 · 세부 관심사 90, 질문 40 |
+| `db/migration/V20261123_0012__create_term.sql` | `term`, 학기 2026 하반기 |
+| `db/migration/V20261123_0036__create_interest.sql` | `interest_category`, `interest`, `user_interest`, 대분류 12 · 세부 관심사 90 |
+| `db/migration/V20261123_0037__create_intro_question.sql` | `intro_question`(대분류를 참조하므로 관심사보다 뒤), 질문 40 |
 | `term/` | `Term`, `TermRepository`, `TermService`(시계 기준으로 열린 학기), `TermController`, `TermListResponse` |
 | `interest/` | `InterestCategory`, `Interest`, `UserInterest`(복합 키, 03이 쓸 `create`), 저장소 3개 + `InterestUserCount`, `InterestService`, `InterestCategoryController`, `InterestCategoryListResponse` |
 | `question/` | `IntroQuestion`, `IntroQuestionType`, `IntroQuestionRepository`, `IntroQuestionService`, `IntroQuestionController`, `IntroQuestionListResponse` |
@@ -181,6 +183,7 @@ erDiagram
 ### 계획과 달라진 점
 
 - 마이그레이션 번호가 계획의 `V20261122_2348`에서 실제로 파일을 만든 시각 `V20261123_0012`로 바뀌었다(KAN-42 규칙).
+- 계획은 마이그레이션 하나였으나, Codex 리뷰 P1(한 마이그레이션은 자기 영역의 테이블만)에 따라 학기 · 관심사 · 질문 세 파일로 나눴다. 질문은 관심사 대분류를 참조하므로 관심사보다 뒤의 시각이다.
 - `user_interest.sort_order`에 `CHECK (1 ~ 10)`를 더했다. 계획에는 없었고 DB 설계의 "3 ~ 10개, 1이 대표"를 DB가 지키게 한 것이다.
 - 계획 I에서 "KAN-44 · 46 설명에 적는다"고 했으나, 막는 장치는 이미 KAN-44의 "함께 할 것"이라 KAN-44 설명에만 적었다. 이 PR이 만든 테이블 목록도 함께 적었다.
 - `docs/api/00-common.md`의 관심사 · 질문 응답 예시를 실제 처음 값(id)으로 바꿨다.
@@ -195,6 +198,6 @@ erDiagram
 ### 검토 순서
 
 1. `docs/api/00-common.md`의 "구현하며 정한 것", `docs/db/account.md` · `burrow.md`
-2. 마이그레이션 `V20261123_0012__create_term_interest_question.sql`(특히 질문 초안)
+2. 마이그레이션 `V20261123_0012__create_term.sql`, `V20261123_0036__create_interest.sql`, `V20261123_0037__create_intro_question.sql`(특히 질문 초안)
 3. `term` → `interest` → `question` 패키지(컨트롤러 → 서비스 → 저장소 → 엔티티)
 4. 테스트 3개
