@@ -120,7 +120,7 @@ flowchart TD
     Q2 --> OK
 ```
 
-새로 만든 테이블은 다섯 개 모두이고, 이 API는 읽기만 합니다. `user`는 이미 있는 테이블(V3)이고 `user_interest`가 참조만 합니다.
+새로 만든 테이블은 다섯 개 모두이고, 이 API는 읽기만 한다. `user`는 이미 있는 테이블(V3)이고 `user_interest`가 참조만 한다.
 
 ```mermaid
 erDiagram
@@ -176,6 +176,7 @@ erDiagram
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
 - 로컬 코드 리뷰: P0 0건, P1 0건. 학기를 여는 시각과 같은 순간을 "열림"으로 셈을 API 명세 문구에 맞춤
 - 첫 빌드에서 새 테스트 3건 실패(테스트의 JSON 비교 방식과 기대 예외 타입 잘못). 테스트만 고침
+- Swagger 호출 결과 6건(API마다 정상 1, 실패 1)을 PR #26 본문 "호출 결과"에 넣음
 
 ### 계획과 달라진 점
 
@@ -183,6 +184,7 @@ erDiagram
 - `user_interest.sort_order`에 `CHECK (1 ~ 10)`를 더했다. 계획에는 없었고 DB 설계의 "3 ~ 10개, 1이 대표"를 DB가 지키게 한 것이다.
 - 계획 I에서 "KAN-44 · 46 설명에 적는다"고 했으나, 막는 장치는 이미 KAN-44의 "함께 할 것"이라 KAN-44 설명에만 적었다. 이 PR이 만든 테이블 목록도 함께 적었다.
 - `docs/api/00-common.md`의 관심사 · 질문 응답 예시를 실제 처음 값(id)으로 바꿨다.
+- 호출 결과를 찍다가 Swagger 응답 예시(`@Schema(example)`)의 질문이 `TMI`인데 대분류 id가 있는 것을 보고, 세 API의 예시를 실제 처음 값으로 맞췄다.
 
 ### 남은 일
 
