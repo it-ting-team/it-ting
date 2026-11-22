@@ -89,6 +89,10 @@ public class PasswordResetService {
 		if (user == null) {
 			return;
 		}
+		// DB는 이메일의 대소문자와 악센트를 가리지 않아 다른 입력이 같은 계정이 된다. 계정으로도 간격을 센다.
+		if (!passwordResetRepository.reserveRequestForUser(user.getId(), now, properties.requestInterval())) {
+			return;
+		}
 		String token = passwordResetRepository.issue(user.getId(), now, properties.linkTtl());
 		String link = frontendProperties.frontendUrl() + "/password-reset/" + token;
 		String to = user.getEmail();

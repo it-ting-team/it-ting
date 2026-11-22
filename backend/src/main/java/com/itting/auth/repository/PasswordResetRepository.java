@@ -18,7 +18,9 @@ import org.springframework.stereotype.Repository;
  * <ul>
  * <li>{@code itting:password-reset:<token>}: {@code <계정 id>:<만료 밀리초>}. 30분 뒤 저절로 사라진다.</li>
  * <li>{@code itting:password-reset-user:<계정 id>}: 그 계정의 마지막 링크. 다시 보내면 이전 링크를 지우는 데 쓴다.</li>
- * <li>{@code itting:password-reset-sent:<이메일>}: 마지막으로 요청한 시각(요청 간격). 가입하지 않은 이메일에도 남긴다.</li>
+ * <li>{@code itting:password-reset-sent:<이메일>}: 입력한 이메일로 마지막으로 요청한 시각(요청 간격). 가입하지 않은 이메일에도 남긴다.</li>
+ * <li>{@code itting:password-reset-sent-user:<계정 id>}: 그 계정으로 마지막으로 메일을 보낸 시각. DB는 이메일의 대소문자와
+ * 악센트를 가리지 않아 여러 입력이 같은 계정이 되므로, 계정으로도 간격을 센다.</li>
  * </ul>
  *
  * <p>만들기와 쓰기는 Lua 스크립트로 한 번에 해, 동시에 요청해도 링크가 둘 남거나 한 링크를 두 번 쓰지 못한다.
@@ -32,6 +34,8 @@ public class PasswordResetRepository {
 	private static final String USER_KEY = "itting:password-reset-user:";
 
 	private static final String SENT_KEY = "itting:password-reset-sent:";
+
+	private static final String SENT_USER_KEY = "itting:password-reset-sent-user:";
 
 	/** KEYS: 1 새 링크, 2 계정의 마지막 링크. ARGV: 1 새 토큰, 2 값, 3 만료(밀리초), 4 링크 키 앞부분. */
 	private static final RedisScript<Long> ISSUE = new DefaultRedisScript<>("""
@@ -75,6 +79,17 @@ public class PasswordResetRepository {
 	 */
 	public boolean reserveRequest(String email, Instant now, Duration interval) {
 		Long result = redis.execute(VerificationScripts.RESERVE_SEND, List.of(SENT_KEY + email),
+				String.valueOf(now.toEpochMilli()), String.valueOf(interval.toMillis()), "", "");
+		return result != null && result == 1L;
+	}
+
+	/**
+	 * 그 계정으로 메일을 보낼 자리를 잡는다. 입력한 이메일이 달라도(대소문자, 악센트) 같은 계정이면 함께 센다.
+	 *
+	 * @return 그 계정으로 마지막으로 보낸 뒤 간격이 지나지 않았으면 false
+	 */
+	public boolean reserveRequestForUser(Long userId, Instant now, Duration interval) {
+		Long result = redis.execute(VerificationScripts.RESERVE_SEND, List.of(SENT_USER_KEY + userId),
 				String.valueOf(now.toEpochMilli()), String.valueOf(interval.toMillis()), "", "");
 		return result != null && result == 1L;
 	}

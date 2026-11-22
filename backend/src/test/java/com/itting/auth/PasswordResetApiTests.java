@@ -159,6 +159,21 @@ class PasswordResetApiTests {
 	}
 
 	@Test
+	void 대소문자나_악센트만_다른_이메일로_다시_요청해도_같은_계정이면_간격_안에는_메일을_보내지_않는다() throws Exception {
+		String email = newEmail();
+		testUsers.createEmailUser(email, PASSWORD);
+		requestReset(email).andExpect(status().isCreated());
+		String first = token(mailpit.awaitLatestTo(email, 1));
+
+		requestReset(email.toUpperCase()).andExpect(status().isCreated());
+		requestReset(email.replaceFirst("o", "ó")).andExpect(status().isCreated());
+		Thread.sleep(500);
+
+		assertThat(mailpit.countTo(email)).isEqualTo(1);
+		mockMvc.perform(get("/api/v1/password-resets/" + first)).andExpect(status().isOk());
+	}
+
+	@Test
 	void 새_비밀번호를_저장하면_새_비밀번호로만_로그인되고_모든_기기에서_로그아웃되며_링크는_다시_쓸_수_없다() throws Exception {
 		String email = newEmail();
 		testUsers.createEmailUser(email, PASSWORD);
