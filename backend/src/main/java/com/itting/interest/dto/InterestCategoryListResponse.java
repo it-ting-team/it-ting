@@ -17,8 +17,8 @@ public record InterestCategoryListResponse(
 	}
 
 	public record InterestResponse(
-			@Schema(description = "세부 관심사의 id. 관심사를 저장하는 API의 interestIds에는 이 값을 보낸다", example = "2") Long id,
-			@Schema(description = "세부 관심사 이름", example = "카페/커피") String name,
+			@Schema(description = "세부 관심사의 id. 관심사를 저장하는 API의 interestIds에는 이 값을 보낸다", example = "1") Long id,
+			@Schema(description = "세부 관심사 이름", example = "맛집탐방") String name,
 			@Schema(description = "그 관심사를 고른 사람 수. 아무도 고르지 않았으면 0", example = "57") long userCount) {
 	}
 
