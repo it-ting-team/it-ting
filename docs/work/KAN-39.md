@@ -145,7 +145,7 @@ sequenceDiagram
 | `application*.yml` | `itting.verification`(5분 · 60초 · 5번 · 1시간), `itting.mail.from`, `itting.mattermost.webhooks`, local의 Mailpit · 웹후크, test · prod의 환경 변수 안내 |
 | `auth/controller/` | `EmailVerificationController`, `SsafyVerificationController`, `SignupController`(`POST /users`) |
 | `auth/service/` | `EmailVerificationService`, `SsafyVerificationService`, `SignupService`, `VerificationMailService`, `MattermostService`(돌아가며 · 넘기기 · 모두 400이면 성공), `SignupCookieService`, `VerificationCodeGenerator`, `VerificationProperties` |
-| `auth/repository/` | `EmailVerificationRepository`, `SignupRepository`(Redis). 만료와 재전송 간격은 저장한 시각과 서버 시계로 본다 |
+| `auth/repository/` | `EmailVerificationRepository`, `SignupRepository`(Redis), `VerificationScripts`(확인 · 보낼 자리 잡기를 한 번에 하는 Lua 스크립트). 만료와 재전송 간격은 저장한 시각과 서버 시계로 본다 |
 | `auth/domain/` | `VerificationCode`, `SignupRecord`, `SignupMethod`, `AuthErrorCode`에 7개 |
 | `auth/dto/` | 요청 · 응답 record, `ValidPassword`(8 ~ 20자, 쓸 수 있는 문자, 영문 · 숫자 · 특수기호) |
 | `campus/domain/CampusErrorCode` | `CAMPUS_FLOOR_NOT_FOUND` |
@@ -158,21 +158,23 @@ sequenceDiagram
 
 ### 확인한 것
 
-- `./gradlew build` 통과. 테스트 96개(기존 61 + 새 35)
-  - `EmailVerificationApiTests`(10): 201 · 만료 시각 · Mailpit에 한글 메일, 60초 안 429 · 지난 뒤 새 코드만 맞음, 형식 400, 이미 가입 409(대소문자 무관), 맞으면 200 · 가입 쿠키 속성 · 재사용 불가, 대소문자 무관 확인, 4번 틀려도 통과, 5번 틀리면 EXPIRED(재전송 간격은 유지), 없음 · 5분 지남 EXPIRED, 코드 형식 400
-  - `SsafyVerificationApiTests`(13): 고른 기수 웹후크로 `@아이디`와 한글 문구, 아이디 정리(공백 · `@` · 대문자), 돌아가며 쓰기, 500이면 다음으로, 400이면 다음으로, 모두 400이면 성공, 500 · 연결 오류면 503이고 바로 다시 가능, 웹후크 없음 503, 쿠키 없음 · 1시간 지남 409, 기수 · 아이디 형식 400, 이미 쓰인 아이디 409, 60초 안 429, 이메일 인증을 다시 하면 이전 기록 무효
+- `./gradlew build` 통과. 테스트 100개(기존 61 + 새 39)
+  - `EmailVerificationApiTests`(12): 같은 이메일로 동시에 5번 보내면 1번만 201 · 메일 1통, 틀린 확인이 동시에 와도 기록이 망가지지 않고 EXPIRED,  201 · 만료 시각 · Mailpit에 한글 메일, 60초 안 429 · 지난 뒤 새 코드만 맞음, 형식 400, 이미 가입 409(대소문자 무관), 맞으면 200 · 가입 쿠키 속성 · 재사용 불가, 대소문자 무관 확인, 4번 틀려도 통과, 5번 틀리면 EXPIRED(재전송 간격은 유지), 없음 · 5분 지남 EXPIRED, 코드 형식 400
+  - `SsafyVerificationApiTests`(15): 같은 가입에서 동시에 5번 보내면 1번만 201 · DM 1번, 틀린 확인이 동시에 와도 EXPIRED이고 새 코드로 가입 완료,  고른 기수 웹후크로 `@아이디`와 한글 문구, 아이디 정리(공백 · `@` · 대문자), 돌아가며 쓰기, 500이면 다음으로, 400이면 다음으로, 모두 400이면 성공, 500 · 연결 오류면 503이고 바로 다시 가능, 웹후크 없음 503, 쿠키 없음 · 1시간 지남 409, 기수 · 아이디 형식 400, 이미 쓰인 아이디 409, 60초 안 429, 이메일 인증을 다시 하면 이전 기록 무효
   - `SignupApiTests`(10): 계정 · 프로필 저장(비밀번호 해시, 역할, 상태, 시각) · 201 ONBOARDING · 세션으로 `/me` · 이메일 로그인 · 가입 쿠키 지움 · 기록 재사용 불가, 쿠키 없음 409, SSAFY 코드 없음 · 5분 지남 EXPIRED, 틀림 · 5번 틀리면 EXPIRED, 비밀번호 규칙 5가지, 비밀번호 없음 400, 동의 false 400, 없는 층 · 지운 층 404, 그 사이 같은 이메일 · 같은 아이디 409
   - `EmailSendFailureTests`(1): 메일 서버에 닿지 못하면 503이고 다시 불러도 429가 아니라 503
   - `SecurityConfigTests`(+1): `/api/v1/users`는 `POST`만 로그인 없이 부른다
 - 테스트는 실제 Mattermost로 보내지 않는다. 모든 기수의 웹후크를 테스트용 가짜 서버(`FakeMattermost`)로 덮어쓴다.
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
 - 로컬 코드 리뷰: P0 0건, P1 0건
+- Codex 리뷰 P1 2건 고침: 코드 확인과 틀린 횟수 갱신 · 삭제, 재전송 간격 확인과 보낸 시각 기록을 각각 Redis Lua 스크립트 하나로 묶었다(`VerificationScripts`). 동시 요청이 와도 하나만 보내고, 망가진 기록(`attempts`만 남은 해시)이 생기지 않는다
 
 ### 계획과 달라진 점
 
 - `POST /api/v1/ssafy-verifications`와 `POST /api/v1/users`는 가입 진행 기록을 찾기 전에 입력값의 모양부터 본다(Bean Validation이 서비스보다 먼저 돈다). `docs/api/02-auth.md`의 순서를 고쳤다.
 - 운영 프로필은 메일 서버 주소(`SPRING_MAIL_HOST`)가 없으면 서버가 뜨지 않는다. 스프링 부트가 주소가 있을 때만 메일 발송기를 만들기 때문이다. 운영 설정 안내와 `ItTingApplicationTests`의 Prod에 적었다.
 - 서비스에서도 `fields`가 있는 `400 INVALID_INPUT`을 줄 수 있게 `BusinessException.invalidInput`을 더했다(기수 목록에 없는 기수).
+- Codex 리뷰(P1 2건)로 Redis 처리를 Lua 스크립트로 바꿨다. SSAFY 코드는 맞아도 지우지 않는다. 계정을 만들다 겹침 · 없는 층으로 실패하면 같은 코드로 다시 시도할 수 있고, 가입을 마치면 가입 기록째 지운다.
 
 ### 남은 일
 

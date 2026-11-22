@@ -3,8 +3,14 @@ package com.itting.support;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -109,6 +115,30 @@ public class SignupSteps {
 			request.cookie(signupCookie);
 		}
 		return mockMvc.perform(request);
+	}
+
+	/** 같은 요청을 여러 스레드에서 한꺼번에 보내고 상태 코드를 모은다(동시 요청). */
+	public static List<Integer> concurrently(int count, Callable<Integer> request) throws Exception {
+		ExecutorService executor = Executors.newFixedThreadPool(count);
+		try {
+			CountDownLatch start = new CountDownLatch(1);
+			List<Future<Integer>> futures = new ArrayList<>();
+			for (int i = 0; i < count; i++) {
+				futures.add(executor.submit(() -> {
+					start.await();
+					return request.call();
+				}));
+			}
+			start.countDown();
+			List<Integer> statuses = new ArrayList<>();
+			for (Future<Integer> future : futures) {
+				statuses.add(future.get());
+			}
+			return statuses;
+		}
+		finally {
+			executor.shutdownNow();
+		}
 	}
 
 	/** 응답이 준 가입 쿠키. 없으면 실패한다. */

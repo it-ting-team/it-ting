@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.Locale;
 
 import com.itting.auth.domain.AuthErrorCode;
-import com.itting.auth.domain.VerificationCode;
 import com.itting.auth.repository.EmailVerificationRepository;
 import com.itting.auth.repository.SignupRepository;
 import com.itting.global.error.BusinessException;
@@ -59,15 +58,13 @@ public class EmailVerificationService {
 		}
 		String key = key(email);
 		Instant now = Instant.now(clock);
-		emailVerificationRepository.findLastSentAt(key)
-				.filter(sentAt -> now.isBefore(sentAt.plus(properties.resendInterval())))
-				.ifPresent(sentAt -> {
-					throw new BusinessException(CommonErrorCode.TOO_MANY_REQUESTS);
-				});
+		if (!emailVerificationRepository.reserveSend(key, now, properties.resendInterval())) {
+			throw new BusinessException(CommonErrorCode.TOO_MANY_REQUESTS);
+		}
 
 		String code = codeGenerator.generate();
 		Instant expiresAt = now.plus(properties.codeTtl());
-		emailVerificationRepository.save(key, code, now, expiresAt, properties.resendInterval());
+		emailVerificationRepository.saveCode(key, code, now, expiresAt);
 		try {
 			mailService.sendCode(email, code, properties.codeTtl());
 		}
@@ -87,17 +84,11 @@ public class EmailVerificationService {
 	public String check(String email, String code, String previousToken) {
 		String key = key(email);
 		Instant now = Instant.now(clock);
-		VerificationCode stored = emailVerificationRepository.findCode(key)
-				.orElseThrow(() -> new BusinessException(AuthErrorCode.VERIFICATION_CODE_EXPIRED));
-		switch (stored.check(code, now)) {
+		switch (emailVerificationRepository.verify(key, code, now, properties.maxAttempts())) {
 			case EXPIRED -> throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
-			case MISMATCH -> {
-				if (emailVerificationRepository.incrementAttempts(key) >= properties.maxAttempts()) {
-					emailVerificationRepository.deleteCode(key);
-				}
-				throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_MISMATCH);
+			case MISMATCH -> throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_MISMATCH);
+			case MATCH -> {
 			}
-			case MATCH -> emailVerificationRepository.deleteCode(key);
 		}
 		signupRepository.delete(previousToken);
 		return signupRepository.createEmailSignup(email, now, properties.signupTtl());

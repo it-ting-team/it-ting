@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import com.itting.support.FakeMattermost;
 import com.itting.support.Mailpit;
@@ -240,6 +241,42 @@ class SsafyVerificationApiTests {
 		clock.advance(Duration.ofSeconds(1));
 		steps.sendSsafyCode(signup, 16, id).andExpect(status().isCreated());
 		assertThat(fakeMattermost.receivedBy("ok-16")).hasSize(2);
+	}
+
+	@Test
+	void 같은_가입에서_동시에_보내도_하나만_보내고_나머지는_429다() throws Exception {
+		Cookie signup = steps.verifyEmail(newEmail());
+		String id = newMattermostId();
+
+		List<Integer> statuses = SignupSteps.concurrently(5,
+				() -> steps.sendSsafyCode(signup, 16, id).andReturn().getResponse().getStatus());
+
+		assertThat(statuses).containsOnlyOnce(201).containsOnly(201, 429);
+		assertThat(fakeMattermost.receivedBy("ok-16")).hasSize(1);
+	}
+
+	@Test
+	void 틀린_확인이_동시에_와도_기록이_망가지지_않고_EXPIRED로_답한다() throws Exception {
+		Cookie signup = steps.verifyEmail(newEmail());
+		String id = newMattermostId();
+		steps.sendSsafyCode(signup, 16, id).andExpect(status().isCreated());
+		String code = steps.lastSsafyCode(id);
+		String wrong = code.equals("000000") ? "111111" : "000000";
+		for (int i = 0; i < 3; i++) {
+			steps.signUp(signup, "mole1234!", wrong, 23).andExpect(status().isBadRequest());
+		}
+
+		List<Integer> statuses = SignupSteps.concurrently(5,
+				() -> steps.signUp(signup, "mole1234!", wrong, 23).andReturn().getResponse().getStatus());
+
+		assertThat(statuses).containsOnly(400);
+		steps.signUp(signup, "mole1234!", code, 23)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.code").value("VERIFICATION_CODE_EXPIRED"));
+		// 재전송 간격이 지나면 새 코드로 가입을 마칠 수 있다.
+		clock.advance(Duration.ofSeconds(60));
+		steps.sendSsafyCode(signup, 16, id).andExpect(status().isCreated());
+		steps.signUp(signup, "mole1234!", steps.lastSsafyCode(id), 23).andExpect(status().isCreated());
 	}
 
 	@Test

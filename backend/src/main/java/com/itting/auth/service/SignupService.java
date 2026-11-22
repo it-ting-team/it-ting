@@ -74,17 +74,9 @@ public class SignupService {
 	}
 
 	private void verifySsafyCode(SignupRecord record, String code, Instant now) {
-		if (record.ssafyCode() == null) {
-			throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
-		}
-		switch (record.ssafyCode().check(code, now)) {
+		switch (signupRepository.verifySsafyCode(record.token(), code, now, properties.maxAttempts())) {
 			case EXPIRED -> throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
-			case MISMATCH -> {
-				if (signupRepository.incrementSsafyAttempts(record.token()) >= properties.maxAttempts()) {
-					signupRepository.deleteSsafyCode(record.token());
-				}
-				throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_MISMATCH);
-			}
+			case MISMATCH -> throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_MISMATCH);
 			case MATCH -> {
 			}
 		}

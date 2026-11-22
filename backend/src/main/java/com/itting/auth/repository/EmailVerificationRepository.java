@@ -2,8 +2,8 @@ package com.itting.auth.repository;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.itting.auth.domain.VerificationCode;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -17,7 +17,8 @@ import org.springframework.stereotype.Repository;
  * <li>{@code itting:email-code-sent:<이메일>}: 마지막으로 보낸 시각(재전송 간격). 코드를 지워도 남는다.</li>
  * </ul>
  *
- * <p>만료와 재전송 간격은 Redis의 만료가 아니라 저장한 시각과 서버 시계로 판단한다. Redis의 만료는 청소용이다.
+ * <p>확인과 재전송 간격은 {@link VerificationScripts}로 Redis 안에서 한 번에 처리해 동시 요청에도 어긋나지 않는다.
+ * 만료와 간격은 저장한 시각과 서버 시계로 판단하고, Redis의 만료는 청소용이다.
  */
 @Repository
 public class EmailVerificationRepository {
@@ -32,48 +33,42 @@ public class EmailVerificationRepository {
 		this.redis = redis;
 	}
 
-	public Optional<Instant> findLastSentAt(String email) {
-		String value = redis.opsForValue().get(SENT_KEY + email);
-		return Optional.ofNullable(value).map(millis -> Instant.ofEpochMilli(Long.parseLong(millis)));
+	/**
+	 * 보낼 자리를 잡는다. 동시에 여러 요청이 와도 하나만 잡는다.
+	 *
+	 * @return 마지막으로 보낸 뒤 간격이 지나지 않았으면 false
+	 */
+	public boolean reserveSend(String email, Instant now, Duration interval) {
+		Long result = redis.execute(VerificationScripts.RESERVE_SEND, List.of(SENT_KEY + email),
+				millis(now), String.valueOf(interval.toMillis()), "", "");
+		return result != null && result == 1L;
 	}
 
 	/** 새 코드를 저장한다. 이 이메일의 이전 코드와 틀린 횟수는 덮어쓴다. */
-	public void save(String email, String code, Instant sentAt, Instant expiresAt, Duration resendInterval) {
+	public void saveCode(String email, String code, Instant now, Instant expiresAt) {
 		String key = CODE_KEY + email;
 		redis.delete(key);
 		redis.opsForHash().putAll(key, Map.of(
 				"code", code,
-				"expiresAt", String.valueOf(expiresAt.toEpochMilli()),
+				"expiresAt", millis(expiresAt),
 				"attempts", "0"));
-		redis.expire(key, Duration.between(sentAt, expiresAt));
-		redis.opsForValue().set(SENT_KEY + email, String.valueOf(sentAt.toEpochMilli()), resendInterval);
+		redis.expire(key, Duration.between(now, expiresAt));
 	}
 
-	public Optional<VerificationCode> findCode(String email) {
-		Map<Object, Object> hash = redis.opsForHash().entries(CODE_KEY + email);
-		if (hash.isEmpty()) {
-			return Optional.empty();
-		}
-		return Optional.of(new VerificationCode(
-				(String) hash.get("code"),
-				Instant.ofEpochMilli(Long.parseLong((String) hash.get("expiresAt"))),
-				Integer.parseInt((String) hash.get("attempts"))));
-	}
-
-	/** @return 늘린 뒤의 틀린 횟수 */
-	public long incrementAttempts(String email) {
-		return redis.opsForHash().increment(CODE_KEY + email, "attempts", 1);
-	}
-
-	/** 코드만 지운다. 재전송 간격은 그대로 센다. */
-	public void deleteCode(String email) {
-		redis.delete(CODE_KEY + email);
+	/** 코드를 확인한다. 맞으면 지우고, 틀린 횟수가 최대에 닿으면 지운다. 재전송 간격은 그대로 센다. */
+	public VerificationCode.Result verify(String email, String input, Instant now, int maxAttempts) {
+		String result = redis.execute(VerificationScripts.VERIFY, List.of(CODE_KEY + email),
+				input, millis(now), String.valueOf(maxAttempts), "code", "expiresAt", "attempts", "1");
+		return VerificationScripts.toResult(result);
 	}
 
 	/** 보내지 못했을 때 코드와 보낸 시각을 모두 지워 바로 다시 보낼 수 있게 한다. */
 	public void deleteAll(String email) {
-		redis.delete(CODE_KEY + email);
-		redis.delete(SENT_KEY + email);
+		redis.delete(List.of(CODE_KEY + email, SENT_KEY + email));
+	}
+
+	private static String millis(Instant instant) {
+		return String.valueOf(instant.toEpochMilli());
 	}
 
 }

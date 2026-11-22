@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -77,27 +78,49 @@ public class SignupRepository {
 				hash.containsKey(SSAFY_SENT_AT) ? instant(hash.get(SSAFY_SENT_AT)) : null));
 	}
 
-	/** SSAFY 인증 코드를 저장한다. 이전 코드와 틀린 횟수는 덮어쓴다. */
-	public void saveSsafyCode(String token, int generation, String mattermostId, String code, Instant sentAt,
-			Instant expiresAt) {
+	/**
+	 * SSAFY 인증 코드를 보낼 자리를 잡는다. 동시에 여러 요청이 와도 하나만 잡는다.
+	 *
+	 * @return 잡았으면 {@code RESERVED}, 간격이 지나지 않았으면 {@code TOO_SOON}, 가입 기록이 사라졌으면 {@code NO_RECORD}
+	 */
+	public SendReservation reserveSsafySend(String token, Instant now, Duration interval) {
+		Long result = redis.execute(VerificationScripts.RESERVE_SEND, List.of(KEY + token),
+				millis(now), String.valueOf(interval.toMillis()), SSAFY_SENT_AT, "method");
+		if (result == null || result == -1L) {
+			return SendReservation.NO_RECORD;
+		}
+		return result == 1L ? SendReservation.RESERVED : SendReservation.TOO_SOON;
+	}
+
+	public enum SendReservation {
+
+		RESERVED,
+
+		TOO_SOON,
+
+		NO_RECORD
+
+	}
+
+	/** SSAFY 인증 코드를 저장한다. 이전 코드와 틀린 횟수는 덮어쓴다. 보낸 시각은 {@link #reserveSsafySend}가 적었다. */
+	public void saveSsafyCode(String token, int generation, String mattermostId, String code, Instant expiresAt) {
 		Map<String, String> values = new HashMap<>();
 		values.put("generation", String.valueOf(generation));
 		values.put("mattermostId", mattermostId);
 		values.put(SSAFY_CODE, code);
 		values.put(SSAFY_EXPIRES_AT, millis(expiresAt));
 		values.put(SSAFY_ATTEMPTS, "0");
-		values.put(SSAFY_SENT_AT, millis(sentAt));
 		redis.opsForHash().putAll(KEY + token, values);
 	}
 
-	/** @return 늘린 뒤의 틀린 횟수 */
-	public long incrementSsafyAttempts(String token) {
-		return redis.opsForHash().increment(KEY + token, SSAFY_ATTEMPTS, 1);
-	}
-
-	/** SSAFY 인증 코드만 지운다. 재전송 간격은 그대로 센다. */
-	public void deleteSsafyCode(String token) {
-		redis.opsForHash().delete(KEY + token, SSAFY_CODE, SSAFY_EXPIRES_AT, SSAFY_ATTEMPTS);
+	/**
+	 * SSAFY 인증 코드를 확인한다. 틀린 횟수가 최대에 닿으면 코드를 지운다(재전송 간격은 그대로 센다).
+	 * 맞아도 지우지 않는다. 계정을 만들다 실패하면(겹침, 없는 층) 같은 코드로 다시 시도할 수 있다.
+	 */
+	public VerificationCode.Result verifySsafyCode(String token, String input, Instant now, int maxAttempts) {
+		String result = redis.execute(VerificationScripts.VERIFY, List.of(KEY + token),
+				input, millis(now), String.valueOf(maxAttempts), SSAFY_CODE, SSAFY_EXPIRES_AT, SSAFY_ATTEMPTS, "0");
+		return VerificationScripts.toResult(result);
 	}
 
 	/** 보내지 못했을 때 코드와 보낸 시각을 모두 지워 바로 다시 보낼 수 있게 한다. */
