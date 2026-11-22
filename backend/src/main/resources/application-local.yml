@@ -15,10 +15,19 @@ spring:
   data:
     redis:
       port: ${REDIS_PORT:6379}
+  # 메일은 compose의 Mailpit이 받는다. 받은 메일은 http://localhost:8025
+  mail:
+    host: localhost
+    port: ${MAILPIT_SMTP_PORT:1025}
 
 itting:
   cors:
     allowed-origins: http://localhost:3000
+  mattermost:
+    # 값은 .env에 사용자가 넣는다(쉼표로 여러 개). 비어 있으면 그 기수로는 보내지 못하고 503이다.
+    webhooks:
+      15: ${MATTERMOST_WEBHOOK_URLS_15:}
+      16: ${MATTERMOST_WEBHOOK_URLS_16:}
 
 management:
   endpoint:

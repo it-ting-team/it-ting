@@ -58,6 +58,15 @@ class SecurityConfigTests {
 	}
 
 	@Test
+	void 메서드를_적어_연_주소는_그_메서드만_로그인_없이_부른다() throws Exception {
+		mockMvc.perform(get("/api/v1/users"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(content().json(UNAUTHENTICATED, JsonCompareMode.STRICT));
+		mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
 	@WithMockUser
 	void 로그인했으면_없는_API_주소는_404_NOT_FOUND다() throws Exception {
 		mockMvc.perform(get("/api/v1/nothing"))

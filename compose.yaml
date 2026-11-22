@@ -1,4 +1,4 @@
-# 로컬 개발용 MySQL과 Redis
+# 로컬 개발용 MySQL, Redis, Mailpit(메일 받아 보기)
 # 실행: docker compose up -d
 # 값은 .env에서 읽는다. 처음이면 .env.example을 .env로 복사한다.
 
@@ -39,6 +39,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # 서버가 보낸 메일을 실제로 보내지 않고 받아 둔다. 받은 메일은 http://localhost:8025 에서 본다.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
 
 volumes:
   mysql-data:

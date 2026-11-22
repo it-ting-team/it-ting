@@ -28,4 +28,9 @@ public class GenerationService {
 		return new GenerationListResponse(items);
 	}
 
+	/** 회원가입에서 고를 수 있는 기수인지. */
+	public boolean isAvailable(int generation) {
+		return properties.generations().contains(generation);
+	}
+
 }

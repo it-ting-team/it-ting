@@ -47,6 +47,19 @@ itting:
   cors:
     # 쿠키를 실어 API를 부를 수 있는 프론트엔드 출처. 프로필마다 정한다.
     allowed-origins: []
+  # 이메일 · SSAFY 인증 코드와 가입 진행 기록(docs/api/02-auth.md)
+  verification:
+    code-ttl: 5m
+    resend-interval: 60s
+    # 이만큼 틀리면 코드를 지운다. 그 뒤로는 VERIFICATION_CODE_EXPIRED다.
+    max-attempts: 5
+    signup-ttl: 1h
+  mail:
+    # 인증 메일의 보내는 사람. 프로필마다 정한다.
+    from: no-reply@itting.local
+  mattermost:
+    # 기수: 그 기수 Mattermost 서버의 Incoming Webhook URL 목록. 프로필마다 .env나 환경 변수로 넣는다.
+    webhooks: {}
 
 springdoc:
   swagger-ui:
