@@ -91,11 +91,11 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 다른 테이블이 참조하는 계정 ID |
-| `email` | `VARCHAR`(길이 미정) | — | `NULL` 허용, `UNIQUE` | 이메일로 가입한 계정의 로그인 이메일 |
-| `password_hash` | `VARCHAR`(길이 미정) | — | `NULL` 허용, 개별 UNIQUE 없음 | 이메일 로그인 비밀번호의 해시. Google로만 가입한 계정에서는 비어 있음 |
-| `google_sub` | `VARCHAR`(길이 미정) | — | `NULL` 허용, `UNIQUE` | Google 로그인 또는 연동에 사용하는 Google 계정 식별자 |
-| `google_email` | `VARCHAR`(길이 미정) | — | `NULL` 허용, 개별 UNIQUE 없음 | 연동된 Google 이메일. 설정의 연동 상태 화면에 표시 |
-| `mattermost_id` | `VARCHAR`(길이 미정) | — | `NULL` 허용, `UNIQUE` | SSAFY 인증을 완료한 계정의 Mattermost 식별자 |
+| `email` | `VARCHAR(254)` | — | `NULL` 허용, `UNIQUE` | 이메일로 가입한 계정의 로그인 이메일 |
+| `password_hash` | `VARCHAR(100)` | — | `NULL` 허용, 개별 UNIQUE 없음 | 이메일 로그인 비밀번호의 BCrypt 해시. Google로만 가입한 계정에서는 비어 있음 |
+| `google_sub` | `VARCHAR(255)` | — | `NULL` 허용, `UNIQUE` | Google 로그인 또는 연동에 사용하는 Google 계정 식별자 |
+| `google_email` | `VARCHAR(254)` | — | `NULL` 허용, 개별 UNIQUE 없음 | 연동된 Google 이메일. 설정의 연동 상태 화면에 표시 |
+| `mattermost_id` | `VARCHAR(64)` | — | `NULL` 허용, `UNIQUE` | SSAFY 인증을 완료한 계정의 Mattermost 식별자 |
 | `ssafy_verified_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | SSAFY 인증을 마친 시각. 계정을 만들 때 넣는다 |
 | `terms_agreed_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 필수 약관과 개인정보 수집·이용에 모두 동의한 시각. 계정을 만들 때 넣는다 |
 | `onboarded_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 온보딩 마지막 단계에서 관심사를 확정한 시각 |
@@ -104,7 +104,7 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 계정이 생성된 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 계정 정보가 마지막으로 갱신된 시각 |
 
-이메일 가입과 Google 가입 모두 SSAFY 인증과 필수 동의를 마칠 때 계정 행을 생성한다. 그 전의 가입 진행 값은 임시 저장소에 두며, 가입 도중에 나가면 계정이 남지 않는다. 재로그인 시 온보딩 완료 시각에 따라 다음 화면을 정한다.
+이메일 가입과 Google 가입 모두 SSAFY 인증과 필수 동의를 마칠 때 계정 행을 생성한다. 이메일 길이는 이메일 주소의 최대 길이(254자)를 따른다. 이메일은 DB의 정렬 규칙(`utf8mb4_0900_ai_ci`)에 따라 대소문자를 가리지 않고 비교한다. 마이그레이션은 `V3__create_user.sql`이다. 그 전의 가입 진행 값은 임시 저장소에 두며, 가입 도중에 나가면 계정이 남지 않는다. 재로그인 시 온보딩 완료 시각에 따라 다음 화면을 정한다.
 
 탈퇴하면 계정 ID를 남기고 로그인·인증 식별 정보를 비운다. 탈퇴한 시각과 사유는 [`user_withdrawal`](#user_withdrawal)에 따로 남긴다. 남는 글·댓글·쓴 방명록 글·채팅 메시지·지난 모임 기록은 기존 ID를 참조한다. 탈퇴자가 받은 방명록은 삭제하며, 재가입하면 새 계정 ID를 사용한다.
 
@@ -134,7 +134,7 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | `generation` | `SMALLINT` | — | `NOT NULL`, 개별 UNIQUE 없음 | SSAFY 인증에 사용한 기수. 내 정보 수정에서 변경할 수 없음 |
 | `campus_floor_id` | `BIGINT` | FK → `campus_floor.id` | `NOT NULL`, 개별 UNIQUE 없음 | 프로필 소속의 기준이 되는 캠퍼스·층 |
 | `intro` | `VARCHAR(150)` | — | `NULL` 허용, 개별 UNIQUE 없음, 최대 150자 | 선택 자기소개 |
-| `profile_image_url` | `VARCHAR`(길이 미정) | — | `NULL` 허용, 개별 UNIQUE 없음 | 선택 프로필 사진의 주소. 올리지 않으면 비움 |
+| `profile_image_url` | `VARCHAR(500)` | — | `NULL` 허용, 개별 UNIQUE 없음 | 선택 프로필 사진의 주소. 올리지 않으면 비움 |
 | `mole_head` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 머리 부위 아이템 코드 | 두더지 머리 아이템. NULL은 미착용 |
 | `mole_face` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 얼굴 부위 아이템 코드 | 두더지 얼굴 아이템. NULL은 미착용 |
 | `mole_neck` | `VARCHAR(30)` | — | `NULL` 허용, 개별 UNIQUE 없음, 목 부위 아이템 코드 | 두더지 목 아이템. NULL은 미착용 |
@@ -142,7 +142,7 @@ Mattermost 인증 정보와 콘텐츠가 참조하는 서비스 내부 계정 ID
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 프로필 정보가 마지막으로 갱신된 시각 |
 
-SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임은 온보딩 미완료 단계에서 NULL을 허용하며, 온보딩 완료에는 닉네임이 필요하다. 두더지 선택도 온보딩 최종 확정 시 반영한다.
+SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. `profile_image_url`의 길이는 파일 저장소를 정할 때(04) 더 길어야 하면 새 마이그레이션으로 늘린다. 닉네임은 온보딩 미완료 단계에서 NULL을 허용하며, 온보딩 완료에는 닉네임이 필요하다. 두더지 선택도 온보딩 최종 확정 시 반영한다.
 
 - 남의 땅굴, 글 작성자, 프로필 팝업처럼 다른 사람을 보여줄 때 로그인 값은 노출하지 않고 프로필을 읽는다.
 - 실명과 반은 받지 않는다. 프로필 사진은 선택이고, 올리지 않아도 두더지로 표시한다. 땅굴은 `burrow`([들판 · 땅굴](burrow.md))에 따로 있다.
@@ -155,7 +155,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 정지 기록 ID |
 | `user_id` | `BIGINT` | FK → `user.id` | `NOT NULL`, 개별 UNIQUE 없음 | 정지 대상 계정 |
-| `reason` | `VARCHAR`(길이 미정) | — | `NOT NULL`, 개별 UNIQUE 없음 | 정지 사유. 정지된 사용자의 로그인 안내에 표시 |
+| `reason` | `VARCHAR(200)` | — | `NOT NULL`, 개별 UNIQUE 없음 | 정지 사유. 정지된 사용자의 로그인 안내에 표시 |
 | `starts_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 정지 시작 시각 |
 | `ends_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 정지 종료 시각 |
 | `imposed_by` | `BIGINT` | FK → `user.id` | `NOT NULL`, 개별 UNIQUE 없음(신규 기록) | 정지를 등록한 관리자 계정 |
@@ -288,5 +288,5 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. 닉네임
 아래 항목은 [명세의 보류한 결정](../spec/open-issues.md)과 함께 검토한다.
 
 - 내 정보 수정에서 관심사를 넣고 뺄 때의 순서 규칙, 뺀 관심사에 딸린 질문 · 답변의 처리(남은 검토 항목 44)
-- 이메일 길이, 닉네임에 쓸 수 있는 문자, 인증 코드의 유효 시간과 재전송 간격
+- 닉네임에 쓸 수 있는 문자, 인증 코드의 유효 시간과 재전송 간격
 - 같은 이메일의 Google 계정과 이메일 계정의 관계

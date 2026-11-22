@@ -1,0 +1,117 @@
+package com.itting.user.domain;
+
+import java.time.Instant;
+
+import com.itting.global.entity.BaseTimeEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+/**
+ * 계정({@code user}). 로그인 수단, SSAFY 인증, 온보딩 완료와 탈퇴 상태를 둔다.
+ * 다른 사람에게 보여 주는 값은 {@link UserProfile}에 있다.
+ */
+@Entity
+@Table(name = "`user`")
+public class User extends BaseTimeEntity {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	/** 이메일로 가입한 계정의 로그인 이메일. Google로만 가입했거나 탈퇴하면 비어 있다. */
+	@Column(length = 254)
+	private String email;
+
+	/** 비밀번호의 BCrypt 해시. Google로만 가입했으면 비어 있다. */
+	@Column(name = "password_hash", length = 100)
+	private String passwordHash;
+
+	@Column(name = "google_sub")
+	private String googleSub;
+
+	@Column(name = "google_email", length = 254)
+	private String googleEmail;
+
+	@Column(name = "mattermost_id", length = 64)
+	private String mattermostId;
+
+	@Column(name = "ssafy_verified_at", nullable = false)
+	private Instant ssafyVerifiedAt;
+
+	@Column(name = "terms_agreed_at", nullable = false)
+	private Instant termsAgreedAt;
+
+	/** 온보딩을 마친 시각. 비어 있으면 온보딩을 마치지 않았다. */
+	@Column(name = "onboarded_at")
+	private Instant onboardedAt;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private UserRole role;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private UserStatus status;
+
+	protected User() {
+	}
+
+	public boolean isActive() {
+		return status == UserStatus.ACTIVE;
+	}
+
+	public boolean isOnboarded() {
+		return onboardedAt != null;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public String getPasswordHash() {
+		return passwordHash;
+	}
+
+	public String getGoogleSub() {
+		return googleSub;
+	}
+
+	public String getGoogleEmail() {
+		return googleEmail;
+	}
+
+	public String getMattermostId() {
+		return mattermostId;
+	}
+
+	public Instant getSsafyVerifiedAt() {
+		return ssafyVerifiedAt;
+	}
+
+	public Instant getTermsAgreedAt() {
+		return termsAgreedAt;
+	}
+
+	public Instant getOnboardedAt() {
+		return onboardedAt;
+	}
+
+	public UserRole getRole() {
+		return role;
+	}
+
+	public UserStatus getStatus() {
+		return status;
+	}
+
+}

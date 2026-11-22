@@ -136,7 +136,7 @@ POST /api/v1/email-verifications/check
 
 대상이 없을 때는 `NOT_FOUND` 대신 `<대상>_NOT_FOUND`를 쓴다. 영역마다의 코드는 그 영역의 API 목록에 적는다.
 
-없는 주소는 메서드와 상관없이 `404`다. 위 표에 없는 `4xx`가 나면(서버나 프레임워크가 거절한 요청) `400`과 `INVALID_INPUT`으로 답한다.
+없는 주소는 메서드와 상관없이 `404`다. 다만 로그인하지 않고 부른 `/api/**`는 주소가 있는지 보기 전에 로그인을 검사하므로 `401`과 `UNAUTHENTICATED`다([로그인](#로그인)). 위 표에 없는 `4xx`가 나면(서버나 프레임워크가 거절한 요청) `400`과 `INVALID_INPUT`으로 답한다.
 
 ## JSON 필드
 
@@ -248,11 +248,21 @@ data: {"unreadCount":4,"hasUnread":true}
 
 세션 방식을 쓴다. 로그인하면 서버가 세션을 만들어 Redis에 저장하고 세션 쿠키를 준다. 이메일 로그인과 Google 로그인 모두 같은 세션을 만든다.
 
-- MUST: 세션 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`로 준다.
+- MUST: 세션 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`로 준다. 이름은 `ITTING_SESSION`이다.
+- MUST: 세션은 마지막으로 쓴 뒤 14일 동안 유지한다. 세션이 살아 있는 요청마다 서버의 만료와 쿠키의 `Max-Age`를 다시 14일로 늘린다.
 - MUST: 프론트엔드는 요청에 쿠키를 함께 보낸다(`credentials: "include"`).
 - MUST: 로그인이 필요한 API에 세션이 없거나 만료됐으면 `401`과 `UNAUTHENTICATED`로 답한다.
+- MUST: 로그인 없이 부를 수 있는 API는 서버의 허용 목록에 적은 것뿐이다. 나머지 `/api/**`는 모두 로그인이 필요하고, 로그인하지 않았으면 없는 주소여도 `401`이다.
+- MUST: 로그인에 성공하면 세션 id를 새로 만든다. 그 브라우저의 이전 세션은 버린다.
 - MUST: 계정이 정지되거나 탈퇴하면 그 계정의 세션을 모두 지운다.
 - MUST NOT: 로그인 정보를 응답 본문의 토큰이나 `localStorage`로 주고받지 않는다.
+
+### CSRF · CORS
+
+- MUST: 프론트엔드와 백엔드는 같은 사이트(같은 주 도메인)에 둔다. 예: `itting.com`과 `api.itting.com`, 또는 한 도메인에서 경로로 나눔. 다른 사이트에 두면 `SameSite=Lax` 쿠키가 실리지 않는다.
+- CSRF 토큰은 쓰지 않는다. `SameSite=Lax`라 다른 사이트에서 보낸 `POST` · `PUT` · `PATCH` · `DELETE`에는 쿠키가 실리지 않는다.
+- MUST NOT: `GET` API가 데이터를 바꾸지 않는다. `SameSite=Lax`는 다른 사이트에서 링크로 들어오는 `GET`에는 쿠키를 싣는다.
+- MUST: CORS는 서버 설정 `itting.cors.allowed-origins`에 적은 프론트엔드 출처만 쿠키와 함께 허용한다. 로컬은 `http://localhost:3000`이다.
 
 ## 영역별 API 목록
 
@@ -307,4 +317,3 @@ POST   /api/v1/chat-requests/5/accept
 
 - 영역별 개별 API. 각 영역을 구현하기 직전에 쓴다.
 - 올린 파일을 두는 저장소와 파일 주소의 모양. 구현할 때 정한다.
-- 세션이 유지되는 기간, CSRF 방어 방법, 허용하는 출처(CORS). 백엔드 보안 설정을 할 때 정한다.

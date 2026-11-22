@@ -1,0 +1,98 @@
+package com.itting.global.security;
+
+import java.time.Duration;
+import java.util.List;
+
+import com.itting.global.error.CommonErrorCode;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+
+/**
+ * 로그인 검사, CORS, CSRF 설정({@code docs/api-convention.md}의 "로그인").
+ *
+ * <ul>
+ * <li>로그인 없이 부를 수 있는 주소는 {@link #PUBLIC_API}에 적은 것뿐이다. 나머지 {@code /api/**}는 로그인이 필요하다.
+ * 새 API가 로그인 없이 불려야 하면 여기에 더한다.</li>
+ * <li>CSRF 토큰은 쓰지 않는다. 세션 쿠키가 {@code SameSite=Lax}라 다른 사이트에서 보낸 POST · DELETE에는 쿠키가 실리지 않는다.
+ * 그래서 프론트엔드와 백엔드는 같은 사이트(같은 주 도메인)에 둔다.</li>
+ * <li>CORS는 설정 {@code itting.cors.allowed-origins}의 출처만 쿠키와 함께 허용한다.</li>
+ * </ul>
+ */
+@Configuration
+@EnableConfigurationProperties(CorsProperties.class)
+public class SecurityConfig {
+
+	/** 로그인 없이 부를 수 있는 API. 메서드와 상관없이 연다(허용하지 않는 메서드는 405로 답한다). */
+	static final String[] PUBLIC_API = {
+			"/api/v1/campuses",
+			"/api/v1/generations",
+			"/api/v1/sessions",
+	};
+
+	@Bean
+	SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository securityContextRepository,
+			CorsConfigurationSource corsConfigurationSource, SecurityErrorWriter errorWriter) throws Exception {
+		// 허용하지 않은 출처를 거절할 때도 응답 틀로 답하게 CORS 필터를 직접 만들어 넣는다.
+		CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
+		corsFilter.setCorsProcessor(new ApiCorsProcessor(errorWriter));
+		http
+				.csrf(AbstractHttpConfigurer::disable)
+				.cors(AbstractHttpConfigurer::disable)
+				.addFilter(corsFilter)
+				.formLogin(AbstractHttpConfigurer::disable)
+				.httpBasic(AbstractHttpConfigurer::disable)
+				.logout(AbstractHttpConfigurer::disable)
+				// 로그인하지 않은 요청을 세션에 저장해 두지 않는다. 저장하면 로그인하지 않은 사람에게도 세션이 생긴다.
+				.requestCache(cache -> cache.disable())
+				.securityContext(context -> context.securityContextRepository(securityContextRepository))
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(PUBLIC_API).permitAll()
+						.requestMatchers("/api/**").authenticated()
+						// Swagger, 헬스체크, 오류 응답(/error)
+						.anyRequest().permitAll())
+				.exceptionHandling(exception -> exception
+						.authenticationEntryPoint((request, response, e) ->
+								errorWriter.write(response, CommonErrorCode.UNAUTHENTICATED))
+						.accessDeniedHandler((request, response, e) ->
+								errorWriter.write(response, CommonErrorCode.FORBIDDEN)));
+		return http.build();
+	}
+
+	/** 로그인 정보(SecurityContext)를 세션에 둔다. 세션은 Spring Session이 Redis에 저장한다. */
+	@Bean
+	SecurityContextRepository securityContextRepository() {
+		return new HttpSessionSecurityContextRepository();
+	}
+
+	@Bean
+	PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	@Bean
+	CorsConfigurationSource corsConfigurationSource(CorsProperties properties) {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(properties.allowedOrigins());
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
+		configuration.setAllowedHeaders(List.of("*"));
+		configuration.setAllowCredentials(true);
+		configuration.setMaxAge(Duration.ofHours(1));
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/api/**", configuration);
+		return source;
+	}
+
+}
