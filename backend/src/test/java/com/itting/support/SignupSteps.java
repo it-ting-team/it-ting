@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -47,9 +48,12 @@ public class SignupSteps {
 		return "mole-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
 	}
 
-	/** 겹치지 않는 Mattermost ID(영문 소문자와 숫자). */
+	/**
+	 * 겹치지 않는 Mattermost ID(영문 소문자와 숫자).
+	 * 숫자 6자리({@code 123456})를 늘 넣어, 코드를 꺼낼 때 아이디의 숫자를 코드로 잘못 읽지 않는지 매번 확인한다.
+	 */
 	public static String newMattermostId() {
-		return "mole" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+		return "mole123456" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
 	}
 
 	public ResultActions sendEmailCode(String email) throws Exception {
@@ -88,7 +92,11 @@ public class SignupSteps {
 		return mockMvc.perform(request);
 	}
 
-	/** 이 아이디로 온 가장 최근 Mattermost 메시지에서 코드를 꺼낸다. */
+	/**
+	 * 이 아이디로 온 가장 최근 Mattermost 메시지에서 코드를 꺼낸다.
+	 * 본문 전체가 아니라 {@code text}에서 찾는다. 본문의 {@code channel}에 든 아이디에도 숫자 6자리가 있을 수 있고,
+	 * 서버가 {@code Map.of}로 만든 본문은 JVM마다 필드 순서가 달라 {@code channel}이 앞에 올 수 있다.
+	 */
 	public String lastSsafyCode(String mattermostId) {
 		List<FakeMattermost.Received> messages = fakeMattermost.received().stream()
 				.filter(r -> r.body().contains("\"@" + mattermostId + "\""))
@@ -97,7 +105,8 @@ public class SignupSteps {
 		if (messages.isEmpty()) {
 			throw new AssertionError(mattermostId + "에게 간 메시지가 없습니다.");
 		}
-		Matcher matcher = CODE.matcher(messages.getLast().body());
+		String text = JsonPath.read(messages.getLast().body(), "$.text");
+		Matcher matcher = CODE.matcher(text);
 		if (!matcher.find()) {
 			throw new AssertionError("메시지에 코드가 없습니다.");
 		}
