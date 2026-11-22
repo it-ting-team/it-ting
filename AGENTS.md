@@ -14,6 +14,7 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 | `docs/api/` | API 명세. 어떻게 주고받는가. 공통 규칙은 `docs/api-convention.md` |
 | `docs/branch-strategy.md` | 브랜치 이름, 병합 흐름, 보호 규칙 |
 | `docs/commit-convention.md` | 커밋 메시지, 작성자, 서명 |
+| `docs/work/` | 작업 계획서 · 완료 보고서(`KAN-<번호>.md`). 템플릿은 `_template.md` |
 | `compose.yaml` | 로컬 MySQL, Redis |
 | `.agents/skills/` | 스킬 원본 |
 | `.claude/skills/` | 스킬 사본 (Claude Code용) |
@@ -22,6 +23,7 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 
 | 하려는 일 | 먼저 읽을 문서 |
 |---|---|
+| 기능 · 설정 티켓 시작 | 스킬 `work-plan`, `docs/work/_template.md` |
 | 기능 구현 | `docs/spec/<번호>-*.md`, `docs/api/<번호>-*.md`, `docs/db/<영역>.md` |
 | API 추가 · 변경 | 위 문서 + `docs/api-convention.md` |
 | 브랜치 만들기 | `docs/branch-strategy.md` |
@@ -34,6 +36,8 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 
 - MUST: 새 작업 브랜치는 최신 `origin/dev`에서 만든다.
 - MUST: 푸시와 PR 전에 `git fetch origin` 후 `git merge-tree --write-tree HEAD origin/dev`로 충돌이 없는지 확인한다.
+- MUST: 코드나 설정을 바꾸는 기능 · 설정 티켓은 `docs/work/KAN-<번호>.md`에 계획을 쓰고, 사용자가 승인한 뒤 구현한다. 절차는 스킬 `work-plan`을 따른다. 문서만 바꾸거나 한두 줄 고치는 작업은 빼도 된다.
+- MUST: 명세에 없거나 "미정"인 것은 시작 전에 계획서의 "이번에 정할 것"에 모아 한꺼번에 묻는다. 이미 정해진 것(명세, 이전 작업 기록, 대화에서 정한 것)은 다시 묻지 않고 진행한다.
 - MUST: 명세와 다르게 구현해야 하면 코드를 바꾸기 전에 사용자에게 묻는다.
 - MUST: 구현하면서 API의 주소, 요청, 응답, 에러 코드가 `docs/api/`와 달라지면 같은 PR에서 `docs/api/`도 고친다.
 - MUST: 커밋, 푸시, PR 생성, 병합은 사용자가 요청한 경우에만 한다.
@@ -58,6 +62,13 @@ com.itting
 - MUST: 실패는 `BusinessException`을 던져 알린다. 영역의 에러 코드는 `ErrorCode`를 구현한 `<영역>ErrorCode` enum에 두고, 상수 이름이 응답의 `code`다. 공통 코드는 `CommonErrorCode`에 있다.
 - MUST NOT: 컨트롤러나 서비스에서 실패 응답 본문을 직접 만들지 않는다. 응답 틀로 바꾸는 일은 `GlobalExceptionHandler`가 한다.
 - 입력 검증은 DTO와 메서드 인자에 Bean Validation(`@NotBlank`, `@Size`, `@Max` 등)으로 붙인다. 실패하면 `400 INVALID_INPUT`과 `fields`가 자동으로 나간다.
+
+로그인(세션 방식, `docs/api-convention.md`의 "로그인"):
+
+- MUST: 로그인 없이 부르는 API(`docs/api/`에 "로그인: 불필요")는 `global/security/SecurityConfig`의 `PUBLIC_API`에 주소를 더한다. 나머지 `/api/**`는 모두 로그인이 필요하고, 로그인하지 않았으면 `401 UNAUTHENTICATED`가 자동으로 나간다.
+- MUST NOT: 로그인이 필요한 API를 `PUBLIC_API`에 넣지 않는다.
+- MUST: 로그인한 사용자의 id는 컨트롤러 인자 `@Parameter(hidden = true) @AuthenticationPrincipal Long userId`로 받는다. 요청 본문이나 주소로 자기 id를 받지 않는다.
+- 세션을 만들고 지우는 일은 `auth/service/SessionService`가 한다. 컨트롤러나 다른 서비스가 세션을 직접 다루지 않는다.
 
 ### DB
 
@@ -89,8 +100,9 @@ com.itting
 ### 코드를 바꾼 모든 작업
 
 - MUST: PR을 올리기 전에 스킬 `code-review`로 로컬 리뷰를 하고, P0과 P1 지적을 모두 고친다.
-- MUST: `backend/`를 바꿨으면 `./gradlew build`가 통과한다. 테스트는 Testcontainers로 MySQL을 띄우므로 Docker가 켜져 있어야 한다.
-- MUST: DB를 쓰는 테스트는 `@Import(TestcontainersConfiguration.class)`로 실제 MySQL에서 돌린다. H2 같은 대체 DB를 쓰지 않는다.
+- MUST: `backend/`를 바꿨으면 `./gradlew build`가 통과한다. 테스트는 Testcontainers로 MySQL과 Redis를 띄우므로 Docker가 켜져 있어야 한다.
+- MUST: DB나 세션(Redis)을 쓰는 테스트는 `@Import(TestcontainersConfiguration.class)`로 실제 MySQL과 Redis에서 돌린다. H2 같은 대체 DB나 가짜 Redis를 쓰지 않는다.
+- MUST: 작업 기록의 "결과"와 PR 본문에 "한눈에 보기" Mermaid 다이어그램을 넣는다. 흐름도는 늘 넣고, 순서가 중요한 처리는 시퀀스, 테이블을 바꾸면 ERD를 더한다(스킬 `work-plan`).
 
 PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 번 더 리뷰한다. AI 리뷰는 병합 조건이 아니다. 병합은 사람이 Codex 리뷰의 P0, P1 지적이 처리됐는지 확인하고 한다.
 
@@ -102,6 +114,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 
 | 스킬 | 언제 쓰나 |
 |---|---|
+| `work-plan` | 기능 · 설정 티켓을 시작할 때 계획서를 쓰고 승인받을 때, 끝나고 결과를 채울 때 |
 | `code-review` | PR을 올리기 전에 내 변경을 리뷰할 때 |
 | `api-evidence` | API PR에 호출 결과(스크린샷, 응답 텍스트)를 남길 때 |
 | `pr-create` | PR을 만들 때. 안에서 `code-review`를 먼저 실행한다 |
@@ -143,6 +156,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 
 - 비밀값(비밀번호, API 키, 토큰, 웹후크 URL)이 코드, 설정, 테스트, 로그에 들어 있다.
 - 로그인한 사용자가 다른 사용자의 자원을 조회하거나 바꿀 수 있다(권한 검사 누락).
+- 로그인이 필요한 API가 `SecurityConfig.PUBLIC_API`에 들어 있다(로그인하지 않은 사람도 부를 수 있다).
 - 응답에 다른 사용자의 개인 정보, 스택 트레이스, SQL이 나간다.
 - 로그에 비밀값이나 다른 사용자의 개인 정보가 남는다. 서버 오류의 원인을 찾으려고 서버 로그에 스택 트레이스를 남기는 것은 지적하지 않는다.
 - `prod` 프로필에서 Swagger, 상세 헬스체크처럼 내부 정보를 여는 설정이 켜진다.
@@ -151,6 +165,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 ### P1: 고치고 병합해야 하는 것
 
 - 동작이 `docs/spec/`, `docs/api/`와 다르다. 또는 API 모양이 바뀌었는데 `docs/api/`를 고치지 않았다.
+- 로그인 없이 불러야 하는 API(`docs/api/`에 "로그인: 불필요")가 `SecurityConfig.PUBLIC_API`에 없다(명세와 달리 `401`이 난다).
 - `docs/api-convention.md`의 MUST를 어긴다(응답 틀, 상태 코드, 에러 `code`, JSON 필드 이름, 주소 모양).
 - API가 자기 영역이 아닌 데이터를 바꾼다. 예외는 문서에 이유가 적힌 경우뿐이다(예: 탈퇴 API, `docs/api/10-settings.md`).
 - 여러 테이블을 바꾸는데 하나의 트랜잭션으로 묶이지 않아 중간에 실패하면 데이터가 어긋난다.

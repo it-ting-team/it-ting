@@ -94,7 +94,11 @@ git push -u origin HEAD
 ```markdown
 ## 무엇을 바꿨나
 
-<바꾼 것과 이유. 표로 정리해도 좋다>
+<바꾼 것과 이유. 표로 정리해도 좋다. 작업 기록이 있으면 링크: [`docs/work/KAN-<번호>.md`](docs/work/KAN-<번호>.md)>
+
+### 한눈에 보기
+
+<작업 기록 "결과"의 "한눈에 보기" Mermaid 다이어그램을 그대로 넣는다>
 
 ## 쓰는 법
 
@@ -116,11 +120,15 @@ git push -u origin HEAD
 <AI 공동 작성 표시: 도구가 정한 문구>
 ```
 
+- "한눈에 보기"는 코드나 설정을 바꾼 PR이면 넣는다. 무엇을 그리는지는 스킬 `work-plan`의 7단계를 따른다. 문서만 바꾼 PR은 뺀다.
+
 PR을 연다.
 
 ```bash
 gh pr create --base dev --title "<제목>" --body-file <본문 파일>
 ```
+
+PR 페이지에서 다이어그램이 그림으로 그려지는지 본다. "Unable to render" 같은 오류가 보이면 Mermaid를 고쳐 `gh pr edit --body-file`로 다시 올린다.
 
 ### 8. 마무리
 
@@ -136,3 +144,4 @@ gh pr create --base dev --title "<제목>" --body-file <본문 파일>
 - [ ] 백엔드가 바뀌었으면 빌드가 통과했다.
 - [ ] PR의 base가 `dev`다.
 - [ ] API PR이면 `## 호출 결과` 절이 채워졌다.
+- [ ] 코드나 설정을 바꾼 PR이면 "한눈에 보기" 다이어그램이 있고 그림으로 그려진다.
