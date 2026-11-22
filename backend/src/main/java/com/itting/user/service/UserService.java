@@ -47,6 +47,22 @@ public class UserService {
 		}
 	}
 
+	/**
+	 * 비밀번호를 바꾼다.
+	 *
+	 * @return 바꿀 계정이 없거나 탈퇴했으면 false
+	 */
+	@Transactional
+	public boolean changePassword(Long userId, String passwordHash) {
+		return userRepository.findById(userId)
+				.filter(User::isActive)
+				.map(user -> {
+					user.changePassword(passwordHash);
+					return true;
+				})
+				.orElse(false);
+	}
+
 	/** UNIQUE 제약의 이름(V3 마이그레이션)으로 어느 값이 겹쳤는지 가린다. */
 	private static RuntimeException toDuplicated(DataIntegrityViolationException e) {
 		String message = String.valueOf(e.getMostSpecificCause().getMessage());

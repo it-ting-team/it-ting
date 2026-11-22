@@ -77,6 +77,11 @@ public class User extends BaseTimeEntity {
 		return user;
 	}
 
+	/** 비밀번호를 바꾼다(비밀번호 재설정, 비밀번호 변경). */
+	public void changePassword(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
+
 	public boolean isActive() {
 		return status == UserStatus.ACTIVE;
 	}
