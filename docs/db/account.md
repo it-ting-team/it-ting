@@ -174,7 +174,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. `profile_
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 관심사 대분류 ID |
-| `name` | 미정 (문자열) | — | NULL 허용·UNIQUE 여부 미정 | 대분류 표시 이름 |
+| `name` | `VARCHAR(20)` | — | `NOT NULL`, UNIQUE | 대분류 표시 이름. 이모지(아이콘)는 넣지 않는다(프론트엔드가 갖는다) |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 | `deleted_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
@@ -189,7 +189,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. `profile_
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | `NOT NULL`, PK로 유일 | 자동 증가. 세부 관심사 ID |
 | `interest_category_id` | `BIGINT` | FK → `interest_category.id` | `NOT NULL`, 개별 UNIQUE 없음 | 세부 관심사가 속한 대분류 |
-| `name` | 미정 (문자열) | — | NULL 허용·UNIQUE 여부 미정 | 세부 관심사 표시 이름 |
+| `name` | `VARCHAR(30)` | — | `NOT NULL`, UNIQUE(대분류가 달라도 겹치지 않음) | 세부 관심사 표시 이름 |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 | `deleted_at` | `DATETIME` | — | `NULL` 허용, 개별 UNIQUE 없음 | 삭제한 시각. NULL이면 삭제되지 않음 |
@@ -204,7 +204,7 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. `profile_
 | --- | --- | --- | --- | --- |
 | `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | `NOT NULL`, 개별 UNIQUE 없음 | 관심사를 고른 사용자 |
 | `interest_id` | `BIGINT` | 복합 PK, FK → `interest.id` | `NOT NULL`, 개별 UNIQUE 없음 | 선택한 세부 관심사 |
-| `sort_order` | `TINYINT` | — | `NOT NULL`, 개별 UNIQUE 없음, `1`이 대표 관심사 | 사용자마다 관심사를 고른 순서. 이 값으로 선택 목록을 정렬 |
+| `sort_order` | `TINYINT` | — | `NOT NULL`, 개별 UNIQUE 없음, `1`–`10`(CHECK), `1`이 대표 관심사 | 사용자마다 관심사를 고른 순서. 이 값으로 선택 목록을 정렬 |
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
@@ -223,7 +223,9 @@ SSAFY 인증이 완료되면 기수와 캠퍼스·층을 저장한다. `profile_
 | `created_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 질문이 생성된 시각 |
 | `updated_at` | `DATETIME` | — | `NOT NULL`, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
 
-관리자가 질문을 추가·수정하며, 숨기거나 지우지 않는다.
+관리자가 질문을 추가·수정하며, 숨기거나 지우지 않는다. `type`과 `interest_category_id`의 짝(`INTEREST`면 대분류 필수, `TMI`면 비움)은 CHECK 제약으로 지킨다(KAN-43).
+
+처음 값(KAN-43 마이그레이션): 대분류 12개와 세부 관심사 90개는 [00 공통](../spec/00-common.md) 5의 표 순서대로 넣어 id 순이 표 순서와 같다. 자기소개 질문은 명세에 문구가 없어 초안 40개(대분류마다 관심사 질문 2개 = 24개, TMI 16개)를 넣었다. 문구는 [작업 기록](../work/KAN-43.md#부록-자기소개-질문-초안)에 있고, 바꿀 때는 새 마이그레이션으로 고친다.
 
 ### `user_answer`
 
