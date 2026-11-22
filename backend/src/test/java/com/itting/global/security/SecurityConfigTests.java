@@ -64,6 +64,9 @@ class SecurityConfigTests {
 				.andExpect(content().json(UNAUTHENTICATED, JsonCompareMode.STRICT));
 		mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
 				.andExpect(status().isBadRequest());
+		mockMvc.perform(get("/api/v1/password-resets")).andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/api/v1/password-resets/no-such-link")).andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/v1/password-resets/no-such-link/complete")).andExpect(status().isUnauthorized());
 	}
 
 	@Test

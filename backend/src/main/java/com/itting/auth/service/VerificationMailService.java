@@ -16,7 +16,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 /**
- * 이메일 인증 코드를 메일로 보낸다. 로컬에서는 compose의 Mailpit이 받는다(http://localhost:8025).
+ * 인증 코드와 비밀번호 재설정 링크를 메일로 보낸다. 로컬에서는 compose의 Mailpit이 받는다(http://localhost:8025).
  */
 @Service
 @EnableConfigurationProperties(VerificationMailService.MailProperties.class)
@@ -37,23 +37,42 @@ public class VerificationMailService {
 	 * @throws BusinessException 메일 서버에 보내지 못하면 {@code VERIFICATION_SEND_FAILED}
 	 */
 	public void sendCode(String email, String code, Duration codeTtl) {
+		send(email, "[디굴디굴] 이메일 인증 코드", """
+				디굴디굴 가입 인증 코드는 %s입니다.
+				%d분 안에 입력해 주세요.
+
+				요청하지 않았다면 이 메일을 무시해 주세요.
+				""".formatted(code, codeTtl.toMinutes()));
+	}
+
+	/**
+	 * 비밀번호 재설정 링크를 메일로 보낸다.
+	 *
+	 * @throws BusinessException 메일 서버에 보내지 못하면 {@code VERIFICATION_SEND_FAILED}
+	 */
+	public void sendPasswordReset(String email, String link, Duration linkTtl) {
+		send(email, "[디굴디굴] 비밀번호 재설정", """
+				아래 링크에서 새 비밀번호를 정해 주세요.
+				%s
+
+				링크는 %d분 동안 한 번만 쓸 수 있어요.
+				요청하지 않았다면 이 메일을 무시해 주세요. 비밀번호는 바뀌지 않아요.
+				""".formatted(link, linkTtl.toMinutes()));
+	}
+
+	private void send(String email, String subject, String text) {
 		try {
 			MimeMessage message = mailSender.createMimeMessage();
 			MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 			helper.setFrom(properties.from());
 			helper.setTo(email);
-			helper.setSubject("[디굴디굴] 이메일 인증 코드");
-			helper.setText("""
-					디굴디굴 가입 인증 코드는 %s입니다.
-					%d분 안에 입력해 주세요.
-
-					요청하지 않았다면 이 메일을 무시해 주세요.
-					""".formatted(code, codeTtl.toMinutes()));
+			helper.setSubject(subject);
+			helper.setText(text);
 			mailSender.send(message);
 		}
 		catch (MailException | MessagingException e) {
 			// 받는 사람의 이메일과 예외 내용(서버 주소가 들어 있음)은 남기지 않는다.
-			log.warn("인증 메일을 보내지 못했습니다: {}", e.getClass().getSimpleName());
+			log.warn("메일을 보내지 못했습니다: {}", e.getClass().getSimpleName());
 			throw new BusinessException(AuthErrorCode.VERIFICATION_SEND_FAILED);
 		}
 	}

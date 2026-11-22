@@ -28,6 +28,9 @@ public enum AuthErrorCode implements ErrorCode {
 	/** 메일 서버나 Mattermost 웹후크가 모두 실패해 코드를 보내지 못했다. 바로 다시 시도할 수 있다. */
 	VERIFICATION_SEND_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "인증 코드를 보내지 못했습니다. 잠시 뒤 다시 시도해 주세요."),
 
+	/** 30분이 지났거나, 이미 썼거나, 다시 보내서 지워졌거나, 없는 재설정 링크. */
+	PASSWORD_RESET_LINK_INVALID(HttpStatus.NOT_FOUND, "만료됐거나 이미 쓴 링크입니다. 재설정 메일을 다시 받아 주세요."),
+
 	/** 가입 진행 기록이 없거나 시간이 지났다. 가입을 처음부터 다시 한다. */
 	SIGNUP_EXPIRED(HttpStatus.CONFLICT, "가입 시간이 지났습니다. 처음부터 다시 진행해 주세요.");
 

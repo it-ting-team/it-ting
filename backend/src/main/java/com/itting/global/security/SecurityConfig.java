@@ -46,11 +46,14 @@ public class SecurityConfig {
 			PublicApi.anyMethod("/api/v1/email-verifications"),
 			PublicApi.anyMethod("/api/v1/email-verifications/check"),
 			PublicApi.anyMethod("/api/v1/ssafy-verifications"),
-			PublicApi.of(HttpMethod.POST, "/api/v1/users"));
+			PublicApi.of(HttpMethod.POST, "/api/v1/users"),
+			PublicApi.of(HttpMethod.POST, "/api/v1/password-resets"),
+			PublicApi.of(HttpMethod.GET, "/api/v1/password-resets/*"),
+			PublicApi.of(HttpMethod.POST, "/api/v1/password-resets/*/complete"));
 
 	/**
 	 * @param method 연 메서드. null이면 모든 메서드
-	 * @param path 주소. 정확히 같은 주소만 연다(하위 주소는 열지 않는다)
+	 * @param path 주소. 적은 주소만 연다. {@code *}는 주소의 한 마디(예: 재설정 링크 값)만 대신한다
 	 */
 	record PublicApi(HttpMethod method, String path) {
 

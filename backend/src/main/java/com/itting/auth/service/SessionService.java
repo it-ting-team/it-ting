@@ -9,6 +9,8 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 
 /**
@@ -23,8 +25,12 @@ public class SessionService {
 
 	private final SecurityContextRepository securityContextRepository;
 
-	public SessionService(SecurityContextRepository securityContextRepository) {
+	private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+
+	public SessionService(SecurityContextRepository securityContextRepository,
+			FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
 		this.securityContextRepository = securityContextRepository;
+		this.sessionRepository = sessionRepository;
 	}
 
 	/**
@@ -42,6 +48,11 @@ public class SessionService {
 				userId, null, AuthorityUtils.createAuthorityList("ROLE_" + role.name())));
 		SecurityContextHolder.setContext(context);
 		securityContextRepository.saveContext(context, request, response);
+	}
+
+	/** 그 계정의 세션을 모든 기기에서 지운다(비밀번호 재설정, 정지, 탈퇴). 세션의 주인 이름이 계정 id다. */
+	public void endAll(Long userId) {
+		sessionRepository.findByPrincipalName(String.valueOf(userId)).keySet().forEach(sessionRepository::deleteById);
 	}
 
 	/** 지금 요청의 세션만 지운다. 다른 기기의 세션은 그대로다. 쿠키는 Spring Session이 지운다. */

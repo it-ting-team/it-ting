@@ -49,8 +49,8 @@ class ItTingApplicationTests {
 	}
 
 	@Nested
-	// 운영 서버는 메일 서버 주소(SPRING_MAIL_HOST)를 환경 변수로 받는다. 없으면 서버가 뜨지 않는다.
-	@SpringBootTest(properties = "spring.mail.host=localhost")
+	// 운영 서버는 메일 서버 주소(SPRING_MAIL_HOST)와 프론트엔드 주소(ITTING_FRONTEND_URL)를 환경 변수로 받는다. 없으면 서버가 뜨지 않는다.
+	@SpringBootTest(properties = { "spring.mail.host=localhost", "itting.frontend-url=https://itting.example" })
 	@AutoConfigureMockMvc
 	@Import(TestcontainersConfiguration.class)
 	@ActiveProfiles("prod")
