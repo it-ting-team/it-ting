@@ -92,6 +92,8 @@ Claude Code와 Codex는 같은 규칙과 스킬을 쓴다.
 | `.claude/skills/` | 스킬 사본 (Claude Code). 직접 고치지 않는다 |
 | `.mcp.json`, `.codex/config.toml` | Playwright MCP 설정 (브라우저 조작, 스크린샷) |
 
+스킬은 일하는 순서대로 `work-plan`(계획서 · 결과) → `code-review` → `pr-create` → `api-evidence`(API PR)다. 언제 쓰는지는 `AGENTS.md`의 "스킬" 절에 있다.
+
 ### 처음 한 번
 
 1. Chrome을 설치해 둔다. Playwright MCP가 설치된 Chrome을 쓴다.
