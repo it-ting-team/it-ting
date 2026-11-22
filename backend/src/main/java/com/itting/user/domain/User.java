@@ -62,6 +62,21 @@ public class User extends BaseTimeEntity {
 	protected User() {
 	}
 
+	/**
+	 * 이메일 가입을 마친 계정. SSAFY 인증과 필수 동의를 마친 시각은 {@code now}다. 온보딩은 아직이다.
+	 */
+	public static User createByEmail(String email, String passwordHash, String mattermostId, Instant now) {
+		User user = new User();
+		user.email = email;
+		user.passwordHash = passwordHash;
+		user.mattermostId = mattermostId;
+		user.ssafyVerifiedAt = now;
+		user.termsAgreedAt = now;
+		user.role = UserRole.USER;
+		user.status = UserStatus.ACTIVE;
+		return user;
+	}
+
 	public boolean isActive() {
 		return status == UserStatus.ACTIVE;
 	}

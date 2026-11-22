@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(BusinessException.class)
 	ResponseEntity<ApiResult<Void>> handleBusiness(BusinessException e) {
 		ErrorCode code = e.getErrorCode();
-		return respond(code, null, e.getDetail());
+		return respond(code, null, e.getFields(), e.getDetail());
 	}
 
 	/** {@code @Valid @RequestBody}, {@code @Valid @ModelAttribute}의 검증 실패. */

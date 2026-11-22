@@ -62,6 +62,11 @@ public class TestUsers {
 		entityManager.clear();
 	}
 
+	public void setMattermostId(long userId, String mattermostId) {
+		jdbcTemplate.update("UPDATE `user` SET mattermost_id = ? WHERE id = ?", mattermostId, userId);
+		entityManager.clear();
+	}
+
 	/** 탈퇴 처리처럼 상태를 바꾸고 로그인 값을 비운다. */
 	public void withdraw(long userId) {
 		jdbcTemplate.update("""

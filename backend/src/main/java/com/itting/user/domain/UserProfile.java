@@ -50,6 +50,15 @@ public class UserProfile extends BaseTimeEntity {
 	protected UserProfile() {
 	}
 
+	/** 계정을 만들 때 함께 만드는 프로필. 닉네임과 두더지 아이템은 온보딩을 마칠 때 정한다. */
+	public static UserProfile create(Long userId, int generation, Long campusFloorId) {
+		UserProfile profile = new UserProfile();
+		profile.userId = userId;
+		profile.generation = (short) generation;
+		profile.campusFloorId = campusFloorId;
+		return profile;
+	}
+
 	public Long getUserId() {
 		return userId;
 	}

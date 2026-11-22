@@ -2,7 +2,7 @@ ssafy인들을 위한 관심사 기반 커뮤니티 플랫폼
 
 ## 로컬 개발 환경
 
-로컬에서 쓰는 MySQL과 Redis를 Docker Compose로 띄운다.
+로컬에서 쓰는 MySQL, Redis, Mailpit을 Docker Compose로 띄운다. Mailpit은 서버가 보낸 메일(인증 코드)을 실제로 보내지 않고 받아 둔다. 받은 메일은 http://localhost:8025 에서 본다.
 
 ### 준비
 
@@ -15,6 +15,8 @@ cp .env.example .env
 ```
 
 내 PC에 MySQL이나 Redis가 이미 떠 있어 포트가 겹치면 `.env`의 `MYSQL_PORT`, `REDIS_PORT`를 다른 번호(예: `3307`)로 바꾼다.
+
+SSAFY 인증 코드(Mattermost DM)를 실제로 보내 보려면 `.env`의 `MATTERMOST_WEBHOOK_URLS_<기수>`에 그 기수 Mattermost의 Incoming Webhook URL을 넣는다. 비워 두면 그 기수로는 보내지 못하고 `503`이 난다. URL은 비밀값이라 공유하지 않는다.
 
 ### 실행과 종료
 

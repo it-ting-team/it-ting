@@ -7,6 +7,7 @@ import com.itting.global.error.CommonErrorCode;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,12 +35,34 @@ import org.springframework.web.filter.CorsFilter;
 @EnableConfigurationProperties(CorsProperties.class)
 public class SecurityConfig {
 
-	/** 로그인 없이 부를 수 있는 API. 메서드와 상관없이 연다(허용하지 않는 메서드는 405로 답한다). */
-	static final String[] PUBLIC_API = {
-			"/api/v1/campuses",
-			"/api/v1/generations",
-			"/api/v1/sessions",
-	};
+	/**
+	 * 로그인 없이 부를 수 있는 API. 메서드를 적지 않은 주소는 모든 메서드를 연다(허용하지 않는 메서드는 405로 답한다).
+	 * 같은 주소에 로그인이 필요한 메서드가 생길 수 있으면 메서드를 적는다.
+	 */
+	static final List<PublicApi> PUBLIC_API = List.of(
+			PublicApi.anyMethod("/api/v1/campuses"),
+			PublicApi.anyMethod("/api/v1/generations"),
+			PublicApi.anyMethod("/api/v1/sessions"),
+			PublicApi.anyMethod("/api/v1/email-verifications"),
+			PublicApi.anyMethod("/api/v1/email-verifications/check"),
+			PublicApi.anyMethod("/api/v1/ssafy-verifications"),
+			PublicApi.of(HttpMethod.POST, "/api/v1/users"));
+
+	/**
+	 * @param method 연 메서드. null이면 모든 메서드
+	 * @param path 주소. 정확히 같은 주소만 연다(하위 주소는 열지 않는다)
+	 */
+	record PublicApi(HttpMethod method, String path) {
+
+		static PublicApi anyMethod(String path) {
+			return new PublicApi(null, path);
+		}
+
+		static PublicApi of(HttpMethod method, String path) {
+			return new PublicApi(method, path);
+		}
+
+	}
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository securityContextRepository,
@@ -57,11 +80,19 @@ public class SecurityConfig {
 				// 로그인하지 않은 요청을 세션에 저장해 두지 않는다. 저장하면 로그인하지 않은 사람에게도 세션이 생긴다.
 				.requestCache(cache -> cache.disable())
 				.securityContext(context -> context.securityContextRepository(securityContextRepository))
-				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(PUBLIC_API).permitAll()
-						.requestMatchers("/api/**").authenticated()
-						// Swagger, 헬스체크, 오류 응답(/error)
-						.anyRequest().permitAll())
+				.authorizeHttpRequests(auth -> {
+					for (PublicApi api : PUBLIC_API) {
+						if (api.method() == null) {
+							auth.requestMatchers(api.path()).permitAll();
+						}
+						else {
+							auth.requestMatchers(api.method(), api.path()).permitAll();
+						}
+					}
+					auth.requestMatchers("/api/**").authenticated()
+							// Swagger, 헬스체크, 오류 응답(/error)
+							.anyRequest().permitAll();
+				})
 				.exceptionHandling(exception -> exception
 						.authenticationEntryPoint((request, response, e) ->
 								errorWriter.write(response, CommonErrorCode.UNAUTHENTICATED))
