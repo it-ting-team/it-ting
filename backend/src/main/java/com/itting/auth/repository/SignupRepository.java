@@ -116,11 +116,24 @@ public class SignupRepository {
 	/**
 	 * SSAFY 인증 코드를 확인한다. 틀린 횟수가 최대에 닿으면 코드를 지운다(재전송 간격은 그대로 센다).
 	 * 맞아도 지우지 않는다. 계정을 만들다 실패하면(겹침, 없는 층) 같은 코드로 다시 시도할 수 있다.
+	 *
+	 * @return 결과와, 맞았으면 그 코드를 보낸 기수와 Mattermost ID(코드를 비교한 순간의 값)
 	 */
-	public VerificationCode.Result verifySsafyCode(String token, String input, Instant now, int maxAttempts) {
-		String result = redis.execute(VerificationScripts.VERIFY, List.of(KEY + token),
-				input, millis(now), String.valueOf(maxAttempts), SSAFY_CODE, SSAFY_EXPIRES_AT, SSAFY_ATTEMPTS, "0");
-		return VerificationScripts.toResult(result);
+	public SsafyCodeCheck verifySsafyCode(String token, String input, Instant now, int maxAttempts) {
+		List<?> result = redis.execute(VerificationScripts.VERIFY, List.of(KEY + token),
+				input, millis(now), String.valueOf(maxAttempts), SSAFY_CODE, SSAFY_EXPIRES_AT, SSAFY_ATTEMPTS, "0",
+				"generation", "mattermostId");
+		String generation = VerificationScripts.field(result, 1);
+		return new SsafyCodeCheck(VerificationScripts.toResult(result),
+				generation == null ? null : Integer.valueOf(generation), VerificationScripts.field(result, 2));
+	}
+
+	/**
+	 * @param result 확인 결과
+	 * @param generation 맞았을 때만. 코드를 보낸 기수
+	 * @param mattermostId 맞았을 때만. 코드를 보낸 Mattermost ID
+	 */
+	public record SsafyCodeCheck(VerificationCode.Result result, Integer generation, String mattermostId) {
 	}
 
 	/** 보내지 못했을 때 코드와 보낸 시각을 모두 지워 바로 다시 보낼 수 있게 한다. */

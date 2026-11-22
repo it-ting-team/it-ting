@@ -57,8 +57,8 @@ public class EmailVerificationRepository {
 
 	/** 코드를 확인한다. 맞으면 지우고, 틀린 횟수가 최대에 닿으면 지운다. 재전송 간격은 그대로 센다. */
 	public VerificationCode.Result verify(String email, String input, Instant now, int maxAttempts) {
-		String result = redis.execute(VerificationScripts.VERIFY, List.of(CODE_KEY + email),
-				input, millis(now), String.valueOf(maxAttempts), "code", "expiresAt", "attempts", "1");
+		List<?> result = redis.execute(VerificationScripts.VERIFY, List.of(CODE_KEY + email),
+				input, millis(now), String.valueOf(maxAttempts), "code", "expiresAt", "attempts", "1", "", "");
 		return VerificationScripts.toResult(result);
 	}
 

@@ -7,6 +7,7 @@ import com.itting.auth.domain.AuthErrorCode;
 import com.itting.auth.domain.SignupMethod;
 import com.itting.auth.domain.SignupRecord;
 import com.itting.auth.repository.SignupRepository;
+import com.itting.auth.repository.SignupRepository.SsafyCodeCheck;
 import com.itting.campus.domain.CampusErrorCode;
 import com.itting.campus.repository.CampusFloorRepository;
 import com.itting.global.error.BusinessException;
@@ -59,7 +60,7 @@ public class SignupService {
 		if (password == null) {
 			throw BusinessException.invalidInput("password", "필수 값입니다.");
 		}
-		verifySsafyCode(record, code, now);
+		SsafyCodeCheck verified = verifySsafyCode(record, code, now);
 		boolean floorExists = campusFloorRepository.findById(campusFloorId)
 				.filter(floor -> floor.getDeletedAt() == null)
 				.isPresent();
@@ -67,19 +68,22 @@ public class SignupService {
 			throw new BusinessException(CampusErrorCode.CAMPUS_FLOOR_NOT_FOUND);
 		}
 
+		// 기수와 아이디는 코드를 확인한 순간의 값을 쓴다. 그 사이 코드를 다시 보내 기록이 바뀌어도 어긋나지 않는다.
 		Long userId = userService.createEmailUser(record.email(), passwordEncoder.encode(password),
-				record.mattermostId(), record.generation(), campusFloorId, now);
+				verified.mattermostId(), verified.generation(), campusFloorId, now);
 		signupRepository.delete(signupToken);
 		return userId;
 	}
 
-	private void verifySsafyCode(SignupRecord record, String code, Instant now) {
-		switch (signupRepository.verifySsafyCode(record.token(), code, now, properties.maxAttempts())) {
+	private SsafyCodeCheck verifySsafyCode(SignupRecord record, String code, Instant now) {
+		SsafyCodeCheck check = signupRepository.verifySsafyCode(record.token(), code, now, properties.maxAttempts());
+		switch (check.result()) {
 			case EXPIRED -> throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_EXPIRED);
 			case MISMATCH -> throw new BusinessException(AuthErrorCode.VERIFICATION_CODE_MISMATCH);
 			case MATCH -> {
 			}
 		}
+		return check;
 	}
 
 }

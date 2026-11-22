@@ -264,6 +264,32 @@ class SignupApiTests {
 				.andExpect(jsonPath("$.error.code").value("MATTERMOST_ID_DUPLICATED"));
 	}
 
+	@Test
+	void 코드를_다른_아이디로_다시_보내면_확인한_코드의_아이디와_기수로_가입된다() throws Exception {
+		String first = newMattermostId();
+		String second = newMattermostId();
+		Cookie signup = steps.verifyEmail(newEmail());
+		steps.sendSsafyCode(signup, 15, first).andExpect(status().isCreated());
+		String firstCode = steps.lastSsafyCode(first);
+		clock.advance(Duration.ofSeconds(60));
+		steps.sendSsafyCode(signup, 16, second).andExpect(status().isCreated());
+		String secondCode = steps.lastSsafyCode(second);
+
+		if (!firstCode.equals(secondCode)) {
+			steps.signUp(signup, PASSWORD, firstCode, floorId)
+					.andExpect(jsonPath("$.error.code").value("VERIFICATION_CODE_MISMATCH"));
+		}
+		MockHttpServletResponse response = steps.signUp(signup, PASSWORD, secondCode, floorId)
+				.andExpect(status().isCreated())
+				.andReturn().getResponse();
+
+		long userId = ((Number) com.jayway.jsonpath.JsonPath.read(response.getContentAsString(), "$.data.userId")).longValue();
+		assertThat(jdbcTemplate.queryForObject("SELECT mattermost_id FROM `user` WHERE id = ?", String.class, userId))
+				.isEqualTo(second);
+		assertThat(jdbcTemplate.queryForObject("SELECT generation FROM user_profile WHERE user_id = ?", Integer.class, userId))
+				.isEqualTo(16);
+	}
+
 	/** 이메일 인증과 SSAFY 코드 보내기까지 마친 가입 쿠키. */
 	private Cookie signupWithSsafyCode() throws Exception {
 		Cookie signup = steps.verifyEmail(newEmail());
