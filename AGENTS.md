@@ -72,7 +72,8 @@ com.itting
 
 ### DB
 
-- MUST: 테이블은 그 기능을 만드는 PR에서 Flyway 마이그레이션 `V<번호>__<설명>.sql`로 만든다. 번호는 dev에 있는 가장 큰 번호의 다음이다.
+- MUST: 테이블은 그 기능을 만드는 PR에서 Flyway 마이그레이션으로 만든다. 이름은 `V<yyyyMMdd>_<HHmm>__<설명>.sql`이고 번호는 파일을 만든 시각(한국 시간)이다. 예: `V20261123_1430__create_meetup.sql`. 설명은 영어 소문자와 밑줄로 쓴다. 여러 사람이 동시에 만들어도 번호가 겹치지 않게 하려는 것이다(이 규칙 전에 만든 `V1` ~ `V3`은 그대로 둔다).
+- MUST: 한 마이그레이션은 자기 영역의 테이블만 만들거나 바꾼다. 다른 영역의 테이블을 참조(FK)하면 그 테이블을 만든 마이그레이션보다 뒤의 시각을 쓴다. 먼저 만든 마이그레이션이 나중에 병합될 수 있으므로(`spring.flyway.out-of-order: true`) 앞뒤 순서에 기대지 않게 쓴다.
 - MUST: 테이블을 만들거나 바꾸면 `docs/db/<영역>.md`와 맞춘다. 문서에 "미정"인 칸은 그 PR에서 정하고 문서에도 적는다.
 - MUST: 시각은 `java.time.Instant`로 다루고 칼럼은 `DATETIME(6)`으로 만든다. DB에는 UTC로 저장된다.
 - MUST: `created_at`, `updated_at`이 있는 엔티티는 `BaseTimeEntity`를, `created_at`만 있는 엔티티는 `BaseCreatedTimeEntity`를 상속한다. 어느 테이블에 무엇을 두는지는 `docs/db/README.md`의 공통 날짜 칼럼을 따른다.
