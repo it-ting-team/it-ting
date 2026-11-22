@@ -89,15 +89,24 @@ class SecurityConfigTests {
 	}
 
 	@Test
-	void 허용하지_않은_출처는_CORS가_거절한다() throws Exception {
+	void 허용하지_않은_출처는_CORS가_403_FORBIDDEN_응답_틀로_거절한다() throws Exception {
+		String forbidden = """
+				{
+				  "success": false,
+				  "data": null,
+				  "error": { "code": "FORBIDDEN", "message": "할 수 없는 요청입니다.", "fields": null, "detail": null }
+				}
+				""";
 		mockMvc.perform(options("/api/v1/me")
 						.header("Origin", "https://evil.example.com")
 						.header("Access-Control-Request-Method", "DELETE"))
 				.andExpect(status().isForbidden())
-				.andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+				.andExpect(header().doesNotExist("Access-Control-Allow-Origin"))
+				.andExpect(content().json(forbidden, JsonCompareMode.STRICT));
 		mockMvc.perform(get("/api/v1/campuses").header("Origin", "https://evil.example.com"))
 				.andExpect(status().isForbidden())
-				.andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+				.andExpect(header().doesNotExist("Access-Control-Allow-Origin"))
+				.andExpect(content().json(forbidden, JsonCompareMode.STRICT));
 	}
 
 }

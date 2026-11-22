@@ -7,7 +7,6 @@ import com.itting.global.error.CommonErrorCode;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -18,6 +17,7 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 /**
  * 로그인 검사, CORS, CSRF 설정({@code docs/api-convention.md}의 "로그인").
@@ -43,10 +43,14 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository securityContextRepository,
-			SecurityErrorWriter errorWriter) throws Exception {
+			CorsConfigurationSource corsConfigurationSource, SecurityErrorWriter errorWriter) throws Exception {
+		// 허용하지 않은 출처를 거절할 때도 응답 틀로 답하게 CORS 필터를 직접 만들어 넣는다.
+		CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
+		corsFilter.setCorsProcessor(new ApiCorsProcessor(errorWriter));
 		http
 				.csrf(AbstractHttpConfigurer::disable)
-				.cors(Customizer.withDefaults())
+				.cors(AbstractHttpConfigurer::disable)
+				.addFilter(corsFilter)
 				.formLogin(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.logout(AbstractHttpConfigurer::disable)

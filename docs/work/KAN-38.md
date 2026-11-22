@@ -97,6 +97,7 @@
 | `global/security/SessionCookieRefreshFilter` | 세션이 살아 있는 요청마다 쿠키를 다시 줘 14일 연장 |
 | `global/security/SecurityErrorWriter` | 보안 필터가 막은 요청의 401 · 403을 응답 틀로 |
 | `global/security/CorsProperties` | `itting.cors.allowed-origins` |
+| `global/security/ApiCorsProcessor` | CORS가 거절한 요청도 응답 틀의 `403 FORBIDDEN`으로 |
 | `auth/controller/` | `SessionController`(`POST /sessions`, `DELETE /sessions/current`), `MeController`(`GET /me`) |
 | `auth/service/` | `LoginService`(비밀번호 · 정지 확인), `SessionService`(세션 만들기 · 지우기), `MeService` |
 | `auth/domain/` | `NextStep`, `AuthErrorCode`(`LOGIN_FAILED`, `ACCOUNT_SUSPENDED`) |
@@ -116,6 +117,7 @@
   - `GlobalExceptionHandlerTests`: 로그인이 필요한 주소가 됐으므로 로그인한 사용자(`@WithMockUser`)로 부름
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
 - 로컬 코드 리뷰: P0 0건, P1 0건. 확인 필요 1건(실제 서버의 쿠키 설정)은 `SessionCookieServerTests`를 더해 확인함
+- Codex 리뷰 P1 1건 고침: 허용하지 않은 출처를 CORS가 거절할 때 일반 텍스트(`Invalid CORS request`)로 답하던 것을 응답 틀의 `403 FORBIDDEN`으로(`ApiCorsProcessor`). 거절 테스트가 본문도 확인한다
 
 ### 계획과 달라진 점
 
