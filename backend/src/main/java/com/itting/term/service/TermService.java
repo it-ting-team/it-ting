@@ -3,6 +3,7 @@ package com.itting.term.service;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.itting.term.domain.Term;
 import com.itting.term.dto.TermListResponse;
@@ -35,6 +36,16 @@ public class TermService {
 			items.add(new TermResponse(term.getId(), term.getYear(), term.getHalf(), i == 0));
 		}
 		return new TermListResponse(items);
+	}
+
+	/**
+	 * 이번 학기의 id. 이미 열린 학기 가운데 가장 최근에 열린 것이고, 학기 목록의 첫 번째와 같다.
+	 *
+	 * @return 열린 학기가 하나도 없으면 빈 값
+	 */
+	public Optional<Long> findCurrentTermId() {
+		return termRepository.findFirstByOpenedAtLessThanEqualOrderByOpenedAtDescIdDesc(clock.instant())
+				.map(Term::getId);
 	}
 
 }

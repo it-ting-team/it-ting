@@ -2,7 +2,6 @@ package com.itting.auth.service;
 
 import java.util.Optional;
 
-import com.itting.auth.domain.NextStep;
 import com.itting.auth.dto.MeResponse;
 import com.itting.campus.domain.Campus;
 import com.itting.campus.domain.CampusFloor;
@@ -29,12 +28,16 @@ public class MeService {
 
 	private final CampusRepository campusRepository;
 
+	private final NextStepService nextStepService;
+
 	public MeService(UserRepository userRepository, UserProfileRepository userProfileRepository,
-			CampusFloorRepository campusFloorRepository, CampusRepository campusRepository) {
+			CampusFloorRepository campusFloorRepository, CampusRepository campusRepository,
+			NextStepService nextStepService) {
 		this.userRepository = userRepository;
 		this.userProfileRepository = userProfileRepository;
 		this.campusFloorRepository = campusFloorRepository;
 		this.campusRepository = campusRepository;
+		this.nextStepService = nextStepService;
 	}
 
 	/**
@@ -53,7 +56,7 @@ public class MeService {
 				.orElseThrow(() -> new IllegalStateException("없는 캠퍼스-층: " + profile.getCampusFloorId()));
 		Campus campus = campusRepository.findById(floor.getCampusId())
 				.orElseThrow(() -> new IllegalStateException("없는 캠퍼스: " + floor.getCampusId()));
-		return new MeResponse(user.getId(), NextStep.of(user), campus.getName(), profile.getGeneration(),
+		return new MeResponse(user.getId(), nextStepService.of(user), campus.getName(), profile.getGeneration(),
 				floor.getFloor(), floor.getId());
 	}
 
