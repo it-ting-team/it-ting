@@ -81,12 +81,6 @@ public class NicknameHoldRepository {
 		return result != null && result == 1L;
 	}
 
-	/** 다른 계정이 이 닉네임을 맡아 두었는지. 맡아 둔 시간이 지났으면 false다. */
-	public boolean isHeldByOther(String nickname, Long userId) {
-		String holder = redis.opsForValue().get(HOLD_KEY + normalize(nickname));
-		return holder != null && !holder.equals(String.valueOf(userId));
-	}
-
 	/** 이 계정이 맡아 둔 닉네임을 푼다. 닉네임을 저장했을 때(온보딩 확정, 내 정보 수정) 부른다. */
 	public void release(Long userId) {
 		redis.execute(RELEASE, List.of(USER_KEY + userId), String.valueOf(userId), HOLD_KEY);

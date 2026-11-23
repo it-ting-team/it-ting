@@ -135,7 +135,8 @@ public class OnboardingService {
 		assertInterestsExist(request.interestIds());
 		assertQuestionsExist(request.answers());
 		String nickname = request.nickname();
-		nicknameService.assertNotHeldByOther(userId, nickname);
+		// 맡은 뒤에 DB를 본다. 이 사이 다른 계정은 이 닉네임을 맡지 못하므로, 확인에 성공한 다른 계정의 닉네임을 저장하는 일이 없다.
+		nicknameService.holdForSave(userId, nickname);
 		if (userProfileRepository.existsByNicknameAndUserIdNot(nickname, userId)) {
 			throw new BusinessException(UserErrorCode.NICKNAME_DUPLICATED);
 		}

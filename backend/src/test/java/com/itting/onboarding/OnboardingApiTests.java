@@ -275,6 +275,23 @@ class OnboardingApiTests {
 	}
 
 	@Test
+	void 확정은_저장하기_전에_닉네임을_맡아_다른_계정이_그사이_확인하지_못한다() throws Exception {
+		long userId = testUsers.createEmailUser("mole@example.com", PASSWORD);
+		testUsers.createEmailUser("other@example.com", PASSWORD);
+		Cookie session = login("mole@example.com");
+		Cookie other = login("other@example.com");
+		// 닉네임을 맡은 뒤 입구를 만들다 실패하게 해서, 확정이 저장 전에 닉네임을 맡는지 본다.
+		jdbcTemplate.update("UPDATE term SET opened_at = '2099-01-01 00:00:00'");
+
+		complete(session, steps.completeBody("두더지왕")).andExpect(status().isInternalServerError());
+
+		assertThat(steps.holder("두더지왕")).isEqualTo(String.valueOf(userId));
+		checkNickname(other, "두더지왕")
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("NICKNAME_DUPLICATED"));
+	}
+
+	@Test
 	void 다른_사람이_대소문자만_다른_닉네임을_쓰고_있으면_409다() throws Exception {
 		long userId = testUsers.createEmailUser("mole@example.com", PASSWORD);
 		long other = testUsers.createEmailUser("other@example.com", PASSWORD);
