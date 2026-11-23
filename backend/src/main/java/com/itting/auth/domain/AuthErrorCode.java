@@ -32,7 +32,13 @@ public enum AuthErrorCode implements ErrorCode {
 	PASSWORD_RESET_LINK_INVALID(HttpStatus.NOT_FOUND, "만료됐거나 이미 쓴 링크입니다. 재설정 메일을 다시 받아 주세요."),
 
 	/** 가입 진행 기록이 없거나 시간이 지났다. 가입을 처음부터 다시 한다. */
-	SIGNUP_EXPIRED(HttpStatus.CONFLICT, "가입 시간이 지났습니다. 처음부터 다시 진행해 주세요.");
+	SIGNUP_EXPIRED(HttpStatus.CONFLICT, "가입 시간이 지났습니다. 처음부터 다시 진행해 주세요."),
+
+	/** 온보딩을 마치지 않은 계정이 "온보딩 중에도"가 아닌 API를 불렀다. */
+	ONBOARDING_INCOMPLETE(HttpStatus.FORBIDDEN, "온보딩을 마친 뒤에 이용할 수 있습니다."),
+
+	/** 새 학기의 캠퍼스 · 층을 고르지 않은 계정이 "새 학기를 고르기 전에도"가 아닌 API를 불렀다. */
+	NEW_TERM_INCOMPLETE(HttpStatus.FORBIDDEN, "이번 학기의 캠퍼스와 층을 고른 뒤에 이용할 수 있습니다.");
 
 	private final HttpStatus status;
 

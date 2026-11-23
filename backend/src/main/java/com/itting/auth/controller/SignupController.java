@@ -7,6 +7,8 @@ import com.itting.auth.service.SessionService;
 import com.itting.auth.service.SignupCookieService;
 import com.itting.auth.service.SignupService;
 import com.itting.global.response.ApiResult;
+import com.itting.global.security.AllowBeforeNewTerm;
+import com.itting.global.security.AllowDuringOnboarding;
 import com.itting.user.domain.UserRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,6 +25,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "02 로그인 · 회원가입", description = "로그인, 로그아웃, 내 계정, 회원가입")
+@AllowDuringOnboarding
+@AllowBeforeNewTerm
 @RestController
 @RequestMapping("/api/v1/users")
 public class SignupController {
