@@ -154,7 +154,7 @@ cd backend
 
 테이블은 Flyway가 `backend/src/main/resources/db/migration/`의 SQL을 번호 순서대로 적용해 만든다. 서버가 뜰 때 아직 적용하지 않은 파일만 적용한다.
 
-- 새 테이블은 그 기능의 PR에서 `V<번호>__<설명>.sql`로 더한다. 예: `V2__create_meetup_tables.sql`
+- 새 테이블은 그 기능의 PR에서 `V<yyyyMMdd>_<HHmm>__<설명>.sql`로 더한다. 번호는 파일을 만든 시각(한국 시간)이다. 예: `V20261123_1430__create_meetup.sql`. 여러 사람이 동시에 만들어도 번호가 겹치지 않게 하려는 것이다(`AGENTS.md`의 DB 절).
 - 이미 dev에 들어간 파일은 고치지 않는다. 바꿀 것이 있으면 새 번호의 파일을 더한다.
 - 엔티티와 테이블이 다르면 서버가 뜨지 않는다(`ddl-auto: validate`).
 
