@@ -44,6 +44,9 @@ public class BurrowService {
 	 *
 	 * <p>이미 그 들판에 있으면 옮기지 않는다. 자리 번호는 {@link #createBurrow}와 같은 잠금으로 정한다.
 	 *
+	 * <p>부른 쪽은 같은 트랜잭션에서 그 캠퍼스-층을 가리키는 행(프로필의 {@code campus_floor_id} 등)을 DB에 쓰기 전에 부른다.
+	 * 먼저 쓰면 외래 키 검사가 캠퍼스-층 행에 공유 잠금을 걸어, 같은 층으로 옮기는 다른 요청과 교착이 생긴다.
+	 *
 	 * @return 옮긴 뒤(또는 그대로인) 입구
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)

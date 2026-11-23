@@ -151,24 +151,30 @@ public class MyProfileService {
 			}
 		}
 
-		boolean campusFloorChanged = !request.campusFloorId().equals(profile.getCampusFloorId());
+		// 입구를 프로필보다 먼저 옮긴다. 입구를 옮기며 목적지 campus_floor 행을 배타 잠금한다. 프로필의 campus_floor_id를
+		// 먼저 DB에 쓰면 외래 키 검사가 그 행에 공유 잠금을 걸고, 같은 층으로 옮기는 다른 요청과 서로 기다리다 교착이 생긴다.
+		if (!request.campusFloorId().equals(profile.getCampusFloorId())) {
+			moveEntrance(userId, request.campusFloorId());
+		}
+
 		profile.changeProfile(nickname, request.campusFloorId(), request.intro().orElse(null));
 		if (nicknameChanged) {
 			saveNickname();
 		}
 
 		saveInterests(userId, request.interestIds());
-		// 영속성 컨텍스트를 비우므로 프로필 · 관심사를 모두 고친 뒤에 부른다.
+		// 영속성 컨텍스트를 비우므로 프로필 · 관심사 · 입구를 모두 고친 뒤에 부른다.
 		saveAnswers(userId, request.answers());
-
-		if (campusFloorChanged) {
-			Burrow burrow = burrowRepository.findByUserId(userId)
-					.orElseThrow(() -> new IllegalStateException("온보딩을 마쳤는데 땅굴이 없는 계정: " + userId));
-			Long termId = termService.findCurrentTermId()
-					.orElseThrow(() -> new IllegalStateException("열린 학기가 없어 땅굴 입구를 옮길 수 없습니다."));
-			burrowService.moveEntrance(burrow.getId(), termId, request.campusFloorId());
-		}
 		return nicknameChanged;
+	}
+
+	/** 땅굴 입구를 이번 학기의 그 캠퍼스-층 들판의 다음 자리로 옮긴다. 그 캠퍼스-층 행은 트랜잭션이 끝날 때까지 잠긴다. */
+	private void moveEntrance(Long userId, Long campusFloorId) {
+		Burrow burrow = burrowRepository.findByUserId(userId)
+				.orElseThrow(() -> new IllegalStateException("온보딩을 마쳤는데 땅굴이 없는 계정: " + userId));
+		Long termId = termService.findCurrentTermId()
+				.orElseThrow(() -> new IllegalStateException("열린 학기가 없어 땅굴 입구를 옮길 수 없습니다."));
+		burrowService.moveEntrance(burrow.getId(), termId, campusFloorId);
 	}
 
 	/** 닉네임을 바로 DB에 써서, 확인한 뒤 다른 사람이 같은 닉네임을 먼저 저장했으면 UNIQUE로 알아챈다. */
