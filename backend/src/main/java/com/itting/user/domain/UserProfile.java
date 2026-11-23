@@ -59,6 +59,18 @@ public class UserProfile extends BaseTimeEntity {
 		return profile;
 	}
 
+	/**
+	 * 온보딩에서 정한 닉네임과 두더지 아이템을 넣는다. 아이템 코드가 null이면 그 부위는 "없음"이다.
+	 */
+	public void completeOnboarding(String nickname, String moleHead, String moleFace, String moleNeck,
+			String moleHand) {
+		this.nickname = nickname;
+		this.moleHead = moleHead;
+		this.moleFace = moleFace;
+		this.moleNeck = moleNeck;
+		this.moleHand = moleHand;
+	}
+
 	public Long getUserId() {
 		return userId;
 	}

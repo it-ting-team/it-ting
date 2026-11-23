@@ -3,12 +3,21 @@ package com.itting.user.repository;
 import java.util.Optional;
 
 import com.itting.user.domain.User;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
 	/** 로그인 이메일로 찾는다. 대소문자는 가리지 않는다(DB의 정렬 규칙이 utf8mb4_0900_ai_ci). */
 	Optional<User> findByEmail(String email);
+
+	/** 계정 행을 트랜잭션이 끝날 때까지 잠그고 읽는다. 같은 계정의 요청이 동시에 상태를 바꾸지 못하게 한다. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT u FROM User u WHERE u.id = :id")
+	Optional<User> findByIdForUpdate(@Param("id") Long id);
 
 	/** 이메일로 가입한 계정이 있는지. 탈퇴한 계정은 이메일을 비워 두므로 걸리지 않는다. */
 	boolean existsByEmail(String email);

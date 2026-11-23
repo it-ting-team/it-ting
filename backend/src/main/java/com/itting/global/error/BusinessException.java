@@ -44,8 +44,12 @@ public class BusinessException extends RuntimeException {
 	 * {@code fields}로 알린다.
 	 */
 	public static BusinessException invalidInput(String field, String message) {
-		return new BusinessException(CommonErrorCode.INVALID_INPUT, null,
-				List.of(new ApiError.FieldError(field, message)));
+		return invalidInput(List.of(new ApiError.FieldError(field, message)));
+	}
+
+	/** 어긋난 입력이 여럿일 때. {@code fields}에 모두 담는다. */
+	public static BusinessException invalidInput(List<ApiError.FieldError> fields) {
+		return new BusinessException(CommonErrorCode.INVALID_INPUT, null, List.copyOf(fields));
 	}
 
 	public ErrorCode getErrorCode() {
