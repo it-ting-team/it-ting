@@ -16,6 +16,9 @@ public interface BurrowEntranceRepository extends JpaRepository<BurrowEntrance, 
 			""")
 	Optional<Long> findTermIdByUserId(@Param("userId") Long userId);
 
+	/** 땅굴의 입구. 땅굴 하나에 하나다. */
+	Optional<BurrowEntrance> findByBurrowId(Long burrowId);
+
 	/**
 	 * 캠퍼스-층 행을 트랜잭션이 끝날 때까지 잠근다. 같은 층에 자리 번호를 주는 일(온보딩 확정, 이사)을 한 줄로 세운다.
 	 *

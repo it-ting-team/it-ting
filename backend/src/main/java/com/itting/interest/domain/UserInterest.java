@@ -43,6 +43,11 @@ public class UserInterest extends BaseTimeEntity {
 		return userInterest;
 	}
 
+	/** 내 정보 수정에서 관심사의 순서를 바꾼다. 1이 대표 관심사다. */
+	public void changeSortOrder(int sortOrder) {
+		this.sortOrder = (byte) sortOrder;
+	}
+
 	public Long getUserId() {
 		return userId;
 	}
