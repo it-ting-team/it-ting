@@ -32,16 +32,19 @@ public class LoginService {
 
 	private final PasswordEncoder passwordEncoder;
 
+	private final NextStepService nextStepService;
+
 	private final Clock clock;
 
 	/** 계정이 없을 때도 BCrypt 비교를 한 번 하려고 쓰는 해시. 응답 시간으로 가입 여부를 알 수 없게 한다. */
 	private final String dummyHash;
 
 	public LoginService(UserRepository userRepository, UserSuspensionRepository userSuspensionRepository,
-			PasswordEncoder passwordEncoder, Clock clock) {
+			PasswordEncoder passwordEncoder, NextStepService nextStepService, Clock clock) {
 		this.userRepository = userRepository;
 		this.userSuspensionRepository = userSuspensionRepository;
 		this.passwordEncoder = passwordEncoder;
+		this.nextStepService = nextStepService;
 		this.clock = clock;
 		this.dummyHash = passwordEncoder.encode("it-ting-dummy-password");
 	}
@@ -63,7 +66,7 @@ public class LoginService {
 		userSuspensionRepository.findActive(user.getId(), now).stream().findFirst().ifPresent(suspension -> {
 			throw new BusinessException(AuthErrorCode.ACCOUNT_SUSPENDED, toDetail(suspension));
 		});
-		return new LoginResult(user.getId(), user.getRole(), NextStep.of(user));
+		return new LoginResult(user.getId(), user.getRole(), nextStepService.of(user));
 	}
 
 	/** 계정이 없거나 비밀번호가 없는 계정(Google로만 가입)이어도 같은 시간이 걸리게 비교한다. */

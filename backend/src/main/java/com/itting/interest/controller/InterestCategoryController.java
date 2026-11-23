@@ -1,6 +1,8 @@
 package com.itting.interest.controller;
 
 import com.itting.global.response.ApiResult;
+import com.itting.global.security.AllowBeforeNewTerm;
+import com.itting.global.security.AllowDuringOnboarding;
 import com.itting.interest.dto.InterestCategoryListResponse;
 import com.itting.interest.service.InterestService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "00 공통", description = "여러 영역이 함께 쓰는 목록")
+@AllowDuringOnboarding
+@AllowBeforeNewTerm
 @RestController
 @RequestMapping("/api/v1/interest-categories")
 public class InterestCategoryController {

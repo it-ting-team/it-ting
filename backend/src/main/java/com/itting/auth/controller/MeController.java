@@ -6,6 +6,8 @@ import com.itting.auth.service.SessionService;
 import com.itting.global.error.BusinessException;
 import com.itting.global.error.CommonErrorCode;
 import com.itting.global.response.ApiResult;
+import com.itting.global.security.AllowBeforeNewTerm;
+import com.itting.global.security.AllowDuringOnboarding;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "02 로그인 · 회원가입", description = "로그인, 로그아웃, 내 계정")
+@AllowDuringOnboarding
+@AllowBeforeNewTerm
 @RestController
 @RequestMapping("/api/v1/me")
 public class MeController {

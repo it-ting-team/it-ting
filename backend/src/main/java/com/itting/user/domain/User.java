@@ -82,6 +82,11 @@ public class User extends BaseTimeEntity {
 		this.passwordHash = passwordHash;
 	}
 
+	/** 온보딩을 마친다. 이 뒤로 {@link #isOnboarded()}가 참이다. */
+	public void completeOnboarding(Instant now) {
+		this.onboardedAt = now;
+	}
+
 	public boolean isActive() {
 		return status == UserStatus.ACTIVE;
 	}

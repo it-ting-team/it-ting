@@ -69,6 +69,7 @@ com.itting
 - MUST NOT: 로그인이 필요한 API를 `PUBLIC_API`에 넣지 않는다.
 - MUST: 로그인한 사용자의 id는 컨트롤러 인자 `@Parameter(hidden = true) @AuthenticationPrincipal Long userId`로 받는다. 요청 본문이나 주소로 자기 id를 받지 않는다.
 - 세션을 만들고 지우는 일은 `auth/service/SessionService`가 한다. 컨트롤러나 다른 서비스가 세션을 직접 다루지 않는다.
+- MUST: `docs/api/`에 "온보딩 중에도"라고 적힌 API는 컨트롤러에 `@AllowDuringOnboarding`을, "새 학기를 고르기 전에도"는 `@AllowBeforeNewTerm`을 붙인다. 로그인 없이 부르는 API에는 둘 다 붙인다. 붙이지 않은 API는 그 계정에게 `403 ONBOARDING_INCOMPLETE` · `NEW_TERM_INCOMPLETE`로 막힌다(`global/security/AccountStepInterceptor`).
 
 ### DB
 
@@ -167,6 +168,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 
 - 동작이 `docs/spec/`, `docs/api/`와 다르다. 또는 API 모양이 바뀌었는데 `docs/api/`를 고치지 않았다.
 - 로그인 없이 불러야 하는 API(`docs/api/`에 "로그인: 불필요")가 `SecurityConfig.PUBLIC_API`에 없다(명세와 달리 `401`이 난다).
+- `@AllowDuringOnboarding` · `@AllowBeforeNewTerm`이 `docs/api/`의 "온보딩 중에도" · "새 학기를 고르기 전에도"와 다르다(명세와 달리 `403`이 나거나, 마치지 않은 계정이 부를 수 있다).
 - `docs/api-convention.md`의 MUST를 어긴다(응답 틀, 상태 코드, 에러 `code`, JSON 필드 이름, 주소 모양).
 - API가 자기 영역이 아닌 데이터를 바꾼다. 예외는 문서에 이유가 적힌 경우뿐이다(예: 탈퇴 API, `docs/api/10-settings.md`).
 - 여러 테이블을 바꾸는데 하나의 트랜잭션으로 묶이지 않아 중간에 실패하면 데이터가 어긋난다.

@@ -3,6 +3,8 @@ package com.itting.campus.controller;
 import com.itting.campus.dto.CampusListResponse;
 import com.itting.campus.service.CampusService;
 import com.itting.global.response.ApiResult;
+import com.itting.global.security.AllowBeforeNewTerm;
+import com.itting.global.security.AllowDuringOnboarding;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "00 공통", description = "여러 영역이 함께 쓰는 목록")
+@AllowDuringOnboarding
+@AllowBeforeNewTerm
 @RestController
 @RequestMapping("/api/v1/campuses")
 public class CampusController {

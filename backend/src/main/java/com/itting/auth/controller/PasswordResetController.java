@@ -4,6 +4,8 @@ import com.itting.auth.dto.PasswordResetCompleteRequest;
 import com.itting.auth.dto.PasswordResetRequest;
 import com.itting.auth.service.PasswordResetService;
 import com.itting.global.response.ApiResult;
+import com.itting.global.security.AllowBeforeNewTerm;
+import com.itting.global.security.AllowDuringOnboarding;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,6 +19,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "02 로그인 · 회원가입", description = "로그인, 로그아웃, 내 계정, 회원가입, 비밀번호 재설정")
+@AllowDuringOnboarding
+@AllowBeforeNewTerm
 @RestController
 @RequestMapping("/api/v1/password-resets")
 public class PasswordResetController {
