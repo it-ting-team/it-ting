@@ -119,7 +119,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 | `work-plan` | 기능 · 설정 티켓을 시작할 때 계획서를 쓰고 승인받을 때, 끝나고 결과를 채울 때 |
 | `code-review` | PR을 올리기 전에 내 변경을 리뷰할 때 |
 | `api-evidence` | API PR에 호출 결과(스크린샷, 응답 텍스트)를 남길 때 |
-| `pr-create` | PR을 만들 때. 안에서 `code-review`를 먼저 실행한다 |
+| `pr-create` | PR을 만들 때. 안에서 `code-review`를 먼저 실행하고, PR을 연 뒤 Codex 재리뷰를 요청하고 확인한다 |
 
 스킬을 고칠 때:
 
