@@ -22,6 +22,11 @@ spring:
         # 시각은 Instant로 다뤄 UTC로 저장한다. Instant가 아닌 시각 타입을 쓰더라도 UTC로 저장되게 맞춘다.
         jdbc:
           time_zone: UTC
+  jackson:
+    deserialization:
+      # 요청 본문에서 Optional인 필드의 키가 빠지면 null로, "키": null이면 Optional.empty()로 읽는다.
+      # "모두 보내되 null은 비움"인 값(PATCH /me/mole의 네 부위, PATCH /me/profile의 intro)이 키가 빠진 것을 알아챈다.
+      use-null-for-missing-reference-values: true
   web:
     # 검증 오류의 설명(error.fields[].message)을 요청의 Accept-Language와 상관없이 한국어로 준다.
     locale: ko_KR

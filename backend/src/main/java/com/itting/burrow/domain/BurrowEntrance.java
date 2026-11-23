@@ -45,6 +45,13 @@ public class BurrowEntrance extends BaseTimeEntity {
 		return entrance;
 	}
 
+	/** 입구를 다른 들판의 자리로 옮긴다. 있던 자리는 빈다. 땅굴은 그대로라 단골 · 방명록 · 대화도 그대로다. */
+	public void moveTo(Long termId, Long campusFloorId, int slot) {
+		this.termId = termId;
+		this.campusFloorId = campusFloorId;
+		this.slot = slot;
+	}
+
 	public Long getId() {
 		return id;
 	}

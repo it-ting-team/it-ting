@@ -71,6 +71,25 @@ public class UserProfile extends BaseTimeEntity {
 		this.moleHand = moleHand;
 	}
 
+	/** 꾸미기 모드에서 고른 두더지 아이템으로 바꾼다. null인 부위는 "없음"이다. */
+	public void changeMole(String moleHead, String moleFace, String moleNeck, String moleHand) {
+		this.moleHead = moleHead;
+		this.moleFace = moleFace;
+		this.moleNeck = moleNeck;
+		this.moleHand = moleHand;
+	}
+
+	/**
+	 * 내 정보 수정에서 바꾼 닉네임, 캠퍼스-층, 자기소개를 넣는다. 기수는 바꿀 수 없다.
+	 *
+	 * @param intro 자기소개. null이면 비운다
+	 */
+	public void changeProfile(String nickname, Long campusFloorId, String intro) {
+		this.nickname = nickname;
+		this.campusFloorId = campusFloorId;
+		this.intro = intro;
+	}
+
 	public Long getUserId() {
 		return userId;
 	}
