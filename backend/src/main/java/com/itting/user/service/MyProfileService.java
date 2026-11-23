@@ -97,10 +97,16 @@ public class MyProfileService {
 		this.transaction = new TransactionTemplate(transactionManager);
 	}
 
-	/** 두더지 네 부위를 보낸 값으로 바꾼다. 빈 값을 보낸 부위는 비운다. 입력 검사는 컨트롤러가 한다. */
+	/**
+	 * 두더지 네 부위를 보낸 값으로 바꾼다. 빈 값을 보낸 부위는 비운다. 입력 검사는 컨트롤러가 한다.
+	 *
+	 * <p>내 정보 저장과 같이 프로필 행을 잠근 뒤 읽는다. 프로필은 행 전체를 UPDATE하므로, 잠그지 않고 읽으면 동시에 커밋된
+	 * 내 정보(닉네임 · 캠퍼스-층 · 자기소개)를 읽기 전의 값으로 되돌린다.
+	 */
 	@Transactional
 	public UserDisplayResponse.Mole changeMole(Long userId, MoleUpdateRequest request) {
-		UserProfile profile = findProfile(userId);
+		UserProfile profile = userProfileRepository.findByIdForUpdate(userId)
+				.orElseThrow(() -> new IllegalStateException("프로필이 없는 계정: " + userId));
 		profile.changeMole(request.head().orElse(null), request.face().orElse(null), request.neck().orElse(null),
 				request.hand().orElse(null));
 		return new UserDisplayResponse.Mole(profile.getMoleHead(), profile.getMoleFace(), profile.getMoleNeck(),
@@ -207,11 +213,6 @@ public class MyProfileService {
 			userAnswers.add(UserAnswer.create(userId, i + 1, answer.introQuestionId(), answer.answer()));
 		}
 		userAnswerRepository.saveAll(userAnswers);
-	}
-
-	private UserProfile findProfile(Long userId) {
-		return userProfileRepository.findById(userId)
-				.orElseThrow(() -> new IllegalStateException("프로필이 없는 계정: " + userId));
 	}
 
 	/** Bean Validation과 세 질문이 서로 다른지를 보고, 어긋난 것을 {@code fields}에 모두 담는다. */

@@ -162,12 +162,13 @@ erDiagram
 | `user/dto/*`, `user/repository/UserProfileRepository`, `user/domain/{UserProfile,UserErrorCode}` | 요청 · 응답 DTO, `KeyRequiredStringDeserializer`(키가 빠진 것과 `null`을 구분), 프로필 잠금, `USER_NOT_FOUND`. 두더지 저장의 응답은 `UserDisplayResponse.Mole` |
 | `interest/{dto/InterestTagResponse,service/InterestTagService}`, `interest/repository/UserInterestRepository`, `interest/domain/UserInterest` | 관심사 태그와 `isShared`, 순서 바꾸기 |
 | `question/repository/{UserAnswerRepository,UserAnswerRow}` | 답변 조회(질문 문구와 함께), 한 사람의 답변 바로 지우기 |
-| 테스트 | `MyBurrowApiTests`(5), `MyProfileApiTests`(16), `GuestbookApiTests`(13), `UserProfileApiTests`(5), 지원 `Members` |
+| 테스트 | `MyBurrowApiTests`(5), `MyProfileApiTests`(16), `MyProfileConcurrencyTests`(1), `GuestbookApiTests`(13), `UserProfileApiTests`(5), 지원 `Members` |
 | 문서 | `docs/api/04-my-burrow.md`(A · B · C, 닉네임 규칙 링크, 8번 잠금, 구현하며 정한 것), `docs/db/burrow.md`(`guestbook_entry` 마이그레이션 · 인덱스, 빈 자리 번호의 뜻) |
 
 ### 확인한 것
 
-- `./gradlew build` 통과. 테스트 232개(dev 193 + 새 39)
+- `./gradlew build` 통과. 테스트 233개(dev 193 + 새 40)
+- 동시성: 내 정보 저장이 프로필 행을 잠근 동안 두더지를 저장해도 내 정보가 되돌아가지 않음(`MyProfileConcurrencyTests`, 실제 커밋. 잠그지 않던 코드에서는 실패하는 것을 확인)
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
 - 로컬 코드 리뷰: P0 0건, P1 0건
 
@@ -178,6 +179,10 @@ erDiagram
 - **빈 자리 번호의 뜻을 문서에 분명히 적음**: KAN-44의 규칙은 "가장 큰 번호 + 1"이다. 그래서 가운데 빈 번호는 다시 쓰지 않지만, 가장 큰 번호의 땅굴이 떠나면 그 번호는 다음 땅굴이 받는다. 테스트를 쓰다 확인했고, `docs/db/burrow.md`에 이 뜻을 적었다. 동작은 바꾸지 않았다.
 - **답변을 지운 뒤 영속성 컨텍스트를 비운다**: 지운 답변이 컨텍스트에 남아 있으면 같은 자리의 새 답변이 INSERT가 아니라 UPDATE로 나간다. 그래서 프로필 · 관심사를 고친 뒤 마지막에 지운다.
 - **내 정보 저장의 입력 검사는 서비스가 한다**: 온보딩 확정과 같은 방식이다. 세 질문이 서로 다른지까지 함께 보고 `fields`에 모두 담으려는 것이다. 두더지 저장은 컨트롤러의 `@Valid`로 검사한다.
+
+PR #33의 Codex 리뷰 P0 1건을 고쳤다.
+
+- **두더지 저장도 프로필 행을 잠근 뒤 읽는다**: 프로필은 행 전체를 UPDATE한다. 그래서 같은 사람의 내 정보 저장과 두더지 저장이 겹치면, 잠그지 않고 먼저 읽은 두더지 저장이 커밋된 닉네임 · 캠퍼스-층 · 자기소개를 이전 값으로 되돌렸다. 이때 입구는 이미 새 층에 있어 프로필과 어긋난다. 두더지 저장도 `findByIdForUpdate`로 읽어 두 저장을 차례로 처리한다.
 
 ### 남은 일
 
