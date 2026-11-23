@@ -292,6 +292,40 @@ class OnboardingApiTests {
 	}
 
 	@Test
+	void 답변_길이는_이모지도_한_자로_센다() throws Exception {
+		long userId = testUsers.createEmailUser("mole@example.com", PASSWORD);
+		testUsers.createEmailUser("other@example.com", PASSWORD);
+		List<Long> questions = steps.questionIds(3);
+		String fiveEmoji = "😀".repeat(5);
+		String thirtyEmoji = "😀".repeat(30);
+		String body = """
+				{
+				  "nickname": "%s",
+				  "mole": { "head": null, "face": null, "neck": null, "hand": null },
+				  "interestIds": %s,
+				  "answers": [
+				    { "introQuestionId": %d, "answer": "%s" },
+				    { "introQuestionId": %d, "answer": "요즘은 인디 밴드 노래만 돌려 듣고 있어요" },
+				    { "introQuestionId": %d, "answer": "출퇴근용으로 산 접이식 자전거가 최고예요" }
+				  ]
+				}
+				""";
+
+		complete(login("other@example.com"), body.formatted("이모지다섯", steps.interestIds(3), questions.get(0),
+				fiveEmoji, questions.get(1), questions.get(2)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.fields[0].field").value("answers[0].answer"))
+				.andExpect(jsonPath("$.error.fields[0].message").value("10자 이상 50자 이하로 써야 합니다."));
+
+		complete(login("mole@example.com"), body.formatted("이모지서른", steps.interestIds(3), questions.get(0),
+				thirtyEmoji, questions.get(1), questions.get(2)))
+				.andExpect(status().isCreated());
+		entityManager.flush();
+		assertThat(jdbcTemplate.queryForObject("SELECT answer FROM user_answer WHERE user_id = ? AND slot = 1",
+				String.class, userId)).isEqualTo(thirtyEmoji);
+	}
+
+	@Test
 	void 다른_사람이_대소문자만_다른_닉네임을_쓰고_있으면_409다() throws Exception {
 		long userId = testUsers.createEmailUser("mole@example.com", PASSWORD);
 		long other = testUsers.createEmailUser("other@example.com", PASSWORD);

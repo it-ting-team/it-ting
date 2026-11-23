@@ -2,6 +2,7 @@ package com.itting.onboarding.dto;
 
 import java.util.List;
 
+import com.itting.global.validation.CodePointLength;
 import com.itting.user.dto.Nickname;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -48,11 +49,11 @@ public record OnboardingCompleteRequest(
 
 	/**
 	 * @param introQuestionId 질문의 id. 세 질문은 서로 달라야 한다
-	 * @param answer 답변. 10 ~ 50자
+	 * @param answer 답변. 10 ~ 50자. 이모지도 한 자로 센다(DB의 {@code CHAR_LENGTH}와 같은 기준)
 	 */
 	public record Answer(
 			@NotNull Long introQuestionId,
-			@NotNull @Size(min = 10, max = 50, message = "10자 이상 50자 이하로 써야 합니다.") String answer) {
+			@NotNull @CodePointLength(min = 10, max = 50, message = "10자 이상 50자 이하로 써야 합니다.") String answer) {
 	}
 
 }
