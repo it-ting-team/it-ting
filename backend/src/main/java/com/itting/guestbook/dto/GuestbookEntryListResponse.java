@@ -3,7 +3,7 @@ package com.itting.guestbook.dto;
 import java.time.Instant;
 import java.util.List;
 
-import com.itting.user.dto.UserSummaryResponse;
+import com.itting.user.dto.UserDisplayResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -18,7 +18,7 @@ public record GuestbookEntryListResponse(
 
 	public record GuestbookEntryResponse(
 			@Schema(description = "방명록 글의 id", example = "204") Long id,
-			@Schema(description = "쓴 사람의 사용자 표시. 탈퇴한 사람이면 isWithdrawn이 true") UserSummaryResponse author,
+			@Schema(description = "쓴 사람의 사용자 표시. 탈퇴한 사람이면 isWithdrawn이 true") UserDisplayResponse author,
 			@Schema(description = "본문. 50자 이하", example = "가구 구경 잘 하고 가요. 다음에 같이 달려요!") String content,
 			@Schema(description = "쓴 시각", example = "2026-11-19T12:40:11Z") Instant createdAt,
 			@Schema(description = "요청한 사람이 이 글을 지울 수 있는지. 땅굴 주인이거나 쓴 사람이면 true", example = "true") boolean canDelete,

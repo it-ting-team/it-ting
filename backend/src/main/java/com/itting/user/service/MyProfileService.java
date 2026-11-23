@@ -27,9 +27,9 @@ import com.itting.question.repository.UserAnswerRepository;
 import com.itting.term.service.TermService;
 import com.itting.user.domain.UserErrorCode;
 import com.itting.user.domain.UserProfile;
-import com.itting.user.dto.MoleResponse;
 import com.itting.user.dto.MoleUpdateRequest;
 import com.itting.user.dto.ProfileUpdateRequest;
+import com.itting.user.dto.UserDisplayResponse;
 import com.itting.user.repository.UserProfileRepository;
 import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -99,11 +99,12 @@ public class MyProfileService {
 
 	/** 두더지 네 부위를 보낸 값으로 바꾼다. 빈 값을 보낸 부위는 비운다. 입력 검사는 컨트롤러가 한다. */
 	@Transactional
-	public MoleResponse changeMole(Long userId, MoleUpdateRequest request) {
+	public UserDisplayResponse.Mole changeMole(Long userId, MoleUpdateRequest request) {
 		UserProfile profile = findProfile(userId);
 		profile.changeMole(request.head().orElse(null), request.face().orElse(null), request.neck().orElse(null),
 				request.hand().orElse(null));
-		return MoleResponse.from(profile);
+		return new UserDisplayResponse.Mole(profile.getMoleHead(), profile.getMoleFace(), profile.getMoleNeck(),
+				profile.getMoleHand());
 	}
 
 	/**

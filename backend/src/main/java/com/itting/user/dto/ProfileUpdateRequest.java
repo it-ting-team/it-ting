@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.valueextraction.Unwrapping;
 import org.hibernate.validator.constraints.UniqueElements;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * {@code PATCH /api/v1/me/profile}의 본문. 다섯 값의 키를 모두 보낸다. 바꾸지 않은 값도 지금 값을 담는다.
@@ -19,7 +20,7 @@ import org.hibernate.validator.constraints.UniqueElements;
  * @param campusFloorId 캠퍼스-층의 id. 기수는 바꿀 수 없어 받지 않는다
  * @param interestIds 세부 관심사의 id. 보낸 순서로 저장하고 첫 번째가 대표 관심사다
  * @param answers 질문과 답변. 보낸 순서가 자리 순서다
- * @param intro 자기소개. 키가 빠지면 null이고, {@code "intro": null}이면 빈 {@link Optional}이다.
+ * @param intro 자기소개. 키가 빠지면 null이고, {@code "intro": null}이면 빈 {@link Optional}이다({@link KeyRequiredStringDeserializer}).
  *        앞뒤 공백을 지우고, 지운 뒤 비었으면 빈 {@link Optional}(비움)로 본다
  */
 public record ProfileUpdateRequest(
@@ -33,6 +34,7 @@ public record ProfileUpdateRequest(
 		@Schema(description = "질문과 답변. 정확히 3개이고 보낸 순서가 자리 순서. 세 질문은 서로 달라야 한다", requiredMode = Schema.RequiredMode.REQUIRED)
 		@NotNull @Size(min = 3, max = 3, message = "질문 3개에 답해야 합니다.") List<@NotNull @Valid Answer> answers,
 		@Schema(description = "자기소개. 150자 이하. 쓰지 않았으면 null. null이나 공백뿐이면 비운다", example = "달리기와 음악을 좋아하는 14기입니다.", nullable = true, requiredMode = Schema.RequiredMode.REQUIRED, implementation = String.class)
+		@JsonDeserialize(using = KeyRequiredStringDeserializer.class)
 		@NotNull(message = "필수 값입니다. 쓰지 않았으면 null을 보내세요.", payload = Unwrapping.Skip.class)
 		Optional<@CodePointLength(max = 150, message = "150자 이하로 써야 합니다.") String> intro) {
 

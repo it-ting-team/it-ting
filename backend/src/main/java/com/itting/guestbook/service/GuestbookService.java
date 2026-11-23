@@ -14,8 +14,8 @@ import com.itting.guestbook.domain.GuestbookErrorCode;
 import com.itting.guestbook.dto.GuestbookEntryListResponse;
 import com.itting.guestbook.dto.GuestbookEntryListResponse.GuestbookEntryResponse;
 import com.itting.guestbook.repository.GuestbookEntryRepository;
-import com.itting.user.dto.UserSummaryResponse;
-import com.itting.user.service.UserSummaryService;
+import com.itting.user.dto.UserDisplayResponse;
+import com.itting.user.service.UserDisplayService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -36,13 +36,13 @@ public class GuestbookService {
 
 	private final BurrowRepository burrowRepository;
 
-	private final UserSummaryService userSummaryService;
+	private final UserDisplayService userDisplayService;
 
 	public GuestbookService(GuestbookEntryRepository guestbookEntryRepository, BurrowRepository burrowRepository,
-			UserSummaryService userSummaryService) {
+			UserDisplayService userDisplayService) {
 		this.guestbookEntryRepository = guestbookEntryRepository;
 		this.burrowRepository = burrowRepository;
-		this.userSummaryService = userSummaryService;
+		this.userDisplayService = userDisplayService;
 	}
 
 	/**
@@ -56,8 +56,8 @@ public class GuestbookService {
 		Burrow burrow = findBurrow(burrowId);
 		Page<GuestbookEntry> entries = guestbookEntryRepository.findByBurrowIdAndStatus(burrowId,
 				GuestbookEntryStatus.PUBLIC, PageRequest.of(page - 1, size, NEWEST_FIRST));
-		Map<Long, UserSummaryResponse> authors = userSummaryService
-				.getSummaries(entries.stream().map(GuestbookEntry::getAuthorId).distinct().toList());
+		Map<Long, UserDisplayResponse> authors = userDisplayService
+				.getAll(entries.stream().map(GuestbookEntry::getAuthorId).distinct().toList());
 		boolean isOwner = burrow.getUserId().equals(viewerId);
 
 		List<GuestbookEntryResponse> items = entries.stream()

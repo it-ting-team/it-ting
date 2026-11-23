@@ -2,9 +2,9 @@ package com.itting.user.controller;
 
 import com.itting.burrow.dto.MyBurrowResponse;
 import com.itting.global.response.ApiResult;
-import com.itting.user.dto.MoleResponse;
 import com.itting.user.dto.MoleUpdateRequest;
 import com.itting.user.dto.ProfileUpdateRequest;
+import com.itting.user.dto.UserDisplayResponse;
 import com.itting.user.service.MyProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,7 +31,7 @@ public class MyProfileController {
 			description = "두더지가 걸친 아이템을 바꾼다. 네 부위의 키를 모두 보내고, \"없음\"인 부위는 null을 보낸다. "
 					+ "키가 빠지면 400이다. 로그인이 필요하다.")
 	@PatchMapping("/mole")
-	public ApiResult<MoleResponse> changeMole(@Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+	public ApiResult<UserDisplayResponse.Mole> changeMole(@Parameter(hidden = true) @AuthenticationPrincipal Long userId,
 			@Valid @RequestBody MoleUpdateRequest body) {
 		return ApiResult.ok(myProfileService.changeMole(userId, body));
 	}

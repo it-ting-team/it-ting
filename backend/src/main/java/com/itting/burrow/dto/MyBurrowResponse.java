@@ -3,7 +3,7 @@ package com.itting.burrow.dto;
 import java.util.List;
 
 import com.itting.interest.dto.InterestTagResponse;
-import com.itting.user.dto.UserSummaryResponse;
+import com.itting.user.dto.UserDisplayResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 public record MyBurrowResponse(
 		@Schema(description = "내 땅굴의 id. 방명록 목록을 부를 때 쓴다", example = "18") Long burrowId,
-		@Schema(description = "땅굴 주인인 나의 사용자 표시") UserSummaryResponse owner,
+		@Schema(description = "땅굴 주인인 나의 사용자 표시") UserDisplayResponse owner,
 		@Schema(description = "프로필의 캠퍼스-층 id. 내 정보 수정에서 지금 값을 고른 채로 열 때 쓴다", example = "12") Long campusFloorId,
 		@Schema(description = "자기소개. 쓰지 않았으면 null", nullable = true) String intro,
 		@Schema(description = "내 관심사 태그. 고른 순서이고 첫 번째가 대표 관심사다. isShared는 모두 false") List<InterestTagResponse> interests,

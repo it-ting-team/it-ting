@@ -46,7 +46,7 @@
 | A | 방명록 목록의 `page` · `size` 범위 (API 명세 "구현 단계로 넘기는 것" 1) | `page`는 1 이상, `size`는 1 ~ 20. 어긋나면 `400 INVALID_INPUT`과 `fields`. 글이 있는 페이지를 넘으면 `items: []`와 실제 `totalItems` · `totalPages`로 `200` | 화면은 5개씩만 쓴다. 너무 큰 `size`로 한 번에 다 읽지 못하게 막고, 마지막 글을 지운 뒤 지금 페이지를 다시 불러도 오류가 나지 않게 한다 |
 | B | 단골 수 `regularCount` | `regular_burrow` 테이블이 생길 때(05 탐색 티켓)까지 늘 `0`을 준다. 응답 모양은 명세 그대로 두고, 그 티켓에서 세는 코드로 바꾼다(코드에 표시) | 남의 영역 테이블을 이 PR에서 미리 만들지 않는다. 지금은 단골을 담는 API가 없어 실제 값도 0이다 |
 | C | 자기소개의 공백 | 앞뒤 공백을 지운다. 지운 뒤 비면 `null`로 저장한다(공백만 보낸 것도 "비움"). 줄바꿈은 그대로 둔다. 150자는 답변처럼 문자 단위로 센다(이모지 1자) | 공백뿐인 자기소개가 "아직 작성한 자기소개가 없어요" 대신 빈 칸으로 보이지 않게 한다. 답변과 세는 법을 맞춘다 |
-| D | 패키지 | `burrow`: 내 땅굴 조회(`MyBurrowController` · `MyBurrowService`), 입구 옮기기(`BurrowService.moveEntrance`). `user`: 두더지 · 내 정보 저장(`MyProfileController`), 프로필 팝업(`UserProfileController`), 함께 쓰는 사용자 표시(`UserSummaryResponse` · `UserSummaryService`). `interest`: 관심사 태그(`InterestTagResponse`). `guestbook`: 방명록 엔티티 · 목록 · 삭제, `GuestbookErrorCode`(`GUESTBOOK_ENTRY_NOT_FOUND`). `BURROW_NOT_FOUND`는 `burrow`의 `BurrowErrorCode`, `USER_NOT_FOUND`는 `UserErrorCode` | 저장 대상이 `user_profile`인 API는 `user`에, 땅굴을 읽는 API는 `burrow`에 둔다. 사용자 표시는 방명록 · 모임 · 채팅이 모두 쓰므로 한 곳에서 만든다 |
+| D | 패키지 | `burrow`: 내 땅굴 조회(`MyBurrowController` · `MyBurrowService`), 입구 옮기기(`BurrowService.moveEntrance`). `user`: 두더지 · 내 정보 저장(`MyProfileController`), 프로필 팝업(`UserProfileController`), 함께 쓰는 사용자 표시(`UserSummaryResponse` · `UserSummaryService`, 결과에서 KAN-51의 `UserDisplay*`로 바꿈). `interest`: 관심사 태그(`InterestTagResponse`). `guestbook`: 방명록 엔티티 · 목록 · 삭제, `GuestbookErrorCode`(`GUESTBOOK_ENTRY_NOT_FOUND`). `BURROW_NOT_FOUND`는 `burrow`의 `BurrowErrorCode`, `USER_NOT_FOUND`는 `UserErrorCode` | 저장 대상이 `user_profile`인 API는 `user`에, 땅굴을 읽는 API는 `burrow`에 둔다. 사용자 표시는 방명록 · 모임 · 채팅이 모두 쓰므로 한 곳에서 만든다 |
 
 ### 만들 것
 
@@ -158,22 +158,23 @@ erDiagram
 | `burrow/controller/MyBurrowController`, `burrow/service/MyBurrowService`, `burrow/dto/MyBurrowResponse` | `GET /me/burrow`. 내 정보 저장의 응답도 이것으로 만든다 |
 | `burrow/service/BurrowService`, `burrow/domain/{BurrowEntrance,BurrowErrorCode}` | `moveEntrance`(KAN-44의 잠금을 `nextSlot`으로 묶어 함께 씀), `BURROW_NOT_FOUND` |
 | `user/controller/{MyProfileController,UserProfileController}` | `PATCH /me/mole`, `PATCH /me/profile`, `GET /users/{userId}/profile` |
-| `user/service/{MyProfileService,UserProfileService,UserSummaryService}` | 두더지 · 내 정보 저장, 프로필 팝업, 사용자 표시(여러 사람을 한 번에 읽음) |
-| `user/dto/*`, `user/repository/{UserProfileRepository,UserSummaryRow}`, `user/domain/{UserProfile,UserErrorCode}` | 요청 · 응답 DTO, 프로필 잠금 · 사용자 표시 조회, `USER_NOT_FOUND` |
+| `user/service/{MyProfileService,UserProfileService}` | 두더지 · 내 정보 저장, 프로필 팝업. 사용자 표시는 KAN-51이 만든 `UserDisplayService` · `UserDisplayResponse`를 쓴다 |
+| `user/dto/*`, `user/repository/UserProfileRepository`, `user/domain/{UserProfile,UserErrorCode}` | 요청 · 응답 DTO, `KeyRequiredStringDeserializer`(키가 빠진 것과 `null`을 구분), 프로필 잠금, `USER_NOT_FOUND`. 두더지 저장의 응답은 `UserDisplayResponse.Mole` |
 | `interest/{dto/InterestTagResponse,service/InterestTagService}`, `interest/repository/UserInterestRepository`, `interest/domain/UserInterest` | 관심사 태그와 `isShared`, 순서 바꾸기 |
 | `question/repository/{UserAnswerRepository,UserAnswerRow}` | 답변 조회(질문 문구와 함께), 한 사람의 답변 바로 지우기 |
-| `application.yml` | `spring.jackson.deserialization.use-null-for-missing-reference-values: true`. 키가 빠진 것과 `null`을 구분해 읽는다 |
 | 테스트 | `MyBurrowApiTests`(5), `MyProfileApiTests`(16), `GuestbookApiTests`(13), `UserProfileApiTests`(5), 지원 `Members` |
 | 문서 | `docs/api/04-my-burrow.md`(A · B · C, 닉네임 규칙 링크, 8번 잠금, 구현하며 정한 것), `docs/db/burrow.md`(`guestbook_entry` 마이그레이션 · 인덱스, 빈 자리 번호의 뜻) |
 
 ### 확인한 것
 
-- `./gradlew build` 통과. 테스트 208개(기존 169 + 새 39)
+- `./gradlew build` 통과. 테스트 232개(dev 193 + 새 39)
+- `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
 - 로컬 코드 리뷰: P0 0건, P1 0건
 
 ### 계획과 달라진 점
 
-- **키가 빠진 것을 알아내는 방법**: 계획은 Jackson의 필수 속성(`@JsonProperty(required = true)`)이었다. 이 방법은 빠진 키를 첫 번째 하나만 알려 준다. 그래서 키가 빠지거나 `null`일 수 있는 값(두더지 네 부위, `intro`)을 `Optional`로 받도록 바꿨다. Jackson 설정 `use-null-for-missing-reference-values`를 켜면 키가 빠졌을 때 `null`, `"키": null`일 때 빈 `Optional`로 읽는다. 빠진 키는 Bean Validation의 `@NotNull`이 다른 오류와 함께 `fields`에 모두 담는다. 설정은 전역이지만 지금 `Optional`을 받는 요청 DTO는 이 둘뿐이다.
+- **키가 빠진 것을 알아내는 방법**: 계획은 Jackson의 필수 속성(`@JsonProperty(required = true)`)이었다. 이 방법은 빠진 키를 첫 번째 하나만 알려 준다. 그래서 키가 빠지거나 `null`일 수 있는 값(두더지 네 부위, `intro`)을 `Optional`로 받고, 전용 역직렬화기 `KeyRequiredStringDeserializer`로 키가 빠지면 `null`, `"키": null`이면 빈 `Optional`로 읽는다. 빠진 키는 Bean Validation의 `@NotNull`이 다른 오류와 함께 `fields`에 모두 담는다. 처음에는 Jackson 전역 설정(`use-null-for-missing-reference-values`)으로 했는데, 먼저 병합된 KAN-51(#32)이 필드마다 역직렬화기를 붙이는 방식이라 그쪽에 맞췄다.
+- **사용자 표시를 KAN-51의 `UserDisplay*`로 맞춤**: 계획의 `UserSummaryResponse` · `UserSummaryService`와 KAN-51의 `UserDisplayResponse` · `UserDisplayService`가 같은 일을 했다. 먼저 병합되는 쪽에 맞추기로 사용자와 정해(2026-11-23), dev를 이 브랜치에 병합하고 이쪽 것을 지웠다. JSON 모양은 같아 응답은 바뀌지 않는다.
 - **빈 자리 번호의 뜻을 문서에 분명히 적음**: KAN-44의 규칙은 "가장 큰 번호 + 1"이다. 그래서 가운데 빈 번호는 다시 쓰지 않지만, 가장 큰 번호의 땅굴이 떠나면 그 번호는 다음 땅굴이 받는다. 테스트를 쓰다 확인했고, `docs/db/burrow.md`에 이 뜻을 적었다. 동작은 바꾸지 않았다.
 - **답변을 지운 뒤 영속성 컨텍스트를 비운다**: 지운 답변이 컨텍스트에 남아 있으면 같은 자리의 새 답변이 INSERT가 아니라 UPDATE로 나간다. 그래서 프로필 · 관심사를 고친 뒤 마지막에 지운다.
 - **내 정보 저장의 입력 검사는 서비스가 한다**: 온보딩 확정과 같은 방식이다. 세 질문이 서로 다른지까지 함께 보고 `fields`에 모두 담으려는 것이다. 두더지 저장은 컨트롤러의 `@Valid`로 검사한다.
@@ -182,14 +183,14 @@ erDiagram
 
 - 단골 수 `regularCount`: 05 탐색 티켓에서 `regular_burrow`를 만들면 `MyBurrowService.countRegulars`를 실제로 세게 바꾼다(코드에 TODO)
 - 방명록 쓰기(05), 신고로 가리기(08), 새 글 알림(09), 탈퇴할 때 받은 글 지우기(10)
-- 사용자 표시의 중복: KAN-51 · KAN-54 작업도 같은 모양의 `UserDisplayResponse` · `UserDisplayService`를 따로 만들고 있다(2026-11-23 확인). 먼저 병합되는 것 하나로 합친다
+- KAN-54(알림)도 `UserDisplayResponse` · `UserDisplayService`를 따로 만들고 있다(2026-11-23 확인). dev의 것(KAN-51)으로 맞춰야 한다
 - Swagger 호출 스크린샷과 응답 텍스트는 PR을 만들 때 남긴다(스킬 `api-evidence`)
 
 ### 검토 순서
 
 1. `docs/api/04-my-burrow.md`의 바뀐 곳과 "구현하며 정한 것", `docs/db/burrow.md`의 `guestbook_entry`
 2. 마이그레이션 → `guestbook/domain`
-3. `user/service/UserSummaryService`, `interest/service/InterestTagService`(함께 쓰는 부품)
+3. `interest/service/InterestTagService`(함께 쓰는 부품), `user/dto/KeyRequiredStringDeserializer`
 4. `burrow/controller/MyBurrowController` → `MyBurrowService`
 5. `user/controller/MyProfileController` → `MyProfileService` → `burrow/service/BurrowService.moveEntrance`
 6. `guestbook/controller/GuestbookController` → `GuestbookService`, `user/controller/UserProfileController` → `UserProfileService`

@@ -13,7 +13,7 @@ import com.itting.interest.service.InterestTagService;
 import com.itting.question.repository.UserAnswerRepository;
 import com.itting.user.domain.UserProfile;
 import com.itting.user.repository.UserProfileRepository;
-import com.itting.user.service.UserSummaryService;
+import com.itting.user.service.UserDisplayService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,20 +35,20 @@ public class MyBurrowService {
 
 	private final GuestbookEntryRepository guestbookEntryRepository;
 
-	private final UserSummaryService userSummaryService;
+	private final UserDisplayService userDisplayService;
 
 	private final InterestTagService interestTagService;
 
 	public MyBurrowService(BurrowRepository burrowRepository, BurrowEntranceRepository burrowEntranceRepository,
 			UserProfileRepository userProfileRepository, UserAnswerRepository userAnswerRepository,
-			GuestbookEntryRepository guestbookEntryRepository, UserSummaryService userSummaryService,
+			GuestbookEntryRepository guestbookEntryRepository, UserDisplayService userDisplayService,
 			InterestTagService interestTagService) {
 		this.burrowRepository = burrowRepository;
 		this.burrowEntranceRepository = burrowEntranceRepository;
 		this.userProfileRepository = userProfileRepository;
 		this.userAnswerRepository = userAnswerRepository;
 		this.guestbookEntryRepository = guestbookEntryRepository;
-		this.userSummaryService = userSummaryService;
+		this.userDisplayService = userDisplayService;
 		this.interestTagService = interestTagService;
 	}
 
@@ -73,7 +73,7 @@ public class MyBurrowService {
 		long guestbookCount = guestbookEntryRepository.countByBurrowIdAndStatus(burrow.getId(),
 				GuestbookEntryStatus.PUBLIC);
 
-		return new MyBurrowResponse(burrow.getId(), userSummaryService.getSummary(userId),
+		return new MyBurrowResponse(burrow.getId(), userDisplayService.get(userId),
 				profile.getCampusFloorId(), profile.getIntro(), interestTagService.getMyTags(userId), answers,
 				countRegulars(burrow.getId()), guestbookCount,
 				new MyBurrowResponse.EntranceResponse(entrance.getTermId(), entrance.getCampusFloorId(),

@@ -17,14 +17,14 @@ public class UserProfileService {
 
 	private final UserRepository userRepository;
 
-	private final UserSummaryService userSummaryService;
+	private final UserDisplayService userDisplayService;
 
 	private final InterestTagService interestTagService;
 
-	public UserProfileService(UserRepository userRepository, UserSummaryService userSummaryService,
+	public UserProfileService(UserRepository userRepository, UserDisplayService userDisplayService,
 			InterestTagService interestTagService) {
 		this.userRepository = userRepository;
-		this.userSummaryService = userSummaryService;
+		this.userDisplayService = userDisplayService;
 		this.interestTagService = interestTagService;
 	}
 
@@ -38,7 +38,7 @@ public class UserProfileService {
 		userRepository.findById(userId)
 				.filter(user -> user.isActive() && user.isOnboarded())
 				.orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
-		return new UserProfileResponse(userSummaryService.getSummary(userId),
+		return new UserProfileResponse(userDisplayService.get(userId),
 				interestTagService.getTags(userId, viewerId));
 	}
 
