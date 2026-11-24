@@ -8,7 +8,7 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 |---|---|
 | `backend/` | Spring Boot 4.2, Java 25, Gradle, Spring Data JPA. 실행 방법은 `README.md`의 백엔드 절 |
 | `backend/src/main/resources/db/migration/` | Flyway 마이그레이션. DB 테이블은 여기서만 만든다 |
-| `frontend/` | Next.js (KAN-25에서 추가) |
+| `frontend/` | Next.js 16.4 (App Router), React 19.3, TypeScript 6.0, Node 24, npm. 실행 방법은 `frontend/README.md` |
 | `docs/spec/` | 서비스 명세. 무엇을 만드는가 |
 | `docs/db/` | DB 설계. 무엇을 저장하는가 |
 | `docs/api/` | API 명세. 어떻게 주고받는가. 공통 규칙은 `docs/api-convention.md` |
