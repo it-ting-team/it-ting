@@ -205,6 +205,21 @@ public class PostQueryRepository {
 		return result;
 	}
 
+	/**
+	 * @return 글 id → 지금 보이는 제목. 삭제된 글과 없는 글은 담지 않는다. 가려진 글은 담는다(알림이 어느 글인지 알려 주기 위해)
+	 */
+	public Map<Long, String> findTitles(Collection<Long> postIds) {
+		Map<Long, String> result = new HashMap<>();
+		if (postIds.isEmpty()) {
+			return result;
+		}
+		jdbc.query("SELECT p.id, v.title FROM post p " + JOIN_LATEST_VERSION
+				+ " WHERE p.id IN (:ids) AND p.status <> 'DELETED'", Map.of("ids", postIds), rs -> {
+					result.put(rs.getLong("id"), rs.getString("title"));
+				});
+		return result;
+	}
+
 	/** @return 글 id → 대표 사진(순서 1)의 주소. 사진이 없는 글은 담지 않는다 */
 	public Map<Long, String> findThumbnailUrls(Collection<Long> postIds) {
 		Map<Long, String> result = new HashMap<>();

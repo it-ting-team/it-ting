@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,6 +19,7 @@ import com.itting.notification.service.ChatRequestReader;
 import com.itting.notification.service.MeetupRequestCountReader;
 import com.itting.notification.service.NotificationTargetReader;
 import com.itting.notification.service.NotificationTargetSummary;
+import com.itting.support.CommunitySteps;
 import com.itting.support.NotificationSteps;
 import com.itting.support.TestcontainersConfiguration;
 import jakarta.servlet.http.Cookie;
@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 다른 영역이 읽기 구현(요청 수, 가장 최근 요청자, 갈 곳의 이름 · 시작 시각)을 등록했을 때 알림 API가 그 값을 싣는지.
+ * 모임 · 요청 수 · 대화 요청은 아직 구현이 없어 가짜를 등록하고, 글은 커뮤니티가 등록한 실제 구현이 제목을 싣는다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -56,6 +57,9 @@ class NotificationReaderApiTests {
 
 	@Autowired
 	NotificationSteps steps;
+
+	@Autowired
+	CommunitySteps communitySteps;
 
 	Instant now;
 
@@ -83,9 +87,11 @@ class NotificationReaderApiTests {
 	@Test
 	void 팝업에_요청_수와_가장_최근_요청자와_갈_곳의_이름을_싣는다() throws Exception {
 		latestRequesterId = other;
+		long post = communitySteps.insertPost(other, "FREE", "5층 라운지 커피머신", "본문", now);
+		long deletedPost = communitySteps.insertPost(other, "FREE", "DELETED", "지운 글", "본문", now);
 		steps.insert(me, "MEETUP_START_REMINDER", "MEETUP", 23L, null, now.minus(Duration.ofMinutes(1)), null);
-		steps.insertPostCommented(me, other, 204L, now.minus(Duration.ofMinutes(2)), null);
-		steps.insertPostCommented(me, other, 999L, now.minus(Duration.ofMinutes(3)), null);
+		steps.insertPostCommented(me, other, post, now.minus(Duration.ofMinutes(2)), null);
+		steps.insertPostCommented(me, other, deletedPost, now.minus(Duration.ofMinutes(3)), null);
 
 		mockMvc.perform(get("/api/v1/me/notifications/popup").cookie(session))
 				.andExpect(status().isOk())
@@ -95,10 +101,11 @@ class NotificationReaderApiTests {
 				.andExpect(jsonPath("$.data.latestChatRequester.nickname").value("모카"))
 				.andExpect(jsonPath("$.data.recentItems[0].target.title").value("퇴근길 러닝 크루"))
 				.andExpect(jsonPath("$.data.recentItems[0].target.startsAt").value("2026-11-25T10:00:00Z"))
-				.andExpect(jsonPath("$.data.recentItems[1].target.title").value("글 204"))
+				.andExpect(jsonPath("$.data.recentItems[1].target.id").value(post))
+				.andExpect(jsonPath("$.data.recentItems[1].target.title").value("5층 라운지 커피머신"))
 				.andExpect(jsonPath("$.data.recentItems[1].target.startsAt").value(nullValue()))
-				// 원본이 사라진 글은 이름이 없다.
-				.andExpect(jsonPath("$.data.recentItems[2].target.id").value(999))
+				// 삭제한 글은 이름이 없다.
+				.andExpect(jsonPath("$.data.recentItems[2].target.id").value(deletedPost))
 				.andExpect(jsonPath("$.data.recentItems[2].target.title").value(nullValue()));
 	}
 
@@ -111,11 +118,12 @@ class NotificationReaderApiTests {
 
 	@Test
 	void 목록에도_갈_곳의_이름을_싣는다() throws Exception {
-		steps.insertPostCommented(me, other, 204L, now.minus(Duration.ofMinutes(2)), null);
+		long post = communitySteps.insertPost(other, "FREE", "5층 라운지 커피머신", "본문", now);
+		steps.insertPostCommented(me, other, post, now.minus(Duration.ofMinutes(2)), null);
 
 		mockMvc.perform(get("/api/v1/me/notifications").cookie(session))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.items[0].target.title").value("글 204"));
+				.andExpect(jsonPath("$.data.items[0].target.title").value("5층 라운지 커피머신"));
 	}
 
 	@TestConfiguration(proxyBeanMethods = false)
@@ -152,25 +160,6 @@ class NotificationReaderApiTests {
 				@Override
 				public Map<Long, NotificationTargetSummary> read(Collection<Long> targetIds) {
 					return Map.of(23L, new NotificationTargetSummary("퇴근길 러닝 크루", MEETUP_STARTS_AT));
-				}
-			};
-		}
-
-		@Bean
-		NotificationTargetReader postTargetReader() {
-			return new NotificationTargetReader() {
-				@Override
-				public NotificationTargetType targetType() {
-					return NotificationTargetType.POST;
-				}
-
-				@Override
-				public Map<Long, NotificationTargetSummary> read(Collection<Long> targetIds) {
-					Map<Long, NotificationTargetSummary> titles = new HashMap<>();
-					targetIds.stream()
-							.filter(id -> id != 999L)
-							.forEach(id -> titles.put(id, new NotificationTargetSummary("글 " + id, null)));
-					return titles;
 				}
 			};
 		}
