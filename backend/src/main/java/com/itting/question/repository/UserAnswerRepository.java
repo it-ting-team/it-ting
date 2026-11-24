@@ -1,5 +1,6 @@
 package com.itting.question.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.itting.question.domain.UserAnswer;
@@ -10,15 +11,15 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserAnswerRepository extends JpaRepository<UserAnswer, UserAnswer.Key> {
 
-	/** 한 사람의 질문과 답변을 자리 순으로, 질문 문구와 함께. */
+	/** 계정별 질문과 답변을 자리 순으로, 질문 문구와 함께 읽는다. */
 	@Query("""
-			SELECT new com.itting.question.repository.UserAnswerRow(a.slot, a.introQuestionId, q.content, a.answer)
+			SELECT new com.itting.question.repository.UserAnswerRow(a.userId, a.slot, a.introQuestionId, q.content, a.answer)
 			FROM UserAnswer a
 			JOIN IntroQuestion q ON q.id = a.introQuestionId
-			WHERE a.userId = :userId
-			ORDER BY a.slot
+			WHERE a.userId IN :userIds
+			ORDER BY a.userId, a.slot
 			""")
-	List<UserAnswerRow> findRowsByUserId(@Param("userId") Long userId);
+	List<UserAnswerRow> findRowsByUserIds(@Param("userIds") Collection<Long> userIds);
 
 	/**
 	 * 한 사람의 답변을 모두 바로 지운다. 내 정보 수정이 답변을 새로 넣기 전에 부른다.

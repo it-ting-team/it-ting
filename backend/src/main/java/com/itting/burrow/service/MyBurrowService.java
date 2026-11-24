@@ -66,7 +66,7 @@ public class MyBurrowService {
 		UserProfile profile = userProfileRepository.findById(userId)
 				.orElseThrow(() -> new IllegalStateException("프로필이 없는 계정: " + userId));
 
-		List<MyBurrowResponse.AnswerResponse> answers = userAnswerRepository.findRowsByUserId(userId).stream()
+		List<MyBurrowResponse.AnswerResponse> answers = userAnswerRepository.findRowsByUserIds(List.of(userId)).stream()
 				.map(row -> new MyBurrowResponse.AnswerResponse(row.slot(), row.introQuestionId(), row.question(),
 						row.answer()))
 				.toList();

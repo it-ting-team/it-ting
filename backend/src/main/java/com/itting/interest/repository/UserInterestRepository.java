@@ -1,9 +1,9 @@
 package com.itting.interest.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.itting.interest.domain.UserInterest;
-import com.itting.interest.dto.InterestTagResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,15 +21,15 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, User
 	/** 한 사람이 고른 관심사를 고른 순서({@code sort_order})로. */
 	List<UserInterest> findAllByUserIdOrderBySortOrderAsc(Long userId);
 
-	/** 한 사람의 관심사 태그를 고른 순서로. {@code isShared}는 모두 false이고, 부른 쪽이 보는 사람 기준으로 다시 정한다. */
+	/** 계정별 관심사 태그를 고른 순서로 읽는다. */
 	@Query("""
-			SELECT new com.itting.interest.dto.InterestTagResponse(i.id, i.name, i.interestCategoryId, false)
+			SELECT new com.itting.interest.repository.UserInterestTagRow(ui.userId, i.id, i.name, i.interestCategoryId)
 			FROM UserInterest ui
 			JOIN Interest i ON i.id = ui.interestId
-			WHERE ui.userId = :userId
-			ORDER BY ui.sortOrder
+			WHERE ui.userId IN :userIds
+			ORDER BY ui.userId, ui.sortOrder
 			""")
-	List<InterestTagResponse> findTagsByUserId(@Param("userId") Long userId);
+	List<UserInterestTagRow> findTagRowsByUserIds(@Param("userIds") Collection<Long> userIds);
 
 	/** 한 사람이 고른 세부 관심사의 id. 순서는 없다. */
 	@Query("SELECT ui.interestId FROM UserInterest ui WHERE ui.userId = :userId")
