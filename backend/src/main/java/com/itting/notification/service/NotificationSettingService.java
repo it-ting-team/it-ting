@@ -10,7 +10,6 @@ import com.itting.notification.dto.NotificationSettingUpdateResponse;
 import com.itting.notification.repository.NotificationSettingRepository;
 import com.itting.user.domain.User;
 import com.itting.user.repository.UserRepository;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
  * 처음 바꿀 때 줄을 만든다. 이미 받은 알림은 지우지 않는다.
  */
 @Service
-@EnableConfigurationProperties(PushProperties.class)
 @Transactional
 public class NotificationSettingService {
 
@@ -31,18 +29,17 @@ public class NotificationSettingService {
 
 	private final NotificationEventPublisher events;
 
-	/** 설정이 비어 있으면 null. */
+	/** 푸시를 보낼 수 없으면(세 설정 가운데 하나라도 비었거나 키가 틀림) null. */
 	private final String pushPublicKey;
 
 	public NotificationSettingService(NotificationSettingRepository notificationSettingRepository,
 			UserRepository userRepository, NotificationQueryService notificationQueryService,
-			NotificationEventPublisher events, PushProperties pushProperties) {
+			NotificationEventPublisher events, WebPushSender pushSender) {
 		this.notificationSettingRepository = notificationSettingRepository;
 		this.userRepository = userRepository;
 		this.notificationQueryService = notificationQueryService;
 		this.events = events;
-		String publicKey = pushProperties.publicKey();
-		this.pushPublicKey = publicKey == null || publicKey.isBlank() ? null : publicKey.strip();
+		this.pushPublicKey = pushSender.publicKey();
 	}
 
 	/** 내 설정. 줄이 없으면 다섯 값을 모두 {@code true}로 준다. 푸시 공개 키는 설정에서 읽는다. */

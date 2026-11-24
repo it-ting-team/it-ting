@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -159,6 +160,17 @@ public class NotificationQueryService {
 		}
 		Map<Long, UserDisplayResponse> displays = userDisplayService.getAll(actorIds(shown));
 		return new NotificationListResponse(toItems(shown, displays), nextCursor, hasNext);
+	}
+
+	/**
+	 * 알림 하나를 목록의 한 줄과 같은 모양으로 만든다. 브라우저 푸시의 내용이다. 받는 사람의 알림이 아니거나 그 사이에 지워졌으면 비어 있다.
+	 * 시간이 지난 알림이어도 만든다(방금 생긴 알림을 보내는 데 쓴다).
+	 */
+	public Optional<NotificationItemResponse> findItem(Long notificationId, Long userId) {
+		return notificationRepository.findById(notificationId)
+				.filter(notification -> notification.getUserId().equals(userId))
+				.map(notification -> toItems(List.of(notification),
+						userDisplayService.getAll(actorIds(List.of(notification)))).getFirst());
 	}
 
 	/** {@code GET /api/v1/me/notifications/unread-count}. 실시간 소식의 값도 이것으로 계산한다. */

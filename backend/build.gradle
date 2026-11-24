@@ -43,3 +43,12 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// 브라우저 푸시(VAPID) 키 한 쌍을 만들어 .env에 붙여 넣을 두 줄로 출력한다. 파일은 만들지 않는다.
+// 실행: ./gradlew -q vapidKeys (-q를 붙이면 두 줄만 나온다)
+tasks.register('vapidKeys', JavaExec) {
+	group = 'application'
+	description = '브라우저 푸시(VAPID) 키를 만들어 .env에 붙여 넣을 두 줄로 출력한다. 파일은 만들지 않는다.'
+	classpath = sourceSets.main.output
+	mainClass = 'com.itting.notification.service.VapidKeyGenerator'
+}

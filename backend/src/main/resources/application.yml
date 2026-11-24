@@ -61,10 +61,16 @@ itting:
   mail:
     # 인증 메일의 보내는 사람. 프로필마다 정한다.
     from: no-reply@itting.local
+  # 브라우저 푸시(VAPID). 키는 backend/에서 ./gradlew vapidKeys로 만들어 넣는다. 모든 프로필에서
+  # 환경 변수 ITTING_PUSH_*를 읽는다(local은 .env). 이름에 하이픈이 있어 자동 연결이 안 되므로 여기서 직접 잇는다.
+  # 세 값 가운데 하나라도 비어 있으면 서버는 정상으로 뜨고 푸시만 보내지 않는다.
   push:
-    # 브라우저가 푸시 구독을 만들 때 쓰는 공개 키(알림 설정이 준다). 공개해도 되는 값이다.
-    # 키를 만들어 넣는 일은 KAN-59(브라우저 푸시)에서 한다. 비어 있으면 알림 설정이 null을 준다.
-    public-key: ""
+    # 브라우저가 푸시 구독을 만들 때 쓰는 공개 키(알림 설정이 준다). 공개해도 되는 값이다. 비어 있으면 알림 설정이 null을 준다.
+    public-key: ${ITTING_PUSH_PUBLIC_KEY:}
+    # 푸시에 서명하는 개인 키. 비밀값이라 .env나 환경 변수에만 두고 공유하지 않는다.
+    private-key: ${ITTING_PUSH_PRIVATE_KEY:}
+    # 푸시 서비스가 문제를 알릴 연락처. mailto:팀주소 형식
+    subject: ${ITTING_PUSH_SUBJECT:}
   # 비밀번호 재설정 링크(docs/api/02-auth.md)
   password-reset:
     link-ttl: 30m

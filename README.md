@@ -140,6 +140,17 @@ cd backend
 | http://localhost:8080/swagger-ui.html | API 문서(Swagger). `prod` 프로필에서는 열리지 않는다 |
 | http://localhost:8080/actuator/health | 헬스체크 |
 
+### 브라우저 푸시 키
+
+브라우저 푸시를 실제로 보내 보려면 VAPID 키를 만들어 `.env`에 넣는다. 키를 비워 두면 서버는 정상으로 뜨고 푸시만 보내지 않는다.
+
+```bash
+cd backend
+./gradlew -q vapidKeys    # ITTING_PUSH_PUBLIC_KEY=..., ITTING_PUSH_PRIVATE_KEY=... 두 줄을 출력한다(파일은 만들지 않는다)
+```
+
+출력된 두 줄을 `.env`에 붙여 넣고, 푸시 서비스가 문제를 알릴 연락처 `ITTING_PUSH_SUBJECT=mailto:<팀 이메일 주소>`도 적는다. 개인 키(`ITTING_PUSH_PRIVATE_KEY`)는 비밀값이라 공유하지 않는다.
+
 ### 프로필
 
 | 프로필 | 쓰는 곳 | 설정 파일 |
