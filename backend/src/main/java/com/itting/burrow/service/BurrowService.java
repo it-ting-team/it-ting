@@ -2,8 +2,13 @@ package com.itting.burrow.service;
 
 import com.itting.burrow.domain.Burrow;
 import com.itting.burrow.domain.BurrowEntrance;
+import com.itting.burrow.domain.BurrowErrorCode;
 import com.itting.burrow.repository.BurrowEntranceRepository;
 import com.itting.burrow.repository.BurrowRepository;
+import com.itting.global.error.BusinessException;
+import com.itting.global.error.CommonErrorCode;
+import com.itting.user.domain.User;
+import com.itting.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +22,34 @@ public class BurrowService {
 	private final BurrowRepository burrowRepository;
 
 	private final BurrowEntranceRepository burrowEntranceRepository;
+	private final UserRepository userRepository;
 
-	public BurrowService(BurrowRepository burrowRepository, BurrowEntranceRepository burrowEntranceRepository) {
+	public BurrowService(BurrowRepository burrowRepository, BurrowEntranceRepository burrowEntranceRepository,
+			UserRepository userRepository) {
 		this.burrowRepository = burrowRepository;
 		this.burrowEntranceRepository = burrowEntranceRepository;
+		this.userRepository = userRepository;
+	}
+
+	/** 방문자가 쓰기 전에 계정과 땅굴을 잠가 탈퇴와 동시에 관계나 방명록이 생기지 않게 한다. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Burrow lockForInteraction(Long burrowId, Long actorId) {
+		Long ownerId = burrowRepository.findOwnerId(burrowId)
+				.orElseThrow(() -> new BusinessException(BurrowErrorCode.BURROW_NOT_FOUND));
+		long firstId = Math.min(ownerId, actorId);
+		long secondId = Math.max(ownerId, actorId);
+		lockActiveUser(firstId, actorId);
+		if (firstId != secondId) {
+			lockActiveUser(secondId, actorId);
+		}
+		return burrowRepository.findByIdForShare(burrowId)
+				.orElseThrow(() -> new BusinessException(BurrowErrorCode.BURROW_NOT_FOUND));
+	}
+
+	private void lockActiveUser(long userId, Long actorId) {
+		userRepository.findByIdForShare(userId).filter(User::isActive)
+				.orElseThrow(() -> new BusinessException(actorId.equals(userId)
+						? CommonErrorCode.UNAUTHENTICATED : BurrowErrorCode.BURROW_NOT_FOUND));
 	}
 
 	/**

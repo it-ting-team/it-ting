@@ -24,7 +24,7 @@ public class MyBurrowController {
 
 	@Operation(summary = "내 땅굴",
 			description = "내 땅굴과 내 정보 카드에 보여 줄 값을 한 번에 준다. 꾸미기 모드와 내 정보 수정도 이 값을 지금 값으로 쓴다. "
-					+ "단골 수는 단골 기능(05 탐색)이 생기기 전까지 0이다. 로그인이 필요하다.")
+					+ "로그인이 필요하다.")
 	@GetMapping
 	public ApiResult<MyBurrowResponse> getMyBurrow(@Parameter(hidden = true) @AuthenticationPrincipal Long userId) {
 		return ApiResult.ok(myBurrowService.getMyBurrow(userId));

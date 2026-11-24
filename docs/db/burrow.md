@@ -207,9 +207,9 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | --- | --- | --- | --- | --- |
 | `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 단골로 담은 사용자 |
 | `burrow_id` | `BIGINT` | 복합 PK, FK → `burrow.id` | NOT NULL, 개별 UNIQUE 없음 | 단골로 담긴 땅굴 |
-| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 단골로 담은 시각 |
+| `created_at` | `DATETIME(6)` | — | NOT NULL, 개별 UNIQUE 없음 | 단골로 담은 시각 |
 
-복합 기본키는 `PK(user_id, burrow_id)`다. 단골을 해제하면 해당 행을 삭제한다.
+복합 기본키는 `PK(user_id, burrow_id)`다. 단골을 해제하면 해당 행을 삭제한다. 땅굴별 단골 수는 `burrow_id` 인덱스로 센다. 이 테이블과 아래 추천 테이블 두 개는 `V20261124_1623__create_burrow_social.sql`에서 만든다.
 
 상대의 수락이 필요하지 않고 상대에게 알리지 않는다.
 
@@ -221,8 +221,8 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 일일 추천 ID |
 | `user_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 추천을 받은 사용자 |
-| `recommended_on` | `DATE` | — | NOT NULL, 개별 UNIQUE 없음 | 추천 기준 날짜 |
-| `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
+| `recommended_on` | `DATE` | — | NOT NULL, 개별 UNIQUE 없음 | 한국 시각(Asia/Seoul)의 추천 날짜. 자정에 바뀐다 |
+| `created_at` | `DATETIME(6)` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 만들어진 시각 |
 
 복합 UNIQUE는 `UNIQUE(user_id, recommended_on)`이다. 추천 후보가 0명이어도 이 행은 남긴다. 추천을 받을 때 고른 캠퍼스·층과 기수는 저장하지 않는다. 지난 날짜의 행은 지우지 않는다.
 
@@ -233,7 +233,7 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 | 컬럼 이름 | 타입 | 외래키·기본키 | NULL 허용 여부·UNIQUE 여부·도메인 범위 | 설명 |
 | --- | --- | --- | --- | --- |
 | `daily_recommendation_id` | `BIGINT` | 복합 PK, FK → `daily_recommendation.id` | NOT NULL, 개별 UNIQUE 없음 | 해당 날짜의 일일 추천 |
-| `sort_order` | 미정 (정수형) | 복합 PK | NOT NULL, 개별 UNIQUE 없음, 1–3 | 추천 결과의 표시 순서 |
+| `sort_order` | `TINYINT` | 복합 PK | NOT NULL, 개별 UNIQUE 없음, 1–3(CHECK) | 추천 결과의 표시 순서 |
 | `target_user_id` | `BIGINT` | FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 추천된 사용자 |
 
 복합 기본키는 `PK(daily_recommendation_id, sort_order)`다. 일일 추천 기록 한 건에 결과 행은 0~3개이며, 각 결과 행은 반드시 일일 추천 기록 하나에 속한다.
@@ -266,5 +266,5 @@ A가 B의 땅굴에 글을 쓰고 B도 A의 땅굴에 글을 쓴 뒤 A가 탈퇴
 ## 명세에 없어 구현 단계로 넘기는 것
 
 - 새 학기의 수동·자동 개설 방식. 빈 입구 자리는 다시 쓰지 않기로 했다(KAN-44, 위 `burrow_entrance`)
-- 추천 기준 날짜의 경계, 캠퍼스·층이나 기수를 고르지 않고 전체에서 받을 수 있는지
+- 캠퍼스·층이나 기수를 고르지 않고 전체에서 추천받을 수 있는지
 - 방명록 글이 가려졌다는 알림을 눌렀을 때 갈 곳

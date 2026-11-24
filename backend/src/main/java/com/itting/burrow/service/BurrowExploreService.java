@@ -20,6 +20,7 @@ import com.itting.burrow.dto.MyBurrowResponse.EntranceResponse;
 import com.itting.burrow.repository.BurrowEntranceRepository;
 import com.itting.burrow.repository.BurrowRepository;
 import com.itting.burrow.repository.FieldEntranceRow;
+import com.itting.burrow.repository.RegularBurrowRepository;
 import com.itting.campus.repository.CampusFloorLocation;
 import com.itting.campus.service.CampusService;
 import com.itting.global.error.BusinessException;
@@ -53,12 +54,13 @@ public class BurrowExploreService {
 	private final InterestTagService interestTagService;
 	private final UserAnswerRepository answerRepository;
 	private final GuestbookEntryRepository guestbookRepository;
+	private final RegularBurrowRepository regularBurrowRepository;
 
 	public BurrowExploreService(TermService termService, CampusService campusService,
 			BurrowEntranceRepository entranceRepository, BurrowRepository burrowRepository, UserRepository userRepository,
 			UserProfileRepository profileRepository, UserDisplayService userDisplayService,
 			InterestTagService interestTagService, UserAnswerRepository answerRepository,
-			GuestbookEntryRepository guestbookRepository) {
+			GuestbookEntryRepository guestbookRepository, RegularBurrowRepository regularBurrowRepository) {
 		this.termService = termService;
 		this.campusService = campusService;
 		this.entranceRepository = entranceRepository;
@@ -69,6 +71,7 @@ public class BurrowExploreService {
 		this.interestTagService = interestTagService;
 		this.answerRepository = answerRepository;
 		this.guestbookRepository = guestbookRepository;
+		this.regularBurrowRepository = regularBurrowRepository;
 	}
 
 	public FieldListResponse getFields(Long termId) {
@@ -117,10 +120,12 @@ public class BurrowExploreService {
 				.toList();
 		long guestbookCount = guestbookRepository.countByBurrowIdAndStatus(burrow.getId(), GuestbookEntryStatus.PUBLIC);
 
-		// 단골과 채팅이 추가되면 각각의 저장된 관계를 읽는다. KAN-47, KAN-55, KAN-56.
-		return new BurrowVisitResponse(burrow.getId(), viewerId.equals(ownerId), userDisplayService.get(ownerId),
+		boolean isMine = viewerId.equals(ownerId);
+		boolean isRegular = !isMine && regularBurrowRepository.existsByUserIdAndBurrowId(viewerId, burrow.getId());
+		// 채팅이 추가되면 저장된 관계를 읽는다. KAN-55, KAN-56.
+		return new BurrowVisitResponse(burrow.getId(), isMine, userDisplayService.get(ownerId),
 				profile.getIntro(), interestTagService.getTags(ownerId, viewerId), answers, guestbookCount,
-				false, new ChatResponse(ChatStatus.NONE, null),
+				isRegular, new ChatResponse(ChatStatus.NONE, null),
 				new EntranceResponse(entrance.getTermId(), entrance.getCampusFloorId(), entrance.getSlot()));
 	}
 
