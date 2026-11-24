@@ -2,14 +2,14 @@ package com.itting.interest.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.itting.interest.dto.InterestTagResponse;
 import com.itting.interest.repository.UserInterestRepository;
+import com.itting.interest.repository.UserInterestTagRow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +28,7 @@ public class InterestTagService {
 
 	/** 내 관심사. 고른 순서이고 {@code isShared}는 모두 false다. */
 	public List<InterestTagResponse> getMyTags(Long userId) {
-		return userInterestRepository.findTagsByUserId(userId);
+		return getTags(userId, userId);
 	}
 
 	/**
@@ -39,15 +39,23 @@ public class InterestTagService {
 	 * @param viewerId 보는 사람(요청한 사람)
 	 */
 	public List<InterestTagResponse> getTags(Long ownerId, Long viewerId) {
-		List<InterestTagResponse> tags = userInterestRepository.findTagsByUserId(ownerId);
-		if (ownerId.equals(viewerId)) {
-			return tags;
+		return getTagsForOwners(List.of(ownerId), viewerId).getOrDefault(ownerId, List.of());
+	}
+
+	/** 여러 사람의 관심사를 한 번에 읽고, 각 주인에 대해 {@code isShared}를 같은 규칙으로 계산한다. */
+	public Map<Long, List<InterestTagResponse>> getTagsForOwners(Collection<Long> ownerIds, Long viewerId) {
+		if (ownerIds.isEmpty()) {
+			return Map.of();
 		}
-		Set<Long> viewerInterestIds = new HashSet<>(userInterestRepository.findInterestIdsByUserId(viewerId));
-		return tags.stream()
-				.map(tag -> new InterestTagResponse(tag.id(), tag.name(), tag.interestCategoryId(),
-						viewerInterestIds.contains(tag.id())))
-				.toList();
+		Set<Long> viewerInterestIds = ownerIds.stream().anyMatch(ownerId -> !ownerId.equals(viewerId))
+				? Set.copyOf(userInterestRepository.findInterestIdsByUserId(viewerId)) : Set.of();
+		Map<Long, List<InterestTagResponse>> tagsByOwner = new HashMap<>();
+		for (UserInterestTagRow row : userInterestRepository.findTagRowsByUserIds(ownerIds)) {
+			boolean shared = !row.ownerId().equals(viewerId) && viewerInterestIds.contains(row.id());
+			tagsByOwner.computeIfAbsent(row.ownerId(), id -> new ArrayList<>())
+					.add(new InterestTagResponse(row.id(), row.name(), row.interestCategoryId(), shared));
+		}
+		return tagsByOwner;
 	}
 
 	/**
@@ -57,13 +65,13 @@ public class InterestTagService {
 	 * @return 계정 id → 겹치는 관심사 태그. 겹치는 것이 없는 사람은 담지 않는다
 	 */
 	public Map<Long, List<InterestTagResponse>> getSharedTags(Collection<Long> ownerIds, Long viewerId) {
-		Map<Long, List<InterestTagResponse>> shared = new LinkedHashMap<>();
-		if (ownerIds.isEmpty()) {
-			return shared;
-		}
-		userInterestRepository.findSharedInterests(ownerIds, viewerId).forEach(row -> shared
-				.computeIfAbsent(row.ownerId(), id -> new ArrayList<>())
-				.add(new InterestTagResponse(row.interestId(), row.name(), row.interestCategoryId(), true)));
+		Map<Long, List<InterestTagResponse>> shared = new HashMap<>();
+		getTagsForOwners(ownerIds, viewerId).forEach((ownerId, tags) -> {
+			List<InterestTagResponse> sharedTags = tags.stream().filter(InterestTagResponse::isShared).toList();
+			if (!sharedTags.isEmpty()) {
+				shared.put(ownerId, sharedTags);
+			}
+		});
 		return shared;
 	}
 
