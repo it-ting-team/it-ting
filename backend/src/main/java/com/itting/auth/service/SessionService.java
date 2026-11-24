@@ -55,6 +55,18 @@ public class SessionService {
 		sessionRepository.findByPrincipalName(String.valueOf(userId)).keySet().forEach(sessionRepository::deleteById);
 	}
 
+	/**
+	 * 그 계정의 세션 가운데 지금 요청의 세션만 남기고 지운다(비밀번호 변경). 다른 기기는 로그아웃되고 지금 쓰는 기기는 그대로다.
+	 * 요청에 세션이 없으면 모두 지운다.
+	 */
+	public void endOthers(Long userId, HttpServletRequest request) {
+		HttpSession current = request.getSession(false);
+		String currentId = current == null ? null : current.getId();
+		sessionRepository.findByPrincipalName(String.valueOf(userId)).keySet().stream()
+				.filter(sessionId -> !sessionId.equals(currentId))
+				.forEach(sessionRepository::deleteById);
+	}
+
 	/** 지금 요청의 세션만 지운다. 다른 기기의 세션은 그대로다. 쿠키는 Spring Session이 지운다. */
 	public void end(HttpServletRequest request) {
 		HttpSession session = request.getSession(false);
