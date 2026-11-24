@@ -1,5 +1,6 @@
 package com.itting.burrow.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.itting.burrow.domain.BurrowEntrance;
@@ -18,6 +19,23 @@ public interface BurrowEntranceRepository extends JpaRepository<BurrowEntrance, 
 
 	/** 땅굴의 입구. 땅굴 하나에 하나다. */
 	Optional<BurrowEntrance> findByBurrowId(Long burrowId);
+
+	@Query("""
+			SELECT DISTINCT e.campusFloorId
+			FROM BurrowEntrance e JOIN Burrow b ON b.id = e.burrowId JOIN User u ON u.id = b.userId
+			WHERE e.termId = :termId AND u.status = com.itting.user.domain.UserStatus.ACTIVE
+			""")
+	List<Long> findOccupiedFloorIds(@Param("termId") Long termId);
+
+	@Query("""
+			SELECT new com.itting.burrow.repository.FieldEntranceRow(b.id, u.id, e.slot, p.intro)
+			FROM BurrowEntrance e JOIN Burrow b ON b.id = e.burrowId JOIN User u ON u.id = b.userId
+			JOIN UserProfile p ON p.userId = u.id
+			WHERE e.termId = :termId AND e.campusFloorId = :campusFloorId
+			AND u.status = com.itting.user.domain.UserStatus.ACTIVE
+			ORDER BY e.slot
+			""")
+	List<FieldEntranceRow> findFieldEntrances(@Param("termId") Long termId, @Param("campusFloorId") Long campusFloorId);
 
 	/**
 	 * 캠퍼스-층 행을 트랜잭션이 끝날 때까지 잠근다. 같은 층에 자리 번호를 주는 일(온보딩 확정, 이사)을 한 줄로 세운다.

@@ -5,12 +5,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.itting.campus.domain.Campus;
+import com.itting.campus.domain.CampusErrorCode;
 import com.itting.campus.domain.CampusFloor;
 import com.itting.campus.dto.CampusListResponse;
 import com.itting.campus.dto.CampusListResponse.CampusResponse;
 import com.itting.campus.dto.CampusListResponse.FloorResponse;
 import com.itting.campus.repository.CampusFloorRepository;
+import com.itting.campus.repository.CampusFloorLocation;
 import com.itting.campus.repository.CampusRepository;
+import com.itting.global.error.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +48,12 @@ public class CampusService {
 						floorsByCampusId.getOrDefault(campus.getId(), List.of())))
 				.toList();
 		return new CampusListResponse(items);
+	}
+
+	/** 캠퍼스 선택 목록에 나오는 층의 이름과 번호다. */
+	public CampusFloorLocation getAvailableFloor(Long campusFloorId) {
+		return campusFloorRepository.findAvailableLocation(campusFloorId)
+				.orElseThrow(() -> new BusinessException(CampusErrorCode.CAMPUS_FLOOR_NOT_FOUND));
 	}
 
 }
