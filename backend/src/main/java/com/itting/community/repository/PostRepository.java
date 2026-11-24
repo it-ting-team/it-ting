@@ -18,6 +18,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	@Query("SELECT p FROM Post p WHERE p.id = :id")
 	Optional<Post> findByIdForUpdate(@Param("id") Long id);
 
+	/**
+	 * 글을 트랜잭션이 끝날 때까지 다른 트랜잭션이 바꾸지 못하게 한다(공유 잠금). 글을 지우는 트랜잭션({@link #findByIdForUpdate})과
+	 * 순서가 정해지므로, 지워지는 글에 댓글이 새로 달리지 않는다. 댓글을 쓸 때 쓴다.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_READ)
+	@Query("SELECT p FROM Post p WHERE p.id = :id")
+	Optional<Post> findByIdForShare(@Param("id") Long id);
+
 	/** 조회수에 1을 더한다. 읽고 쓰지 않고 SQL 한 번으로 더해 동시에 열어도 빠지지 않는다. */
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
 	@Query(value = "UPDATE post SET view_count = view_count + 1 WHERE id = :id", nativeQuery = true)

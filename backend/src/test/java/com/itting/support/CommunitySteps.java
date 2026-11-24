@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 커뮤니티 테스트가 함께 쓰는 값. 글 · 댓글 · 좋아요 · 저장 · 사진을 DB에 바로 넣는다(좋아요 · 댓글 · 사진 올리기 API가 생기기 전).
+ * 커뮤니티 테스트가 함께 쓰는 값. 글 · 댓글 · 좋아요 · 저장 · 사진을 DB에 바로 넣는다(테스트의 준비 단계라 API를 거치지 않는다).
  * 시각은 UTC로 넣는다.
  */
 @Component
@@ -108,25 +108,53 @@ public class CommunitySteps {
 
 	/** 댓글(답글이면 parentId). 본문은 버전 1이다. */
 	public long comment(long postId, long authorId, Long parentId, String status) {
+		return comment(postId, authorId, parentId, null, status, "댓글입니다", null);
+	}
+
+	/**
+	 * 댓글(답글이면 parentId, 답글에 다시 답했으면 mentionUserId). 본문은 버전 1이다.
+	 *
+	 * @param createdAt 쓴 시각. null이면 지금
+	 */
+	public long comment(long postId, long authorId, Long parentId, Long mentionUserId, String status, String content,
+			Instant createdAt) {
+		LocalDateTime at = createdAt == null ? LocalDateTime.now(ZoneOffset.UTC) : utc(createdAt);
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		jdbcTemplate.update(connection -> {
 			var statement = connection.prepareStatement("""
-					INSERT INTO comment (post_id, author_id, parent_id, status, created_at, updated_at, deleted_at)
-					VALUES (?, ?, ?, ?, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6), ?)
+					INSERT INTO comment (post_id, author_id, parent_id, mention_user_id, status, created_at, updated_at,
+					                     deleted_at)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 					""", new String[] { "id" });
 			statement.setLong(1, postId);
 			statement.setLong(2, authorId);
 			statement.setObject(3, parentId);
-			statement.setString(4, status);
-			statement.setObject(5, "DELETED".equals(status) ? LocalDateTime.now(ZoneOffset.UTC) : null);
+			statement.setObject(4, mentionUserId);
+			statement.setString(5, status);
+			statement.setObject(6, at);
+			statement.setObject(7, at);
+			statement.setObject(8, "DELETED".equals(status) ? at : null);
 			return statement;
 		}, keyHolder);
 		long commentId = keyHolder.getKey().longValue();
-		jdbcTemplate.update("""
-				INSERT INTO comment_version (comment_id, version, content, created_at)
-				VALUES (?, 1, '댓글입니다', UTC_TIMESTAMP(6))
-				""", commentId);
+		addCommentVersion(commentId, 1, content, at);
 		return commentId;
+	}
+
+	public void addCommentVersion(long commentId, int version, String content) {
+		addCommentVersion(commentId, version, content, LocalDateTime.now(ZoneOffset.UTC));
+	}
+
+	private void addCommentVersion(long commentId, int version, String content, LocalDateTime at) {
+		jdbcTemplate.update("""
+				INSERT INTO comment_version (comment_id, version, content, created_at) VALUES (?, ?, ?, ?)
+				""", commentId, version, content, at);
+	}
+
+	public void commentLike(long commentId, long userId) {
+		jdbcTemplate.update(
+				"INSERT INTO comment_like (comment_id, user_id, created_at) VALUES (?, ?, UTC_TIMESTAMP(6))", commentId,
+				userId);
 	}
 
 	/** 올린 사진. 올리는 API가 생기기 전이라 줄을 바로 넣는다. */

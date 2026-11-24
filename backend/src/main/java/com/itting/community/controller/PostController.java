@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 커뮤니티 글({@code docs/api/08-community.md}). 모두 로그인이 필요하고, 온보딩과 이번 학기 고르기를 마친 계정만 부른다.
  */
-@Tag(name = "08 커뮤니티", description = "글 목록 · 쓰기 · 상세 · 수정 · 삭제 · 조회수 · 다음 읽을 글 · 인기 글")
+@Tag(name = "08 커뮤니티", description = "글 · 댓글 · 좋아요 · 저장")
 @RestController
 @RequestMapping("/api/v1/posts")
 public class PostController {

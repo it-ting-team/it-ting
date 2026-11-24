@@ -18,6 +18,15 @@ public enum CommunityErrorCode implements ErrorCode {
 	POST_EDIT_NOT_ALLOWED(HttpStatus.CONFLICT, "신고로 가려진 글은 고칠 수 없습니다."),
 
 	/**
+	 * 없거나 삭제된 댓글. 답하려는 댓글이 이 글에 없거나 가려진 경우, 가려진 댓글이나 가려진 글의 댓글에 좋아요를 누르는 경우에도
+	 * 쓴다(KAN-52).
+	 */
+	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "없거나 삭제된 댓글입니다."),
+
+	/** 신고로 가려진 댓글이나, 신고로 가려진 글의 댓글은 고칠 수 없다. */
+	COMMENT_EDIT_NOT_ALLOWED(HttpStatus.CONFLICT, "신고로 가려진 댓글은 고칠 수 없습니다."),
+
+	/**
 	 * 글에 연결하려는 모임이 없거나 삭제됨. 모임 테이블이 생기기 전이라 지금은 어떤 모임 id에도 이 코드로 답한다.
 	 * 08 커뮤니티 ③(KAN-53)에서 모임 영역의 코드로 바꾼다.
 	 */
