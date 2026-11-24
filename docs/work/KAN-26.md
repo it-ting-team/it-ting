@@ -111,7 +111,7 @@ flowchart TD
 - 병합 흐름 스크립트: `feature/be/KAN-1-x` → `dev`, `dev` → `test`, `test` → `main`, `hotfix/be/KAN-1-x` → `main` 통과. `chore/be/KAN-1-x` → `test`, `dev` → `main` 실패(종료 코드 1)
 - 마이그레이션 스크립트(scratchpad의 임시 저장소): 새 파일 추가 통과, `V1__init.sql` 수정 · 삭제 · 이름 변경 실패, 테스트 전용 마이그레이션 수정 통과, 기준 브랜치가 앞서 간 경우 통과. 이 브랜치(`origin/dev` 기준) 통과
 - gitleaks v8.30.1(체크섬 확인): 무작위 값으로 만든 가짜 Discord · Mattermost 웹후크 URL을 `gitleaks dir`로 → 두 규칙 모두 잡음. 새로 만든 파일 → 없음
-- 워크플로 전체: 이 PR의 실제 실행으로 확인(PR을 연 뒤 채움)
+- 워크플로 전체: PR #39의 첫 실행에서 job 7개 모두 통과. 백엔드 빌드 · 테스트 5분 17초, 나머지는 각 10초 이내. gitleaks는 체크섬 확인 뒤 PR의 커밋 1개를 검사
 - `./gradlew build` 통과. 테스트 375개, 실패 0(백엔드 코드는 바꾸지 않음)
 - 로컬 코드 리뷰: P0 0건, P1 1건 고침(긴급 수정 절이 병합 흐름 검사와 어긋남)
 
