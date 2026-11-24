@@ -6,6 +6,7 @@ import java.util.Map;
 import com.itting.burrow.domain.Burrow;
 import com.itting.burrow.domain.BurrowErrorCode;
 import com.itting.burrow.repository.BurrowRepository;
+import com.itting.burrow.service.BurrowService;
 import com.itting.global.error.BusinessException;
 import com.itting.global.error.CommonErrorCode;
 import com.itting.guestbook.domain.GuestbookEntry;
@@ -14,6 +15,8 @@ import com.itting.guestbook.domain.GuestbookErrorCode;
 import com.itting.guestbook.dto.GuestbookEntryListResponse;
 import com.itting.guestbook.dto.GuestbookEntryListResponse.GuestbookEntryResponse;
 import com.itting.guestbook.repository.GuestbookEntryRepository;
+import com.itting.notification.domain.NotificationType;
+import com.itting.notification.service.NotificationService;
 import com.itting.user.dto.UserDisplayResponse;
 import com.itting.user.service.UserDisplayService;
 import org.springframework.data.domain.Page;
@@ -23,7 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 방명록 글을 읽고 지운다. 땅굴 주인과 방문자가 함께 쓴다. 글을 쓰는 일은 05 탐색 · 방문에서 한다.
+ * 땅굴 방문자의 방명록 작성과 방명록 조회 · 삭제를 처리한다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -37,12 +40,28 @@ public class GuestbookService {
 	private final BurrowRepository burrowRepository;
 
 	private final UserDisplayService userDisplayService;
+	private final BurrowService burrowService;
+	private final NotificationService notificationService;
 
 	public GuestbookService(GuestbookEntryRepository guestbookEntryRepository, BurrowRepository burrowRepository,
-			UserDisplayService userDisplayService) {
+			UserDisplayService userDisplayService, BurrowService burrowService, NotificationService notificationService) {
 		this.guestbookEntryRepository = guestbookEntryRepository;
 		this.burrowRepository = burrowRepository;
 		this.userDisplayService = userDisplayService;
+		this.burrowService = burrowService;
+		this.notificationService = notificationService;
+	}
+
+	@Transactional
+	public GuestbookEntryResponse createEntry(Long burrowId, Long userId, String content) {
+		Burrow burrow = burrowService.lockForInteraction(burrowId, userId);
+		if (burrow.getUserId().equals(userId)) {
+			throw new BusinessException(BurrowErrorCode.OWN_BURROW_NOT_ALLOWED);
+		}
+		GuestbookEntry entry = guestbookEntryRepository.save(GuestbookEntry.create(burrowId, userId, content));
+		notificationService.notify(burrow.getUserId(), NotificationType.GUESTBOOK_ENTRY_CREATED, userId, null);
+		return new GuestbookEntryResponse(entry.getId(), userDisplayService.get(userId),
+				entry.getContent(), entry.getCreatedAt(), true, false);
 	}
 
 	/**

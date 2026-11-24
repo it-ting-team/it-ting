@@ -532,7 +532,7 @@ GET /api/v1/me/daily-recommendation
 | 이름 | 타입 | 설명 | 값이 오는 곳 |
 |---|---|---|---|
 | `hasReceived` | 참/거짓 | 오늘 추천을 받았는지 | 계산: `daily_recommendation`에 요청한 사람의 오늘 날짜 줄이 있는지 |
-| `recommendedOn` | 날짜 | 서버가 오늘로 보는 추천 기준 날짜 | 계산: 지금 시각의 추천 기준 날짜 |
+| `recommendedOn` | 날짜 | 한국 시각(Asia/Seoul)의 오늘 날짜. 자정에 바뀐다 | 계산: 지금 시각을 한국 날짜로 바꾼 값 |
 | `items` | 목록 | 오늘 추천된 사람. 0 ~ 3명 | |
 | `items[].burrowId` | 숫자 | 그 사람의 땅굴 id | `burrow.id` |
 | `items[].owner` | 객체 | 추천된 사람의 [사용자 표시](00-common.md#사용자-표시). "땅굴 방문하기"는 `owner.id`로 남의 땅굴을 부른다 | `daily_recommendation_member.target_user_id`의 계정 |
@@ -720,7 +720,7 @@ GET /api/v1/users/52/burrow
 - 가구, 무드, 우체통의 모습은 담지 않는다. 방명록 글의 내용도 담지 않고 글 수만 준다.
 - 내 계정 id로 부르면 `isMine`이 `true`, `isRegular`가 `false`, `chat.status`가 `NONE`이다.
 - 정지된 사람의 땅굴도 준다.
-- 단골 저장(KAN-47) 전까지 `isRegular`는 `false`다. 대화 요청과 대화방(KAN-55 · KAN-56)이 연결되기 전까지 `chat`은 `{"status":"NONE","chatRoomId":null}`이다.
+- `isRegular`는 요청한 사람이 단골로 담았는지에 따라 정한다. 대화 요청과 대화방(KAN-55 · KAN-56)이 연결되기 전까지 `chat`은 `{"status":"NONE","chatRoomId":null}`이다.
 
 ### 응답 예시
 
@@ -780,7 +780,7 @@ GET /api/v1/users/52/burrow
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
 | 경로 | `burrowId` | 숫자 | ✓ | 글을 남길 땅굴의 id |
-| 본문 | `content` | 문자열 | ✓ | 본문. 1 ~ 50자. 공백만으로는 쓸 수 없다 |
+| 본문 | `content` | 문자열 | ✓ | 입력한 그대로 1 ~ 50자. 공백만 있는 글은 쓸 수 없으며, 앞뒤 공백도 글자 수에 포함한다 |
 
 ```text
 POST /api/v1/burrows/27/guestbook-entries
@@ -975,6 +975,5 @@ POST /api/v1/chat-requests
 ## 구현 단계로 넘기는 것
 
 - 들판 상세는 입구를 한 번에 주고 주인 정보·관심사·질문과 답변을 묶어서 읽는다. 응답 크기가 문제가 되면 입구를 나눠 주는 방법을 검토한다(KAN-46).
-- 오늘의 추천 기준 날짜가 바뀌는 시각(DB 설계에서도 구현 단계로 넘겼다)
 - 캠퍼스 · 층이나 기수를 고르지 않고 전체에서 추천받을 수 있는지(명세의 보류한 결정이다)
 - 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
