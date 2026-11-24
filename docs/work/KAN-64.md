@@ -33,7 +33,7 @@
 | 9 | PR 수 | 하나. 본문에 커밋 묶음 표로 리뷰 순서를 안내 | 사용자 (2026-11-23) |
 | 10 | 실제 백엔드 연결 확인 | 다음 티켓(영역별). 이번에는 목 서버로 전 화면 확인 | 사용자 (2026-11-23) |
 | 11 | 한 파일에 여러 화면이 든 곳(로그인 · 회원가입 · 비밀번호 찾기, 게시판 · 글쓰기 · 내 활동) | 파일을 나누지 않고, 뒤 화면 커밋은 주소(`page.tsx`)만 넣고 본문에 까닭을 적음 | 사용자 (2026-11-23) |
-| 12 | 기준 명세 버전 | `dev` `61e6c10`(KAN-54 병합)까지 반영. 이후 바뀌면 PR 전에 다시 맞춤 | 사용자 (2026-11-23) |
+| 12 | 기준 명세 버전 | `dev` `61e6c10`(KAN-54 병합)까지 반영. 이후 바뀌면 PR 전에 다시 맞춤 → PR 전에 `fa73cd7`(KAN-58 병합)까지 확인해 맞춤 | 사용자 (2026-11-23) |
 | 13 | 버전 · 패키지 매니저 | Next.js 16.4.6 · npm · Node 24.18(`frontend/.nvmrc`). 이 조합으로 테스트 · 스모크 · CI(우분투, Node 24)까지 통과. KAN-25에서 다르게 정했다면 그쪽을 따른다 | 사용자 (2026-11-24, 제안대로) |
 | 14 | 린트 | Next 기본 규칙 + React Compiler 규칙은 경고로(지금 경고 55, 오류 0). CI 는 오류만 막음. React Compiler 규칙을 오류로 하면 three.js · 애니메이션 코드 대부분을 다시 써야 해서, 코드 규칙(KAN-4)에서 정할 때 맞춘다 | 사용자 (2026-11-24, 제안대로) |
 | 15 | 큰 파일 | 3D 모델 · 텍스처 약 13MB 를 Git LFS 없이 그대로. LFS 는 CI · 클론 설정이 늘고, 모델이 자주 바뀌지 않는다 | 사용자 (2026-11-24, 제안대로) |
@@ -113,14 +113,16 @@ flowchart TD
 | 앱 틀 | 34 ~ 35 | 에러 경계 · 없는 주소 · 오프라인 띠, 로그인 영역 틀 · 상단 메뉴 |
 | 화면 | 36 ~ 57 | `src/app/` 주소와 `src/screens/` 화면: 랜딩 · 인증 · 온보딩 · 내 땅굴 · 방문 · 탐색 · 채팅 · 모임 · 게시판 · 알림 · 설정 · 관리자 · 실험실 |
 | 테스트 · CI · 문서 | 58 ~ 62 | 영역을 걸친 테스트, `scripts/smoke.mjs` · `scripts/check-labs-off.mjs`, `.github/workflows/frontend-ci.yml`, `frontend/README.md`, `AGENTS.md` 한 줄 |
-| 로컬 리뷰 고침 | 64 ~ | 아래 "확인한 것"의 P1 |
+| 로컬 리뷰 고침 | 64 ~ 68 | 아래 "확인한 것"의 P1 |
+| 최신 명세 | 70 | KAN-58: 푸시 공개 키가 없을 때(`null`) 알림 켜기 안내 |
 
 ### 확인한 것
 
 - 커밋 62개 모두 커밋 전에 `tsc --noEmit` · `eslint`(오류 0, 마지막 경고 55) · `vitest` · `next build` 통과, 59번부터 실험실 빠짐 검사 통과. 서명 62개 모두 확인됨(`G`)
 - 리뷰 고친 뒤: 타입 · 린트(오류 0, 경고 55) · 단위 테스트 641개(2 todo) · 배포 빌드 · 실험실 빠짐 검사 통과
 - 화면 스모크(헤드리스 크롬, 실험실 켠 빌드): 가속 켬 106개 · 가속 끔 106개 모두 OK, 경고 · 실패 0
-- `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음. `frontend/` 밖은 `.github/workflows/frontend-ci.yml` · `AGENTS.md` 한 줄 · 이 문서
+- PR 전 `dev` 가 `fa73cd7`(KAN-58 병합)로 나아감: 바뀐 명세는 `docs/api/10-settings.md`(`pushPublicKey` 가 `null` 일 수 있음, 공지 제목 100자) · `docs/db/notification.md`. `pushPublicKey` `null` 을 처리하는 커밋을 더했고, 새 명세 문서를 놓고 빌드 · 타입 · 린트 · 테스트 641개 통과
+- `git merge-tree --write-tree HEAD origin/dev`(`fa73cd7`): 충돌 없음. `frontend/` 밖은 `.github/workflows/frontend-ci.yml` · `AGENTS.md` 한 줄 · 이 문서
 - 로컬 코드 리뷰(영역 넷으로 나눠 `AGENTS.md` Code Review Rules 기준): P0 0건, P1 10건 고침
   1. 방문자 뷰 방명록이 서버의 `canDelete` · `canReport`를 무시하고 목 계정 id 와 비교 → 실제 모드에서 내 글에 "삭제"가 없고 "신고"만 보임 (`GuestbookModal.tsx`)
   2. 프로필 팝업의 "나" 판별이 목 계정 id → 실제 모드에서 내 프로필에 신고 아이콘 (`ProfilePopup.tsx`, `GET /me` 의 `userId` 로)
@@ -139,6 +141,7 @@ flowchart TD
 - 로컬 리뷰 고침을 62개 뒤 커밋으로 더했다(위 10건)
 - 재설정 링크 주소를 KAN-41 명세(`/password-reset/{token}`)에 맞췄다. 프로토타입 때 질문(백엔드 질문 02-4)으로 올렸던 것인데 명세에서 이미 정해졌다
 - 화면 스모크 화면이 105 → 106개(재설정 링크 주소 하나 늘어남)
+- PR 전에 `dev` 에 들어온 KAN-58 명세(`pushPublicKey` 가 `null`)에 맞추는 커밋을 더했다
 
 ### 남은 일
 
