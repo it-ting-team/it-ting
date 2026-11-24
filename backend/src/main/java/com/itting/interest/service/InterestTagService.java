@@ -1,7 +1,11 @@
 package com.itting.interest.service;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.itting.interest.dto.InterestTagResponse;
@@ -44,6 +48,23 @@ public class InterestTagService {
 				.map(tag -> new InterestTagResponse(tag.id(), tag.name(), tag.interestCategoryId(),
 						viewerInterestIds.contains(tag.id())))
 				.toList();
+	}
+
+	/**
+	 * 여러 사람의 관심사 가운데 보는 사람과 겹치는 것만 준다. 사람마다 그 사람이 고른 순서이고 {@code isShared}는 모두 true다.
+	 * 목록의 카드마다 부르지 않고 한 번에 읽는다.
+	 *
+	 * @return 계정 id → 겹치는 관심사 태그. 겹치는 것이 없는 사람은 담지 않는다
+	 */
+	public Map<Long, List<InterestTagResponse>> getSharedTags(Collection<Long> ownerIds, Long viewerId) {
+		Map<Long, List<InterestTagResponse>> shared = new LinkedHashMap<>();
+		if (ownerIds.isEmpty()) {
+			return shared;
+		}
+		userInterestRepository.findSharedInterests(ownerIds, viewerId).forEach(row -> shared
+				.computeIfAbsent(row.ownerId(), id -> new ArrayList<>())
+				.add(new InterestTagResponse(row.interestId(), row.name(), row.interestCategoryId(), true)));
+		return shared;
 	}
 
 }
