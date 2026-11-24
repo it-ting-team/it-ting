@@ -68,6 +68,10 @@ public class Post extends BaseTimeEntity {
 		return authorId.equals(userId);
 	}
 
+	public boolean isPublic() {
+		return status == PostStatus.PUBLIC;
+	}
+
 	public boolean isDeleted() {
 		return status == PostStatus.DELETED;
 	}
