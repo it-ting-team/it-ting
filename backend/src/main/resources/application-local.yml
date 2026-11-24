@@ -30,11 +30,6 @@ itting:
     webhooks:
       15: ${MATTERMOST_WEBHOOK_URLS_15:}
       16: ${MATTERMOST_WEBHOOK_URLS_16:}
-  push:
-    # ./gradlew vapidKeys로 만든 키를 .env에 넣는다(.env.example 참고). 비어 있으면 푸시만 보내지 않는다.
-    public-key: ${ITTING_PUSH_PUBLIC_KEY:}
-    private-key: ${ITTING_PUSH_PRIVATE_KEY:}
-    subject: ${ITTING_PUSH_SUBJECT:}
 
 management:
   endpoint:

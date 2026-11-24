@@ -43,6 +43,9 @@ class WebPushSender {
 
 	private final VapidSigner signer;
 
+	/** 푸시를 보낼 수 있을 때만 값이 있다. */
+	private final String publicKey;
+
 	private final boolean allowLocalEndpoints;
 
 	private final HttpClient httpClient;
@@ -50,6 +53,7 @@ class WebPushSender {
 	WebPushSender(PushProperties properties, JsonMapper jsonMapper, Clock clock) {
 		this.allowLocalEndpoints = properties.allowLocalEndpoints();
 		this.signer = createSigner(properties, jsonMapper, clock);
+		this.publicKey = signer == null ? null : properties.publicKey().strip();
 		this.httpClient = HttpClient.newBuilder()
 				.connectTimeout(CONNECT_TIMEOUT)
 				.followRedirects(HttpClient.Redirect.NEVER)
@@ -59,6 +63,11 @@ class WebPushSender {
 	/** 푸시를 보낼 준비가 됐는지. 키가 비어 있거나 틀렸으면 거짓이다. */
 	boolean isEnabled() {
 		return signer != null;
+	}
+
+	/** 브라우저가 구독을 만들 때 쓰는 공개 키. 푸시를 보낼 수 없으면(키가 비었거나 틀림) null이다. */
+	String publicKey() {
+		return publicKey;
 	}
 
 	/**

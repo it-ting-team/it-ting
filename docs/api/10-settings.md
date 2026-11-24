@@ -454,7 +454,7 @@ GET /api/v1/me/notification-settings
 | `isCommunityOn` | 참/거짓 | 커뮤니티 알림을 켰는지 | `notification_setting.community_on` |
 | `isBurrowOn` | 참/거짓 | 땅굴 알림을 켰는지 | `notification_setting.burrow_on` |
 | `isNoticeOn` | 참/거짓 | 공지 알림을 켰는지 | `notification_setting.notice_on` |
-| `pushPublicKey` | 문자열 | 브라우저가 푸시 구독을 만들 때 쓰는 공개 키. 서버 설정에 푸시 키가 없으면 `null`이다. 이때 서버는 푸시를 보내지 않는다 | 서버 설정 `itting.push.public-key` |
+| `pushPublicKey` | 문자열 | 브라우저가 푸시 구독을 만들 때 쓰는 공개 키. 서버 설정의 푸시 키(공개 키, 개인 키, 연락처) 가운데 하나라도 없거나 키가 틀리면 `null`이다. 이때 서버는 푸시를 보내지 않는다 | 서버 설정 `itting.push.public-key` |
 
 ### 주는 방식
 
