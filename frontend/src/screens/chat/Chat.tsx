@@ -8,6 +8,7 @@ import ConnectionStrip from '../../components/ConnectionStrip'
 import { CalendarIcon, ChatIcon, CloseIcon, CompassIcon, HomeIcon, PenIcon, PinIcon, PlusIcon, SearchIcon, SendIcon } from '../../components/Icons'
 import { ErrorState, SkeletonRows } from '../../components/AsyncState'
 import { ME_ID, USERS, toneOf } from '../../data/mock'
+import { useUserProfile } from '../../api/onboarding'
 import { catNameOf } from '../../data/meetupStore'
 import { meetupToneOf } from '../../data/meetupCategory'
 import { getMyWorn } from '../../data/moleItems'
@@ -111,8 +112,9 @@ export default function Chat({ requests }: { requests?: boolean }) {
 }
 
 /** 내 두더지 (찻방). 내 프로필 · 두더지는 내 땅굴 영역의 값 (명세: GET /users/{내 id}/profile) */
-const meGuest = (): TeaGuest => ({ id: ME_ID, name: USERS[ME_ID]?.nickname ?? '나', worn: getMyWorn(), me: true })
-const guestOf = (p: Person, myId: string): TeaGuest => (p.id === myId ? meGuest() : { id: p.id, name: p.nickname, worn: p.worn ?? [], gone: p.id === GONE_ID })
+// 실제 모드의 내 id · 닉네임은 RoomView 가 GET /me · GET /users/{내 id}/profile 로 넘김, 모습은 getMyWorn (실제 모드는 AppShell MyWornSync 가 서버 값으로 맞춤)
+const meGuest = (id: string = ME_ID, name: string = USERS[ME_ID]?.nickname ?? '나'): TeaGuest => ({ id, name, worn: getMyWorn(), me: true })
+const guestOf = (p: Person, myId: string): TeaGuest => (p.id === myId ? meGuest(myId, p.nickname) : { id: p.id, name: p.nickname, worn: p.worn ?? [], gone: p.id === GONE_ID })
 
 /** 이름 첫 글자 타일 (03 Chat List Item) */
 function Initial({ text, tone, size = 44 }: { text: string; tone: string; size?: number }) {
@@ -169,7 +171,9 @@ const toPendingMessage = (p: PendingMessage, me: Person): ChatMessage => ({
 function RoomView({ room, onProfile, onToast }: { room: ChatRoomVM; onProfile: (p: Person) => void; onToast: (t: string) => void }) {
   const navigate = useNavigate()
   const myId = useMyId()
-  const me: Person = USERS[myId] ?? USERS[ME_ID]
+  // 실제 모드: 목 사용자(USERS)에 내가 없으므로 내 프로필(GET /users/{내 id}/profile)로. 받기 전에도 id 는 내 id (보내는 중 메시지가 오른쪽에)
+  const myProfile = useUserProfile(USERS[myId] ? null : myId)
+  const me: Person = useMemo(() => USERS[myId] ?? { ...USERS[ME_ID], ...(myProfile.data?.person ?? {}), id: myId }, [myId, myProfile.data])
   const run = useOptimistic()
   const msgsQ = useChatMessages(room.id)
   const pending = useOutbox(room.id)
@@ -217,8 +221,8 @@ function RoomView({ room, onProfile, onToast }: { room: ChatRoomVM; onProfile: (
   // 사용자별 마지막으로 말한 시각 (찻방 3D: 6명 초과일 때 누가 앉을지)
   const spoke = useMemo(() => { const r: Record<string, number> = {}; for (const m of msgs) if (!isNoticeMessage(m)) r[m.authorId] = Math.max(r[m.authorId] ?? 0, m.at); return r }, [msgs])
   const guests = useMemo<TeaGuest[]>(() => (room.kind === 'group'
-    ? [...room.members].sort((a, b) => Number(b.isMe) - Number(a.isMe)).map((x) => (x.isMe ? meGuest() : guestOf(x.person, myId)))
-    : [meGuest(), ...(partner ? [guestOf(partner, myId)] : [])]), [room, partner, myId])
+    ? [...room.members].sort((a, b) => Number(b.isMe) - Number(a.isMe)).map((x) => (x.isMe ? meGuest(myId, me.nickname) : guestOf(x.person, myId)))
+    : [meGuest(myId, me.nickname), ...(partner ? [guestOf(partner, myId)] : [])]), [room, partner, myId, me.nickname])
   const pickGuest = (id: string) => {
     const p = room.kind === 'group' ? room.members.find((x) => x.person.id === id)?.person : partner?.id === id ? partner : undefined
     if (p) onProfile(p)
