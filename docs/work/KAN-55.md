@@ -214,7 +214,7 @@ erDiagram
 | `chat/controller/ChatRequestController` | API 6개(Swagger 태그 `06 채팅`) |
 | `chat/dto/` | `ChatRequestCreateRequest`, `ChatRequestCreateResponse`, `ChatRequestListResponse`, `ChatRequestCountResponse`, `ChatRequestAcceptResponse`, `ChatRequestAcceptedDetailResponse` |
 | `user/repository/UserRepository` | `findBothForUpdate`: 두 사람을 id가 작은 것부터 잠근다 |
-| `interest/repository/UserInterestRepository`, `UserSharedInterest`, `interest/service/InterestTagService` | 여러 사람의 "나와 겹치는 관심사"를 한 번에 읽는다(`findSharedInterests`, `getSharedTags`). 목록 카드마다 부르면 요청 수만큼 쿼리가 나가서다 |
+| `interest/service/InterestTagService` | 여러 사람의 "나와 겹치는 관심사"를 한 번에 읽는다(`getSharedTags`). KAN-46이 더한 `getTagsForOwners`에서 겹치는 것만 고른다. 목록 카드마다 부르면 요청 수만큼 쿼리가 나가서다 |
 | `docs/db/chat.md` | `meetup_id` 논리 참조, `last_read_message_id` 물리 FK 없음(D), 제약 · 색인, "같은 두 사람의 일을 한 번에 하나씩 처리" 절 |
 | `docs/api/05-explore-visit.md` | 보내기 7에 인사가 있으면 새 메시지 알림(B), 요청을 막는 기준 항목에 KAN-55의 결정(E) |
 | `docs/api/06-chat.md` | 요청을 막는 기준 항목에 KAN-55의 결정(E) |
@@ -226,15 +226,15 @@ erDiagram
 
 - `./gradlew build` 통과. 테스트 504개(기존 431 + 새 73), 실패 0
 - 동시성 테스트가 실제로 잡는지 확인: `findBothForUpdate`의 잠금을 빼면 6개 가운데 5개가 실패하고, 잠그는 순서를 id 순서에서 인자 순서로 바꾸면 서로 동시에 보내는 테스트가 교착으로 실패한다. 원래대로 되돌렸다
-- `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음(커밋된 HEAD 기준. 아직 커밋 전이라 작업 트리는 포함하지 않는다)
-- 로컬 코드 리뷰(스킬 `code-review`): 실행하지 않았다. PR을 올리기 전에 한다
-- API 호출 결과(스킬 `api-evidence`: Swagger 스크린샷, 응답 텍스트): 실행하지 않았다. PR을 올리기 전에 한다
+- dev 병합: KAN-46(#41)이 먼저 병합되어 `InterestTagService`가 충돌했다. KAN-46의 `getTagsForOwners`를 쓰도록 합치고 전용 쿼리를 지운 뒤 `./gradlew build`를 다시 돌려 통과했다
+- 로컬 코드 리뷰(스킬 `code-review`): P0 0건, P1 0건
+- API 호출 결과(스킬 `api-evidence`): PR 본문 "호출 결과"
 
 ### 계획과 달라진 점
 
 - 마이그레이션 이름이 계획의 `V20261124_1530__create_chat.sql`이 아니라 만든 시각의 `V20261124_1544__create_chat.sql`이다(규칙: 번호는 파일을 만든 시각)
 - 마이그레이션에 CHECK를 더했다: `chat_request`의 `sender_id <> receiver_id`, `chat_room`의 `type`과 `meetup_id`가 맞음(`MEETUP`이면 `meetup_id` 필수, `DIRECT`이면 비어 있음). DB 설계의 규칙을 DB가 지키게 하려는 것이다
-- 목록의 `sharedInterests`를 위해 관심사 영역에 여러 사람을 한 번에 읽는 메서드를 더했다(`UserInterestRepository.findSharedInterests`, `InterestTagService.getSharedTags`). 계획의 "만들 것"에는 없었다. 아직 병합되지 않은 KAN-46 브랜치(`feature/be/KAN-46-explore-fields`)도 같은 두 파일에 비슷한 일괄 읽기(`getTagsForOwners`)를 더하므로, 나중에 병합하는 쪽에서 충돌이 난다. 그때 하나로 합치면 된다
+- 목록의 `sharedInterests`를 위해 관심사 영역에 여러 사람을 한 번에 읽는 메서드(`InterestTagService.getSharedTags`)를 더했다. 계획의 "만들 것"에는 없었다. 처음에는 전용 쿼리(`findSharedInterests`)를 만들었으나, 먼저 dev에 병합된 KAN-46이 같은 일괄 읽기(`getTagsForOwners`)를 더해 dev를 병합하면서 그것을 쓰도록 합쳤다
 - 받을 사람 확인(없는 사람 · 탈퇴 · 온보딩 안 함)을 잠그기 전에 하고, 잠근 뒤에 한 번 더 한다. 없는 계정 id를 `FOR UPDATE`로 잠그면 id 사이의 빈 곳이 잠겨 다른 계정의 가입이 기다리기 때문이다. 잠근 뒤에 다시 보는 것은 그사이에 탈퇴한 경우를 위해서다
 - 인사는 `null`이거나 빈 문자열(`""`)일 때만 "인사 없음"으로 본다. 공백만 있는 인사는 그대로 저장한다(명세가 공백을 말하지 않는다)
 - `NotificationReaderApiTests`가 등록하는 가짜 `ChatRequestReader`가 채팅의 실제 구현과 겹쳐, 가짜에 `@Primary`를 붙였다(그 테스트의 의도는 그대로다)
@@ -242,7 +242,7 @@ erDiagram
 ### 남은 일
 
 - 서연(KAN-48 모임 ①)에게 알리기: `chat_room`, `chat_room_member`, `chat_message`를 이 작업이 만들었다. `chat_room.meetup_id`에 FK가 없으니 `meetup` 테이블을 만들 때 새 마이그레이션으로 FK를 더해야 한다
-- KAN-46(남의 땅굴 조회의 `chat.status`): 이 작업이 만든 테이블로 읽을 수 있다. 두 사람 사이의 열린 1:1 대화방은 `ChatRoomRepository.findOpenDirectRoomIds`, 살아 있는 요청은 `ChatRequestRepository.findAlive`가 쓰는 기준을 따른다
+- 남의 땅굴 조회의 `chat.status`: KAN-46은 채팅이 없을 때 병합되어 늘 `NONE`을 준다(`BurrowExploreService`). 이 작업이 만든 테이블로 읽을 수 있으니 연결할 사람을 정해야 한다. 두 사람 사이의 열린 1:1 대화방은 `ChatRoomRepository.findOpenDirectRoomIds`, 살아 있는 요청은 `ChatRequestRepository.findAlive`가 쓰는 기준을 따른다
 - KAN-56(채팅 ②): 대화 목록 · 대화방 · 메시지 · 읽음 · 나가기 · 공지, `chat_message_image`. 메시지를 보낼 때 `ChatMessageCreatedEvent`를 같은 방식으로 낸다
 - KAN-57(채팅 ③): `ChatRequestCountChangedEvent`, `ChatMessageCreatedEvent`를 받아 `GET /api/v1/me/event-stream`으로 보낸다
 - KAN-61(회원 탈퇴): 탈퇴한 사람이 보내거나 받은 요청 지우기, 들어 있던 방에 `WITHDRAWN` 안내 메시지 넣기
