@@ -286,7 +286,7 @@ function RoomView({ room, onProfile, onToast }: { room: ChatRoomVM; onProfile: (
           ) : null}
         </header>
 
-        {meetup && <NoticeBar room={room} />}
+        {meetup && <NoticeBar room={room} onToast={onToast} />}
         {!room.readOnly && <ConnectionStrip />}
 
         <div className={s.messages} ref={scroller} aria-live="polite" aria-relevant="additions" onScroll={(e) => { if (e.currentTarget.scrollTop < 40) loadOlder() }}>
@@ -421,16 +421,17 @@ function Composer({ placeholder, onSend, onToast }: { placeholder: string; onSen
 }
 
 /** 공지: 맨 위 고정, 하나만. 쓸 수 있는 사람(canEditNotice = 주최자)에게만 쓰기·고치기·지우기. 공지가 없으면 참여자에게는 줄이 안 보임 */
-function NoticeBar({ room }: { room: ChatRoomVM }) {
+function NoticeBar({ room, onToast }: { room: ChatRoomVM; onToast: (t: string) => void }) {
   const run = useOptimistic()
   const [edit, setEdit] = useState(false)
+  const [askDelete, setAskDelete] = useState(false)
   const [text, setText] = useState(room.notice ?? '')
   if (!room.notice && !room.canEditNotice) return null
   const save = (next: string | null) => run.mutate({
     call: () => (next ? chatCalls.setNotice(room.id, next) : chatCalls.deleteNotice(room.id)),
     errorTitle: next ? '공지를 저장하지 못했어요' : '공지를 지우지 못했어요', errors: CHAT_ERRORS,
     patches: [patch<ChatRoomVM>(chatKeys.room(room.id), (d) => ({ ...d, notice: next?.trim() || null }))],
-  })
+  }, { onSuccess: () => onToast(next ? '공지를 저장했어요' : '공지를 지웠어요') })  // 00 공통 16 완료 토스트
   if (edit) {
     return (
       <form className={s.noticeEdit} onSubmit={(e) => { e.preventDefault(); save(text); setEdit(false) }}>
@@ -447,9 +448,12 @@ function NoticeBar({ room }: { room: ChatRoomVM }) {
       {room.canEditNotice && (
         <span className={s.noticeTools}>
           <button onClick={() => { setText(room.notice ?? ''); setEdit(true) }}>고치기</button>
-          <button onClick={() => save(null)}>지우기</button>
+          <button onClick={() => setAskDelete(true)}>지우기</button>
         </span>
       )}
+      {/* 00 공통 17 삭제 확인 (취소 / 삭제) */}
+      <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} title="공지를 지울까요?" desc="지운 공지는 되돌릴 수 없어요."
+        onConfirm={() => { setAskDelete(false); save(null) }} />
     </div>
   )
 }
