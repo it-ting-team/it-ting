@@ -61,6 +61,10 @@ itting:
   mail:
     # 인증 메일의 보내는 사람. 프로필마다 정한다.
     from: no-reply@itting.local
+  push:
+    # 브라우저가 푸시 구독을 만들 때 쓰는 공개 키(알림 설정이 준다). 공개해도 되는 값이다.
+    # 키를 만들어 넣는 일은 KAN-59(브라우저 푸시)에서 한다. 비어 있으면 알림 설정이 null을 준다.
+    public-key: ""
   # 비밀번호 재설정 링크(docs/api/02-auth.md)
   password-reset:
     link-ttl: 30m
