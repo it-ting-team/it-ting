@@ -200,7 +200,7 @@ Codex Code Review는 팀원 한 명이 Codex 설정에서 이 저장소의 Code 
 
 ### 스킬을 고칠 때
 
-원본 `.agents/skills/`를 고친 뒤 사본을 맞춘다. 두 폴더가 다르면 PR의 `agent-skills-sync` 검사가 실패한다.
+원본 `.agents/skills/`를 고친 뒤 사본을 맞춘다. 두 폴더가 다르면 PR의 CI 검사(스킬 동기화)가 실패한다.
 
 ```bash
 bash scripts/sync-agent-skills.sh
@@ -210,6 +210,7 @@ bash scripts/sync-agent-skills.sh
 
 - [브랜치 전략](docs/branch-strategy.md)
 - [커밋 메시지 규칙](docs/commit-convention.md)
+- [CI](docs/ci.md)
 - [서비스 명세](docs/spec/)
 - [DB 설계](docs/db/)
 - [API 공통 규칙](docs/api-convention.md), [API 명세](docs/api/)

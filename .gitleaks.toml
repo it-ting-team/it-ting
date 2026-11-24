@@ -1,0 +1,20 @@
+# gitleaks 설정. CI(.github/workflows/ci.yml의 secrets job)가 PR의 새 커밋을 이 설정으로 검사한다.
+# 기본 규칙(API 키, 토큰, 개인 키 등)에 이 프로젝트가 쓰는 웹후크 URL 규칙을 더한다.
+# 설명: docs/ci.md
+
+title = "it-ting gitleaks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "discord-webhook-url"
+description = "Discord 웹후크 URL"
+regex = '''https://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/api/webhooks/\d{5,}/[A-Za-z0-9_-]{20,}'''
+keywords = ["discord"]
+
+[[rules]]
+id = "mattermost-webhook-url"
+description = "Mattermost 들어오는 웹후크 URL"
+regex = '''https?://[A-Za-z0-9.-]+(?::\d+)?/hooks/[a-z0-9]{26}\b'''
+keywords = ["/hooks/"]

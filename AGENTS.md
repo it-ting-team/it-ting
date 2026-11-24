@@ -14,8 +14,10 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 | `docs/api/` | API 명세. 어떻게 주고받는가. 공통 규칙은 `docs/api-convention.md` |
 | `docs/branch-strategy.md` | 브랜치 이름, 병합 흐름, 보호 규칙 |
 | `docs/commit-convention.md` | 커밋 메시지, 작성자, 서명 |
+| `docs/ci.md` | PR CI 검사 목록, 실패했을 때 고치는 법 |
 | `docs/work/` | 작업 계획서 · 완료 보고서(`KAN-<번호>.md`). 템플릿은 `_template.md` |
 | `compose.yaml` | 로컬 MySQL, Redis |
+| `.github/workflows/ci.yml`, `scripts/ci/` | PR CI. 결과는 요약 job `ci` 하나로 모인다 |
 | `.agents/skills/` | 스킬 원본 |
 | `.claude/skills/` | 스킬 사본 (Claude Code용) |
 
@@ -104,6 +106,7 @@ com.itting
 - MUST: PR을 올리기 전에 스킬 `code-review`로 로컬 리뷰를 하고, P0과 P1 지적을 모두 고친다.
 - MUST: `backend/`를 바꿨으면 `./gradlew build`가 통과한다. 테스트는 Testcontainers로 MySQL과 Redis를 띄우므로 Docker가 켜져 있어야 한다.
 - MUST: DB나 세션(Redis)을 쓰는 테스트는 `@Import(TestcontainersConfiguration.class)`로 실제 MySQL과 Redis에서 돌린다. H2 같은 대체 DB나 가짜 Redis를 쓰지 않는다.
+- MUST: PR의 CI 검사 `ci`가 실패하면 `docs/ci.md`의 "실패했을 때"를 따라 고친 뒤 병합한다. 지금은 필수 검사가 아니라 GitHub가 막지는 않는다.
 - MUST: 작업 기록의 "결과"와 PR 본문에 "한눈에 보기" Mermaid 다이어그램을 넣는다. 흐름도는 늘 넣고, 순서가 중요한 처리는 시퀀스, 테이블을 바꾸면 ERD를 더한다(스킬 `work-plan`).
 
 PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 번 더 리뷰한다. AI 리뷰는 병합 조건이 아니다. 병합은 사람이 Codex 리뷰의 P0, P1 지적이 처리됐는지 확인하고 한다.
@@ -125,7 +128,7 @@ PR을 올린 뒤에는 Codex Code Review가 아래 `Code Review Rules`로 한 �
 
 1. 원본 `.agents/skills/<이름>/SKILL.md`를 고친다.
 2. `bash scripts/sync-agent-skills.sh`로 `.claude/skills/`에 복사한다.
-3. 두 폴더가 다르면 CI(`agent-skills-sync`)가 실패한다.
+3. 두 폴더가 다르면 CI(`ci`의 스킬 동기화 검사)가 실패한다.
 
 - MUST NOT: `.claude/skills/`를 직접 고치지 않는다.
 
