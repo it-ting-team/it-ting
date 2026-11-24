@@ -12,6 +12,7 @@ import org.testcontainers.utility.DockerImageName;
 /**
  * 테스트용 MySQL, Redis, Mailpit을 Docker 컨테이너로 띄운다. 로컬 compose.yaml과 같은 이미지와 설정을 쓴다.
  * Mattermost 웹후크는 {@link FakeMattermost}로 흉내 낸다. 테스트가 실제 메일이나 Mattermost로 보내는 일은 없다.
+ * 푸시 키는 비워 둔다(푸시를 보내지 않는다).
  * DB나 세션을 쓰는 테스트는 {@code @Import(TestcontainersConfiguration.class)}를 붙인다.
  */
 @TestConfiguration(proxyBeanMethods = false)
@@ -83,6 +84,10 @@ public class TestcontainersConfiguration {
 			registry.add("itting.mattermost.webhooks.20",
 					() -> fakeMattermost.url("down-20") + "," + FakeMattermost.refusedUrl());
 			registry.add("itting.mattermost.webhooks.21", () -> "");
+			// 로컬 .env의 실제 푸시 키가 테스트에 섞이지 않게 비운다. 푸시를 보내는 테스트는 키를 직접 넣은 보내는 쪽을 쓴다.
+			registry.add("itting.push.public-key", () -> "");
+			registry.add("itting.push.private-key", () -> "");
+			registry.add("itting.push.subject", () -> "");
 		};
 	}
 

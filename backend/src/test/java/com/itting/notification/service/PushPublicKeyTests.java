@@ -56,6 +56,27 @@ class PushPublicKeyTests {
 	}
 
 	@Test
+	void 개인_키와_연락처와_서버_안쪽_주소_허용_설정을_읽고_빠지면_비어_있고_허용하지_않는다() {
+		Binder full = new Binder(new MapConfigurationPropertySource(Map.of(
+				"itting.push.public-key", KEY,
+				"itting.push.private-key", "private-value",
+				"itting.push.subject", "mailto:team@example.com",
+				"itting.push.allow-local-endpoints", "true")));
+		Binder empty = new Binder(new MapConfigurationPropertySource(Map.of("itting.push.public-key", "")));
+
+		PushProperties configured = full.bind("itting.push", PushProperties.class).get();
+		PushProperties notConfigured = empty.bind("itting.push", PushProperties.class).get();
+
+		assertThat(configured).isEqualTo(new PushProperties(KEY, "private-value", "mailto:team@example.com", true));
+		assertThat(configured.isConfigured()).isTrue();
+		assertThat(notConfigured.privateKey()).isNull();
+		assertThat(notConfigured.subject()).isNull();
+		assertThat(notConfigured.allowLocalEndpoints()).isFalse();
+		assertThat(notConfigured.isConfigured()).isFalse();
+		assertThat(new PushProperties(KEY, "private-value", " ", false).isConfigured()).isFalse();
+	}
+
+	@Test
 	void 설정한_키를_그대로_주고_비었거나_공백이면_null을_준다() {
 		long userId = testUsers.createEmailUser("push-key@example.com", "mole1234!");
 
@@ -68,7 +89,7 @@ class PushPublicKeyTests {
 
 	private NotificationSettingService settingsWith(String publicKey) {
 		return new NotificationSettingService(notificationSettingRepository, userRepository, notificationQueryService,
-				events, new PushProperties(publicKey));
+				events, new PushProperties(publicKey, null, null, false));
 	}
 
 }
