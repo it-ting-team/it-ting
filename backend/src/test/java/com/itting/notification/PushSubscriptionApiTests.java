@@ -52,7 +52,7 @@ class PushSubscriptionApiTests {
 
 	private static final String P256DH = "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM";
 
-	private static final String AUTH = "tBHItJI5svbpez7KI4CCXg";
+	private static final String AUTH = "tBHItJI5svbpez7KI4CCXg"; // gitleaks:allow (테스트용 예시 값)
 
 	@Autowired
 	MockMvc mockMvc;

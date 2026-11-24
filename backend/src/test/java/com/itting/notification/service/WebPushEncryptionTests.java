@@ -24,17 +24,17 @@ class WebPushEncryptionTests {
 	// RFC 8291 부록 A의 예시 값
 	private static final String PLAINTEXT = "When I grow up, I want to be a watermelon";
 
-	private static final String APPLICATION_SERVER_PRIVATE_KEY = "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw";
+	private static final String APPLICATION_SERVER_PRIVATE_KEY = "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw"; // gitleaks:allow (RFC 8291 부록 A의 공개 예시 값)
 
 	private static final String APPLICATION_SERVER_PUBLIC_KEY =
 			"BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8";
 
-	private static final String USER_AGENT_PRIVATE_KEY = "q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94";
+	private static final String USER_AGENT_PRIVATE_KEY = "q1dXpw3UpT5VOmu_cf_v6ih07Aems3njxI-JWgLcM94"; // gitleaks:allow (RFC 8291 부록 A의 공개 예시 값)
 
 	private static final String USER_AGENT_PUBLIC_KEY =
 			"BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4";
 
-	private static final String AUTH_SECRET = "BTBZMqHH6r4Tts7J_aSIgg";
+	private static final String AUTH_SECRET = "BTBZMqHH6r4Tts7J_aSIgg"; // gitleaks:allow (RFC 8291 부록 A의 공개 예시 값)
 
 	private static final String SALT = "DGv6ra1nlYgDCS1FRnbzlw";
 
