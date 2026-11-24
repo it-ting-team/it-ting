@@ -9,7 +9,9 @@ import org.springframework.http.HttpStatus;
 public enum BurrowErrorCode implements ErrorCode {
 
 	/** 없는 땅굴. 주인이 탈퇴해 지워진 땅굴도 여기에 든다. */
-	BURROW_NOT_FOUND(HttpStatus.NOT_FOUND, "없는 땅굴입니다.");
+	BURROW_NOT_FOUND(HttpStatus.NOT_FOUND, "없는 땅굴입니다."),
+
+	OWN_BURROW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "내 땅굴에는 할 수 없는 일입니다.");
 
 	private final HttpStatus status;
 

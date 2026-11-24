@@ -40,6 +40,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 		return locked;
 	}
 
+	/** 계정 상태 확인 뒤 참조 행을 만드는 동안 상태 변경을 기다리게 한다. */
+	@Lock(LockModeType.PESSIMISTIC_READ)
+	@Query("SELECT u FROM User u WHERE u.id = :id")
+	Optional<User> findByIdForShare(@Param("id") Long id);
+
 	/** 이메일로 가입한 계정이 있는지. 탈퇴한 계정은 이메일을 비워 두므로 걸리지 않는다. */
 	boolean existsByEmail(String email);
 

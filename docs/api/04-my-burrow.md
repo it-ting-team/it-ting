@@ -107,7 +107,7 @@ GET /api/v1/me/burrow
 | `answers[].introQuestionId` | 숫자 | 질문의 id | `user_answer.intro_question_id` |
 | `answers[].question` | 문자열 | 질문 문구 | `intro_question.content` |
 | `answers[].answer` | 문자열 | 답변. 10 ~ 50자 | `user_answer.answer` |
-| `regularCount` | 숫자 | 내 땅굴을 단골로 담은 사람 수. 단골 기능([05 탐색 · 방문](README.md))이 생기기 전까지는 0 | 계산: `regular_burrow`에서 `burrow_id`가 내 땅굴인 줄 수 |
+| `regularCount` | 숫자 | 내 땅굴을 단골로 담은 사람 수 | 계산: `regular_burrow`에서 `burrow_id`가 내 땅굴인 줄 수 |
 | `guestbookCount` | 숫자 | 방명록 글 수 | 계산: `guestbook_entry`에서 내 땅굴에 달리고 가려지지 않은 줄 수 |
 | `entrance` | 객체 | 이번 학기 들판에 놓인 내 땅굴 입구. "탐색"을 누르면 이 들판으로 간다 | |
 | `entrance.termId` | 숫자 | 그 들판의 학기 id | `burrow_entrance.term_id` |
@@ -530,7 +530,6 @@ DELETE /api/v1/guestbook-entries/204
 ## 구현하며 정한 것
 
 - **방명록 목록의 `page` · `size`**(KAN-45): `page`는 1 이상, `size`는 1 ~ 20. 벗어나면 `400`. 글이 있는 페이지를 넘으면 빈 목록으로 `200`이다. 화면은 5개씩만 쓰고, 너무 큰 `size`로 한 번에 다 읽지 못하게 한다.
-- **단골 수**(KAN-45): 단골 테이블 `regular_burrow`와 담는 API는 05 탐색 · 방문에서 만든다. 그 전까지 `regularCount`는 늘 0이다.
 - **자기소개의 공백**(KAN-45): 앞뒤 공백을 지우고, 지운 뒤 비었으면 비운다. 공백뿐인 자기소개가 "아직 작성한 자기소개가 없어요" 대신 빈 칸으로 보이지 않게 한다. 150자는 답변처럼 문자 단위로 센다.
 - **빠진 키와 `null`**(KAN-45): 두더지의 네 부위와 `intro`는 키가 빠지면 `400`, `null`이면 "없음" · "비움"이다. 서버는 둘을 구분해 읽는다.
 - **비게 된 입구 자리 번호**(KAN-44, KAN-45): 다음 번호는 그 들판의 가장 큰 번호 + 1이다. 가운데 빈 번호는 다시 쓰지 않는다([DB 설계](../db/burrow.md#burrow_entrance)).
