@@ -18,7 +18,7 @@ import javax.imageio.ImageIO;
 public final class TestImages {
 
 	/** 메타데이터에 넣는 글자. 저장한 사진에 남으면 안 된다. */
-	public static final String SECRET = "GPS-37.5665N-126.9780E";
+	public static final String SECRET = "GPS-37.5665N-126.9780E"; // gitleaks:allow 비밀값이 아닌 가짜 위치 글자
 
 	private TestImages() {
 	}
