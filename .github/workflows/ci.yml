@@ -153,6 +153,7 @@ jobs:
         run: |
           bash -n deploy/deploy.sh
           bash -n deploy/setup-server.sh
+          bash -n deploy/set-env.sh
 
   merge-flow:
     name: 병합 흐름
