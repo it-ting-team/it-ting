@@ -143,7 +143,7 @@ class GoogleSignupApiTests {
 
 		MockHttpServletResponse again = google.loginWith(SUB, EMAIL).andExpect(status().isFound()).andReturn().getResponse();
 
-		assertThat(location(again)).isEqualTo("http://localhost:3000/");
+		assertThat(location(again)).isEqualTo("http://localhost:3000/auth/google");
 		mockMvc.perform(get("/api/v1/me").cookie(sessionCookie(again)))
 				.andExpect(jsonPath("$.data.userId").value(userId));
 		mockMvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)
@@ -235,7 +235,7 @@ class GoogleSignupApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo("http://localhost:3000/signup/ssafy?method=google");
+		assertThat(location(response)).isEqualTo("http://localhost:3000/signup/ssafy?via=google");
 		// 이전 이메일 가입 기록은 지워져 그 쿠키로는 더 진행할 수 없다.
 		signup.sendSsafyCode(emailSignup, 15, newMattermostId())
 				.andExpect(status().isConflict())
@@ -281,7 +281,7 @@ class GoogleSignupApiTests {
 		MockHttpServletResponse response = google.loginWith(sub, email)
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
-		assertThat(location(response)).isEqualTo("http://localhost:3000/signup/ssafy?method=google");
+		assertThat(location(response)).isEqualTo("http://localhost:3000/signup/ssafy?via=google");
 		return SignupSteps.signupCookie(response);
 	}
 

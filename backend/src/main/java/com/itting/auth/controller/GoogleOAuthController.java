@@ -60,8 +60,8 @@ public class GoogleOAuthController {
 					+ "만들지 않는다), 설정에서 시작한 확인이면 확인 기록만 남긴다. 어느 경우든 프론트엔드 주소로 보내고(302) 실패는 error로 알린다. "
 					+ "응답 틀을 쓰지 않고, 로그인은 필요 없다.")
 	@ApiResponse(responseCode = "302",
-			description = "Location: 로그인됨 /, 처음 쓰는 계정 /signup/ssafy?method=google, 로그인 실패 /login?error=<code>"
-					+ "(정지면 reason, endsAt도), 연동 확인 /settings/google, 탈퇴 확인 /settings/withdraw")
+			description = "Location: 로그인됨 /auth/google, 처음 쓰는 계정 /signup/ssafy?via=google, 로그인 실패 /login?error=<code>"
+					+ "(정지면 reason, endsAt도), 연동 확인 /settings/google, 탈퇴 확인 /settings/leave")
 	@AllowDuringOnboarding
 	@AllowBeforeNewTerm
 	@GetMapping("/callback")
