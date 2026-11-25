@@ -177,6 +177,7 @@ erDiagram
 - `./gradlew build` 통과. 테스트 503개(기존 462 + 새 41)
 - `git merge-tree --write-tree`: `origin/dev`(`a0cc1e4`), 열려 있는 PR #42(KAN-55) · #44(KAN-60)의 브랜치와 모두 충돌 없음(2026-11-25)
 - 로컬 코드 리뷰: P0 0건, P1 0건
+- PR CI: 비밀값 검사(gitleaks)가 테스트 도우미의 가짜 위치 글자 상수(`TestImages.SECRET`)를 API 키로 잘못 잡았다. 그 줄에 `gitleaks:allow`를 달고, 이미 푸시한 커밋의 줄은 `.gitleaksignore`에 적었다(`docs/ci.md`의 "비밀값이 잡혔을 때" 4)
 
 ### 계획과 달라진 점
 
