@@ -1656,8 +1656,8 @@ Content-Type: multipart/form-data
 
 ### 서버가 하는 일
 
-1. 파일이 없거나, 형식이 JPEG · PNG · WebP가 아니거나, 5MB를 넘으면 `400`과 `INVALID_INPUT`. 형식은 파일 이름이 아니라 파일의 내용(앞부분의 바이트)으로 본다. 구조가 깨진 파일도 형식이 맞지 않는 것으로 본다.
-2. 사진에 든 메타데이터를 뺀다. 촬영 위치(GPS)가 담기는 EXIF · XMP와 글자 정보다. JPEG는 APP1 · APP13 · 주석 구간, PNG는 `eXIf` · `tEXt` · `iTXt` · `zTXt` 청크, WebP는 `EXIF` · `XMP ` 청크를 빼고 그림 데이터는 다시 인코딩하지 않는다. JPEG의 회전 방향(EXIF Orientation)은 사진이 바르게 보이도록 그 값 하나만 다시 넣는다.
+1. 파일이 없거나, 형식이 JPEG · PNG · WebP가 아니거나, 5MB를 넘으면 `400`과 `INVALID_INPUT`. 형식은 파일 이름이 아니라 파일의 내용(앞부분의 바이트)으로 본다. 구조가 깨졌거나 그림이 없는 파일도 형식이 맞지 않는 것으로 본다. JPEG는 프레임(SOF) · 스캔(SOS) · 끝(EOI)이, PNG는 IHDR · IDAT · IEND와 맞는 CRC가, WebP는 파일 길이와 맞는 RIFF 크기와 그림 청크(`VP8 ` · `VP8L` · `ANMF`)가 있어야 한다.
+2. 사진에 든 메타데이터를 뺀다. 촬영 위치(GPS)가 담기는 EXIF · XMP와 글자 정보다. JPEG는 스캔 사이를 포함한 모든 APP1 · APP13 · 주석 구간과 EOI 뒤에 붙은 바이트, PNG는 `eXIf` · `tEXt` · `iTXt` · `zTXt` 청크, PNG는 IEND 뒤에 붙은 바이트도 뺀다. WebP는 `EXIF` · `XMP ` 청크를 빼고 그림 데이터는 다시 인코딩하지 않는다. JPEG의 회전 방향(EXIF Orientation)은 사진이 바르게 보이도록 그 값 하나만 다시 넣는다.
 3. 파일을 [저장소](#사진을-두는-곳과-주소)에 새 이름으로 둔다.
 4. `uploaded_image`에 한 줄을 만든다. `uploader_id`는 요청한 사람, `image_url`은 올린 파일의 주소다.
 

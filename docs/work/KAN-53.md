@@ -177,6 +177,10 @@ erDiagram
 - `./gradlew build` 통과. 테스트 503개(기존 462 + 새 41)
 - `git merge-tree --write-tree`: `origin/dev`(`a0cc1e4`), 열려 있는 PR #42(KAN-55) · #44(KAN-60)의 브랜치와 모두 충돌 없음(2026-11-25)
 - 로컬 코드 리뷰: P0 0건, P1 0건
+- Codex 리뷰(`e144060`) P1 2건 고침
+  - 프로그레시브 JPEG의 스캔 사이에 든 주석 · EXIF와 EOI 뒤에 붙은 바이트가 남았다. 스캔 데이터(FF 00 이스케이프, RSTn)를 건너며 EOI까지 모든 구간을 거르고 EOI 뒤는 버린다
+  - 그림이 없는 12바이트 WebP, 끝이 잘린 JPEG가 저장됐다. JPEG는 SOF · SOS · EOI, PNG는 IHDR · IDAT · IEND와 CRC, WebP는 RIFF 크기와 그림 청크를 확인해 아니면 `400 INVALID_INPUT`
+  - 고치기 전 코드에서 실패하는 테스트를 먼저 더했다(`ImageMetadataStripperTests` 2개, `ImageUploadApiTests`의 실패 경우 2개)
 - PR CI: 비밀값 검사(gitleaks)가 테스트 도우미의 가짜 위치 글자 상수(`TestImages.SECRET`)를 API 키로 잘못 잡았다. 그 줄에 `gitleaks:allow`를 달고, 이미 푸시한 커밋의 줄은 `.gitleaksignore`에 적었다(`docs/ci.md`의 "비밀값이 잡혔을 때" 4)
 
 ### 계획과 달라진 점
