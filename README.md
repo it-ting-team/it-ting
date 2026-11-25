@@ -182,10 +182,10 @@ Google 로그인과 설정의 Google 연동을 실제로 써 보려면 Google Cl
 
 | 무엇 | 올라가는 것 | 다시 배포되는 때 | 주소 |
 |---|---|---|---|
-| 테스트 서버 (GCP) | 프론트엔드 + 백엔드, 실제 데이터 | `dev` → `test` PR을 병합할 때 | 첫 배포 뒤에 적는다 |
-| 목 사이트 (Vercel) | 프론트엔드만, 목 데이터 | `dev`에 `frontend/` 변경이 병합될 때 | 첫 배포 뒤에 적는다 |
+| 테스트 서버 (GCP) | 프론트엔드 + 백엔드, 실제 데이터 | `dev` → `test` PR을 병합할 때 | https://test.diguldigul.site |
+| 목 사이트 (Vercel) | 프론트엔드만, 목 데이터 | `dev`에 `frontend/` 변경이 병합될 때 | https://diguldigul-mock.vercel.app |
 
-구성, 처음 만드는 법, 로그 보기, 되돌리기는 [테스트 서버와 목 사이트](docs/infra/test-server.md)에 있다.
+배포 결과는 Discord의 배포 채널로 온다. 구성, 처음 만드는 법, 로그 보기, 되돌리기는 [테스트 서버와 목 사이트](docs/infra/test-server.md)에 있다.
 
 ## AI 에이전트
 
