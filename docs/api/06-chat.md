@@ -189,9 +189,12 @@ A가 B에게 요청을 보냈고 B가 거절했다. 그 요청이 만료되기 �
 ### 안 읽은 수
 
 - 대화방마다 내가 마지막으로 읽은 메시지(`chat_room_member.last_read_message_id`)보다 id가 큰 메시지 가운데, `type`이 `TEXT`이고 남이 보낸 것의 수다. 안내 메시지와 내가 보낸 메시지는 세지 않는다.
+
 - 읽은 자리는 [읽음 API](#post-apiv1chat-roomschatroomidread)가 옮긴다. 메시지를 조회하는 것만으로는 옮겨지지 않는다.
 - 메시지를 보내면 보낸 사람의 읽은 자리도 그 메시지로 옮겨진다.
 - 상대가 읽었는지는 주지 않는다.
+
+KAN-50은 내 모임 목록에 필요한 방 ID와 안 읽은 수를 `chat/repository/ChatRoomReadRepository.findForMeetups(userId, meetupIds)`로 함께 읽는다. KAN-56의 채팅방 목록은 목록에 담을 방 ID들을 정한 뒤 같은 저장소의 `countUnreadByRoomIds(userId, roomIds)`로 한 번에 집계한다. 두 조회는 참여 중이며 삭제된 모임에 속하지 않는 방을 읽는다. 읽은 ID가 비어 있으면 이전 일반 메시지도 센다. 방 ID별 결과에 접근 가능한 방의 안 읽은 수가 들어가며, 안 읽은 메시지가 없으면 0이다. 읽음 처리 API가 `last_read_message_id`를 갱신하면 다음 조회부터 새 위치를 사용한다.
 
 ### 대화방에서 나가기
 
