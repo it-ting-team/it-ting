@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import tools.jackson.core.JacksonException;
@@ -89,6 +91,21 @@ public class GlobalExceptionHandler {
 			return respond(CommonErrorCode.INVALID_INPUT, "요청 본문을 읽을 수 없습니다.", null, null);
 		}
 		return invalidInput(List.of(new ApiError.FieldError(path, INVALID_FORMAT)));
+	}
+
+	/**
+	 * 올린 파일이 {@code spring.servlet.multipart.max-file-size}(사진 5MB)를 넘었을 때. 요청이 컨트롤러에 닿기 전에 끊기므로
+	 * 여기서 사진 올리기({@code POST /api/v1/images})와 같은 응답으로 바꾼다. 문구는 {@code ImageRules.SIZE_MESSAGE}와 같다.
+	 */
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	ResponseEntity<ApiResult<Void>> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+		return invalidInput(List.of(new ApiError.FieldError("file", "5MB 이하의 사진만 올릴 수 있습니다.")));
+	}
+
+	/** {@code multipart/form-data} 본문이 깨져 읽을 수 없을 때. */
+	@ExceptionHandler(MultipartException.class)
+	ResponseEntity<ApiResult<Void>> handleMultipart(MultipartException e) {
+		return respond(CommonErrorCode.INVALID_INPUT, "요청 본문을 읽을 수 없습니다.", null, null);
 	}
 
 	@ExceptionHandler({ NoResourceFoundException.class, NoHandlerFoundException.class })

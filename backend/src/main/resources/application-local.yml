@@ -23,6 +23,10 @@ spring:
 itting:
   cors:
     allowed-origins: http://localhost:3000
+  # 올린 사진은 실행한 폴더 아래 .local-images/에 둔다(git에 올리지 않는다).
+  images:
+    storage-dir: ${ITTING_IMAGES_STORAGE_DIR:./.local-images}
+    public-base-url: ${ITTING_IMAGES_PUBLIC_BASE_URL:http://localhost:${server.port:8080}}
   # 재설정 링크 등이 가리킬 프론트엔드 주소. 끝에 /를 붙이지 않는다.
   frontend-url: http://localhost:3000
   mattermost:

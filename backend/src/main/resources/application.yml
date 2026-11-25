@@ -27,8 +27,14 @@ spring:
     locale: ko_KR
     locale-resolver: fixed
     resources:
-      # 정적 파일을 주지 않는 API 서버다. 끄면 없는 주소가 메서드와 상관없이 404로 답한다(켜 두면 POST가 405가 된다).
+      # 정적 파일을 주지 않는 API 서버다(올린 사진의 /images/**만 ImageResourceConfig가 준다).
+      # 끄면 없는 주소가 메서드와 상관없이 404로 답한다(켜 두면 POST가 405가 된다).
       add-mappings: false
+  servlet:
+    multipart:
+      # 사진은 한 번에 한 장, 5MB까지다(docs/api/08-community.md의 사진 올리기). 넘으면 400 INVALID_INPUT이다.
+      max-file-size: 5MB
+      max-request-size: 6MB
   session:
     # 로그인 세션은 Redis에 두고, 마지막으로 쓴 뒤 14일이 지나면 사라진다(요청할 때마다 다시 14일).
     # 세션 쿠키 ITTING_SESSION의 속성은 SessionCookieConfig에 있다.
@@ -76,6 +82,12 @@ itting:
     link-ttl: 30m
     # 같은 이메일로 이 간격 안에 다시 요청하면 메일을 보내지 않는다(응답은 같다).
     request-interval: 60s
+  # 올린 사진(POST /api/v1/images)을 두는 서버의 폴더와 사진 주소의 앞부분. 비어 있으면 서버가 뜨지 않는다.
+  # 사진은 <public-base-url>/images/2026/11/<UUID>.webp로 받는다(로그인 없이). 폴더는 서버를 다시 띄워도 남아 있어야 한다.
+  # 이름에 하이픈이 있어 환경 변수가 자동으로 연결되지 않으므로 여기서 직접 잇는다(local은 기본값이 있다).
+  images:
+    storage-dir: ${ITTING_IMAGES_STORAGE_DIR:}
+    public-base-url: ${ITTING_IMAGES_PUBLIC_BASE_URL:}
   # 서버가 사용자를 보내는 프론트엔드 주소(재설정 링크, Google 로그인 뒤)는 프로필마다 itting.frontend-url로 정한다.
   mattermost:
     # 기수: 그 기수 Mattermost 서버의 Incoming Webhook URL 목록. 프로필마다 .env나 환경 변수로 넣는다.
