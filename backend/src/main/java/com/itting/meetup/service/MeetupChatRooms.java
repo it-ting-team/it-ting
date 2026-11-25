@@ -10,4 +10,8 @@ public interface MeetupChatRooms {
 
 	Optional<Long> findJoinedRoom(Long meetupId, Long userId);
 
+	void join(Long meetupId, Long userId, Instant now);
+
+	void leave(Long meetupId, Long userId, Instant now);
+
 }

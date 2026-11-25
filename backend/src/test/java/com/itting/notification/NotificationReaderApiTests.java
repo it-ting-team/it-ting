@@ -19,8 +19,8 @@ import com.itting.meetup.domain.MeetupCategory;
 import com.itting.meetup.domain.MeetupDetails;
 import com.itting.meetup.domain.MeetupMode;
 import com.itting.meetup.repository.MeetupRepository;
+import com.itting.meetup.repository.MeetupParticipationRepository;
 import com.itting.notification.service.ChatRequestReader;
-import com.itting.notification.service.MeetupRequestCountReader;
 import com.itting.support.CommunitySteps;
 import com.itting.support.NotificationSteps;
 import com.itting.support.TestcontainersConfiguration;
@@ -40,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 다른 영역이 읽기 구현(요청 수, 가장 최근 요청자, 갈 곳의 이름 · 시작 시각)을 등록했을 때 알림 API가 그 값을 싣는지.
- * 모임·모임 대화방·글은 실제 데이터를 읽는다. 모임 요청 수와 대화 요청은 테스트 구현을 쓰며,
+ * 모임·모임 대화방·글·모임 요청 수는 실제 데이터를 읽는다. 대화 요청은 테스트 구현을 쓰며,
  * 실제 대화 요청 조회는 {@code ChatRequestPopupApiTests}에서 확인한다.
  */
 @SpringBootTest
@@ -66,6 +66,8 @@ class NotificationReaderApiTests {
 	CommunitySteps communitySteps;
 	@Autowired
 	MeetupRepository meetups;
+	@Autowired
+	MeetupParticipationRepository meetupApplications;
 	@Autowired
 	ChatRoomRepository rooms;
 
@@ -95,6 +97,10 @@ class NotificationReaderApiTests {
 	@Test
 	void 팝업에_요청_수와_가장_최근_요청자와_갈_곳의_이름을_싣는다() throws Exception {
 		latestRequesterId = other;
+		MeetupDetails open = new MeetupDetails("열린 모임", MeetupCategory.EXERCISE, null, 4, null, false,
+				now.plus(Duration.ofDays(1)), null, MeetupMode.OFFLINE, "한강공원", null, null);
+		Long openMeetupId = meetups.saveAndFlush(new Meetup(me, open, null)).getId();
+		meetupApplications.insertApplication(openMeetupId, other, null, now);
 		long post = communitySteps.insertPost(other, "FREE", "5층 라운지 커피머신", "본문", now);
 		long deletedPost = communitySteps.insertPost(other, "FREE", "DELETED", "지운 글", "본문", now);
 		steps.insert(me, "MEETUP_START_REMINDER", "MEETUP", createMeetup(), null, now.minus(Duration.ofMinutes(1)), null);
@@ -103,7 +109,7 @@ class NotificationReaderApiTests {
 
 		mockMvc.perform(get("/api/v1/me/notifications/popup").cookie(session))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.meetupRequestCount").value(2))
+				.andExpect(jsonPath("$.data.meetupRequestCount").value(1))
 				.andExpect(jsonPath("$.data.chatRequestCount").value(3))
 				.andExpect(jsonPath("$.data.latestChatRequester.id").value(other))
 				.andExpect(jsonPath("$.data.latestChatRequester.nickname").value("모카"))
@@ -153,11 +159,6 @@ class NotificationReaderApiTests {
 
 	@TestConfiguration(proxyBeanMethods = false)
 	static class FakeReaders {
-
-		@Bean
-		MeetupRequestCountReader meetupRequestCountReader() {
-			return hostId -> 2;
-		}
 
 		/** 채팅이 등록한 실제 구현이 있으므로 이 가짜를 먼저 쓰게 한다. 실제 구현은 {@code ChatRequestPopupApiTests}가 본다. */
 		@Bean

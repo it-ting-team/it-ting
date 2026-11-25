@@ -124,7 +124,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | `user_id` | `BIGINT` | 복합 PK, FK → `user.id` | NOT NULL, 개별 UNIQUE 없음 | 해당 대화방 참여자 |
 | `joined_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 방에 들어온 시각 |
 | `left_at` | `DATETIME` | — | NULL 허용, 개별 UNIQUE 없음 | 대화방에서 나간 시각 |
-| `last_read_message_id` | `BIGINT` | 논리 참조 → `chat_message.id` | NULL 허용, 개별 UNIQUE 없음 | 마지막으로 읽은 같은 방의 메시지 ID. 물리 FK를 걸지 않는다(대화방 · 참여자 · 메시지가 서로를 가리켜 넣는 순서가 꼬이고, 메시지는 지우지 않아 가리키는 줄이 사라질 일이 없다) |
+| `last_read_message_id` | `BIGINT` | 논리 참조 → `chat_message.id` | NULL 허용, 개별 UNIQUE 없음 | 마지막으로 읽은 같은 방의 메시지 ID. 새 모임 참여자는 NULL로 시작한다. 물리 FK를 걸지 않는다(대화방 · 참여자 · 메시지가 서로를 가리켜 넣는 순서가 꼬이고, 메시지는 지우지 않아 가리키는 줄이 사라질 일이 없다) |
 
 복합 기본키는 `PK(chat_room_id, user_id)`다. 색인 `(user_id)`가 내가 들어 있는 방을 찾는다. 요청을 수락해 방을 열 때 두 사람의 줄을 함께 만들고, 내가 거절한 사람에게 요청을 보내 방이 열릴 때 인사를 첫 메시지로 넣으면 보낸 사람의 `last_read_message_id`를 그 메시지로 둔다. 1:1은 두 사람이며, 모임은 주최자와 확정 참여자가 입장한다. 참여 취소·내보내기·탈퇴와 방에서만 나가기는 위의 접근 규칙을 따른다. 탈퇴하면 들어 있던 모든 방(1:1, 모임)에 `WITHDRAWN` 안내 메시지를 한 줄 넣고 `left_at`을 채운다.
 
