@@ -126,12 +126,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 			@Param("eventKey") String eventKey);
 
 	/**
-	 * {@code before}보다 먼저 생긴 알림을 {@code limit}줄까지 지운다.
+	 * {@code cutoff}보다 먼저 생긴 알림을 {@code batchSize}줄까지 지운다.
 	 *
 	 * @return 지운 줄 수
 	 */
 	@Modifying
-	@Query(value = "DELETE FROM notification WHERE created_at < :before LIMIT :limit", nativeQuery = true)
-	int deleteCreatedBefore(@Param("before") Instant before, @Param("limit") int limit);
+	@Query(value = "DELETE FROM notification WHERE created_at < :cutoff LIMIT :batchSize", nativeQuery = true)
+	int deleteCreatedBefore(@Param("cutoff") Instant cutoff, @Param("batchSize") int batchSize);
 
 }

@@ -6,6 +6,9 @@
 # 프론트엔드 주소(재설정 링크 등, 없으면 서버가 뜨지 않는다): ITTING_FRONTEND_URL
 # 메일(없으면 서버가 뜨지 않는다): SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD, ITTING_MAIL_FROM
 # Mattermost 웹후크(기수별, 쉼표로 여러 개): ITTING_MATTERMOST_WEBHOOKS_15, ITTING_MATTERMOST_WEBHOOKS_16
+# Google OAuth 클라이언트(없으면 Google 로그인 · 연동만 실패한다): ITTING_GOOGLE_CLIENT_ID, ITTING_GOOGLE_CLIENT_SECRET, ITTING_GOOGLE_REDIRECT_URI(콜백의 전체 주소)
+# 브라우저 푸시 키(없으면 푸시만 보내지 않는다. ./gradlew vapidKeys로 만든다): ITTING_PUSH_PUBLIC_KEY, ITTING_PUSH_PRIVATE_KEY, ITTING_PUSH_SUBJECT(mailto:팀주소)
+# 올린 사진(서버를 다시 띄워도 남는 폴더, 사진 주소의 앞부분. 없으면 서버가 뜨지 않는다): ITTING_IMAGES_STORAGE_DIR, ITTING_IMAGES_PUBLIC_BASE_URL
 
 management:
   endpoint:

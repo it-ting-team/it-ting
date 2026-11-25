@@ -8,8 +8,9 @@ PR마다 GitHub Actions(`.github/workflows/ci.yml`)가 빌드 · 테스트와 �
 
 | job | 언제 도나 | 무엇을 보나 |
 |---|---|---|
-| 바뀐 곳 찾기 | 늘 | `backend/`나 `.github/workflows/`가 바뀌었는지 |
+| 바뀐 곳 찾기 | 늘 | `backend/`나 `.github/workflows/`가 바뀌었는지, Docker 이미지와 배포 설정에 영향을 주는 파일이 바뀌었는지 |
 | 백엔드 빌드 · 테스트 | 위 경로가 바뀐 PR, `dev`에 병합된 뒤 | `backend/`에서 `./gradlew build`. 테스트는 Testcontainers로 MySQL · Redis를 띄운다 |
+| Docker 이미지 · 배포 설정 | `deploy/`, Dockerfile, `backend/build.gradle`, `frontend/next.config.ts`, `frontend/package*.json`, `.github/workflows/`가 바뀐 PR | 백엔드 · 프론트엔드 이미지가 만들어지는지, `deploy/`의 Compose 파일과 Caddyfile이 맞는지, `deploy/deploy.sh`의 문법. 이미지를 올리지는 않는다 |
 | 병합 흐름 | PR | `test`로 가는 PR은 `dev`에서만, `main`으로 가는 PR은 `test`나 `hotfix/*`에서만 |
 | 마이그레이션 보호 | PR | 기준 브랜치에 이미 있는 `backend/src/main/resources/db/migration/` 파일을 고치거나 지우거나 이름을 바꿨는지 |
 | 비밀값 | PR | gitleaks로 PR의 새 커밋에 비밀값(API 키, 토큰, 웹후크 URL 등)이 들었는지 |
@@ -27,6 +28,7 @@ PR 아래 Checks에서 빨간 job을 눌러 로그를 본다. `ci`가 빨강이�
 | job | 고치는 법 |
 |---|---|
 | 백엔드 빌드 · 테스트 | 로컬 `backend/`에서 `./gradlew build`로 같은 실패를 본다. 실행 페이지 아래 Artifacts의 `backend-test-reports`를 받으면 테스트 보고서(HTML)가 있다 |
+| Docker 이미지 · 배포 설정 | 실패한 단계의 명령을 로컬에서 그대로 실행한다(아래 "로컬에서 돌리는 법"). 구성은 `docs/infra/test-server.md` |
 | 병합 흐름 | PR의 기준 브랜치를 바꾼다(Edit → base). 작업 브랜치는 `dev`로 보낸다. `docs/branch-strategy.md` |
 | 마이그레이션 보호 | 기존 파일을 되돌리고, 고칠 내용은 새 번호의 마이그레이션으로 더한다. `AGENTS.md`의 DB 절 |
 | 비밀값 | 아래 "비밀값이 잡혔을 때" |
@@ -58,7 +60,14 @@ gitleaks git --config .gitleaks.toml --log-opts="origin/dev..HEAD" --redact
 
 # 백엔드
 cd backend && ./gradlew build
+
+# Docker 이미지(저장소 루트에서). 백엔드는 jar를 먼저 만든다
+(cd backend && ./gradlew bootJar)
+docker build --tag it-ting-backend:ci backend
+docker build --build-context buildenv=deploy/test --tag it-ting-frontend:ci frontend
 ```
+
+PR CI 말고 배포 워크플로가 둘 있다. `test`에 병합되면 `deploy-test.yml`이 테스트 서버에, `dev`에 프론트엔드 변경이 병합되면 `deploy-mock.yml`이 목 사이트(Vercel)에 배포한다. 설명은 [테스트 서버와 목 사이트](infra/test-server.md).
 
 ## 처음 한 번 (저장소 관리자)
 
@@ -86,6 +95,5 @@ GitHub가 알아보는 비밀값 종류는 서비스마다 다르다. 웹후크 
 
 | 검사 | 언제 |
 |---|---|
-| Docker 이미지 빌드 | Dockerfile이 생기는 KAN-63 |
 | 프론트엔드 린트 · 타입 검사 · 빌드 | `frontend/`가 생기는 KAN-25 |
 | 코드 스타일 | 코드 규칙(KAN-4)을 정한 뒤 |

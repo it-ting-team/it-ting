@@ -76,6 +76,11 @@ public class Comment extends BaseTimeEntity {
 		this.deletedAt = now;
 	}
 
+	/** 신고로 가린다. 공개 댓글에만 부른다. 달린 답글은 그대로 둔다. */
+	public void hide() {
+		this.status = PostStatus.HIDDEN;
+	}
+
 	public boolean isWrittenBy(Long userId) {
 		return authorId.equals(userId);
 	}

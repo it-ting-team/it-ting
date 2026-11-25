@@ -11,11 +11,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.DynamicUpdate;
 
 /**
  * 계정({@code user}). 로그인 수단, SSAFY 인증, 온보딩 완료와 탈퇴 상태를 둔다.
  * 다른 사람에게 보여 주는 값은 {@link UserProfile}에 있다.
  */
+/*
+ * 바꾼 칼럼만 UPDATE한다. 잠그지 않고 읽은 계정을 고쳐 저장해도, 그 사이 다른 트랜잭션이 바꾼 칼럼(예: Google 연동 해제)을
+ * 읽은 때의 값으로 되돌리지 않는다.
+ */
+@DynamicUpdate
 @Entity
 @Table(name = "`user`")
 public class User extends BaseTimeEntity {
@@ -75,6 +81,34 @@ public class User extends BaseTimeEntity {
 		user.role = UserRole.USER;
 		user.status = UserStatus.ACTIVE;
 		return user;
+	}
+
+	/**
+	 * Google 가입을 마친 계정. 이메일과 비밀번호는 비워 둔다. SSAFY 인증과 필수 동의를 마친 시각은 {@code now}다.
+	 * 온보딩은 아직이다.
+	 */
+	public static User createByGoogle(String googleSub, String googleEmail, String mattermostId, Instant now) {
+		User user = new User();
+		user.googleSub = googleSub;
+		user.googleEmail = googleEmail;
+		user.mattermostId = mattermostId;
+		user.ssafyVerifiedAt = now;
+		user.termsAgreedAt = now;
+		user.role = UserRole.USER;
+		user.status = UserStatus.ACTIVE;
+		return user;
+	}
+
+	/** Google 계정을 연결한다(설정의 Google 연동). */
+	public void linkGoogle(String googleSub, String googleEmail) {
+		this.googleSub = googleSub;
+		this.googleEmail = googleEmail;
+	}
+
+	/** Google 연동을 해제한다. */
+	public void unlinkGoogle() {
+		this.googleSub = null;
+		this.googleEmail = null;
 	}
 
 	/** 비밀번호를 바꾼다(비밀번호 재설정, 비밀번호 변경). */

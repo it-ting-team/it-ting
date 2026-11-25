@@ -1,5 +1,10 @@
 package com.itting.support;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -11,7 +16,9 @@ import org.testcontainers.utility.DockerImageName;
 
 /**
  * 테스트용 MySQL, Redis, Mailpit을 Docker 컨테이너로 띄운다. 로컬 compose.yaml과 같은 이미지와 설정을 쓴다.
- * Mattermost 웹후크는 {@link FakeMattermost}로 흉내 낸다. 테스트가 실제 메일이나 Mattermost로 보내는 일은 없다.
+ * Mattermost 웹후크는 {@link FakeMattermost}로, Google의 토큰 · 사용자 정보 주소는 {@link FakeGoogle}로 흉내 낸다.
+ * 테스트가 실제 메일이나 Mattermost, Google로 요청하는 일은 없다.
+ * 푸시 키는 비워 둔다(푸시를 보내지 않는다).
  * DB나 세션을 쓰는 테스트는 {@code @Import(TestcontainersConfiguration.class)}를 붙인다.
  */
 @TestConfiguration(proxyBeanMethods = false)
@@ -51,6 +58,11 @@ public class TestcontainersConfiguration {
 		return new FakeMattermost();
 	}
 
+	@Bean(destroyMethod = "stop")
+	FakeGoogle fakeGoogle() {
+		return new FakeGoogle();
+	}
+
 	/**
 	 * 메일 서버와 Mattermost 웹후크를 테스트용으로 바꾼다. 로컬 .env의 실제 웹후크가 쓰이지 않게 기수마다 덮어쓴다.
 	 *
@@ -67,7 +79,7 @@ public class TestcontainersConfiguration {
 	 */
 	@Bean
 	DynamicPropertyRegistrar testServiceProperties(@Qualifier("mailpitContainer") GenericContainer<?> mailpitContainer,
-			FakeMattermost fakeMattermost) {
+			FakeMattermost fakeMattermost, FakeGoogle fakeGoogle) {
 		return registry -> {
 			registry.add("spring.mail.host", mailpitContainer::getHost);
 			registry.add("spring.mail.port", () -> mailpitContainer.getMappedPort(1025));
@@ -83,7 +95,32 @@ public class TestcontainersConfiguration {
 			registry.add("itting.mattermost.webhooks.20",
 					() -> fakeMattermost.url("down-20") + "," + FakeMattermost.refusedUrl());
 			registry.add("itting.mattermost.webhooks.21", () -> "");
+			// 로컬 .env의 실제 Google OAuth 값이 테스트에 섞이지 않게 덮어쓰고, 토큰 · 사용자 정보 주소는 가짜 Google로 보낸다.
+			registry.add("itting.google.client-id", () -> FakeGoogle.CLIENT_ID);
+			registry.add("itting.google.client-secret", () -> FakeGoogle.CLIENT_SECRET);
+			registry.add("itting.google.redirect-uri", () -> FakeGoogle.REDIRECT_URI);
+			registry.add("itting.google.authorization-uri", fakeGoogle::authorizationUri);
+			registry.add("itting.google.token-uri", fakeGoogle::tokenUri);
+			registry.add("itting.google.userinfo-uri", fakeGoogle::userinfoUri);
+			// 로컬 .env의 실제 푸시 키가 테스트에 섞이지 않게 비운다. 푸시를 보내는 테스트는 키를 직접 넣은 보내는 쪽을 쓴다.
+			registry.add("itting.push.public-key", () -> "");
+			registry.add("itting.push.private-key", () -> "");
+			registry.add("itting.push.subject", () -> "");
+			// 올린 사진은 로컬의 .local-images가 아니라 테스트용 임시 폴더에 둔다.
+			registry.add("itting.images.storage-dir", () -> IMAGE_DIR.toString());
 		};
+	}
+
+	/** 테스트가 올린 사진을 두는 임시 폴더. 운영체제의 임시 폴더 아래에 만든다. */
+	public static final Path IMAGE_DIR = createImageDir();
+
+	private static Path createImageDir() {
+		try {
+			return Files.createTempDirectory("itting-images-");
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 }

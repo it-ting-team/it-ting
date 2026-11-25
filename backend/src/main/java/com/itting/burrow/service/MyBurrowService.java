@@ -7,6 +7,7 @@ import com.itting.burrow.domain.BurrowEntrance;
 import com.itting.burrow.dto.MyBurrowResponse;
 import com.itting.burrow.repository.BurrowEntranceRepository;
 import com.itting.burrow.repository.BurrowRepository;
+import com.itting.burrow.repository.RegularBurrowRepository;
 import com.itting.guestbook.domain.GuestbookEntryStatus;
 import com.itting.guestbook.repository.GuestbookEntryRepository;
 import com.itting.interest.service.InterestTagService;
@@ -34,6 +35,7 @@ public class MyBurrowService {
 	private final UserAnswerRepository userAnswerRepository;
 
 	private final GuestbookEntryRepository guestbookEntryRepository;
+	private final RegularBurrowRepository regularBurrowRepository;
 
 	private final UserDisplayService userDisplayService;
 
@@ -42,7 +44,7 @@ public class MyBurrowService {
 	public MyBurrowService(BurrowRepository burrowRepository, BurrowEntranceRepository burrowEntranceRepository,
 			UserProfileRepository userProfileRepository, UserAnswerRepository userAnswerRepository,
 			GuestbookEntryRepository guestbookEntryRepository, UserDisplayService userDisplayService,
-			InterestTagService interestTagService) {
+			InterestTagService interestTagService, RegularBurrowRepository regularBurrowRepository) {
 		this.burrowRepository = burrowRepository;
 		this.burrowEntranceRepository = burrowEntranceRepository;
 		this.userProfileRepository = userProfileRepository;
@@ -50,6 +52,7 @@ public class MyBurrowService {
 		this.guestbookEntryRepository = guestbookEntryRepository;
 		this.userDisplayService = userDisplayService;
 		this.interestTagService = interestTagService;
+		this.regularBurrowRepository = regularBurrowRepository;
 	}
 
 	/**
@@ -66,7 +69,7 @@ public class MyBurrowService {
 		UserProfile profile = userProfileRepository.findById(userId)
 				.orElseThrow(() -> new IllegalStateException("프로필이 없는 계정: " + userId));
 
-		List<MyBurrowResponse.AnswerResponse> answers = userAnswerRepository.findRowsByUserId(userId).stream()
+		List<MyBurrowResponse.AnswerResponse> answers = userAnswerRepository.findRowsByUserIds(List.of(userId)).stream()
 				.map(row -> new MyBurrowResponse.AnswerResponse(row.slot(), row.introQuestionId(), row.question(),
 						row.answer()))
 				.toList();
@@ -75,19 +78,9 @@ public class MyBurrowService {
 
 		return new MyBurrowResponse(burrow.getId(), userDisplayService.get(userId),
 				profile.getCampusFloorId(), profile.getIntro(), interestTagService.getMyTags(userId), answers,
-				countRegulars(burrow.getId()), guestbookCount,
+				regularBurrowRepository.countByBurrowId(burrow.getId()), guestbookCount,
 				new MyBurrowResponse.EntranceResponse(entrance.getTermId(), entrance.getCampusFloorId(),
 						entrance.getSlot()));
-	}
-
-	/**
-	 * 내 땅굴을 단골로 담은 사람 수.
-	 *
-	 * <p>TODO(05 탐색 티켓): 단골 테이블 {@code regular_burrow}와 담는 API가 아직 없어 늘 0이다(KAN-45 계획 B).
-	 * 테이블을 만들면 {@code burrow_id}가 이 땅굴인 줄 수를 센다.
-	 */
-	private long countRegulars(Long burrowId) {
-		return 0;
 	}
 
 }

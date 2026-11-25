@@ -90,6 +90,11 @@ public class UserProfile extends BaseTimeEntity {
 		this.intro = intro;
 	}
 
+	/** 새 학기를 고를 때 프로필의 캠퍼스-층을 입구와 맞춘다. */
+	public void moveToCampusFloor(Long campusFloorId) {
+		this.campusFloorId = campusFloorId;
+	}
+
 	public Long getUserId() {
 		return userId;
 	}

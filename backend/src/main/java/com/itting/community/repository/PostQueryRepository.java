@@ -179,10 +179,11 @@ public class PostQueryRepository {
 	/**
 	 * 글 카드와 상세에 쓰는 글 한 줄. 제목과 본문은 지금 보이는 버전이다.
 	 *
+	 * @param meetupId 연결한 모임의 id. 연결하지 않았으면 null
 	 * @param latestVersion 지금 보이는 버전의 번호. 2 이상이면 고친 글이다
 	 */
-	public record PostRow(Long id, Long authorId, PostCategory category, PostStatus status, String title,
-			String content, int latestVersion, int viewCount, Instant createdAt) {
+	public record PostRow(Long id, Long authorId, PostCategory category, Long meetupId, PostStatus status,
+			String title, String content, int latestVersion, int viewCount, Instant createdAt) {
 	}
 
 	/** @return 글 id → 글. 받은 id의 순서를 따르고, 없는 id는 담지 않는다 */
@@ -192,13 +193,14 @@ public class PostQueryRepository {
 			return result;
 		}
 		Map<Long, PostRow> found = new HashMap<>();
-		jdbc.query("SELECT p.id, p.author_id, p.category, p.status, p.view_count, p.created_at, v.title, v.content, "
-				+ "v.version FROM post p " + JOIN_LATEST_VERSION + " WHERE p.id IN (:ids)",
+		jdbc.query("SELECT p.id, p.author_id, p.category, p.meetup_id, p.status, p.view_count, p.created_at, "
+				+ "v.title, v.content, v.version FROM post p " + JOIN_LATEST_VERSION + " WHERE p.id IN (:ids)",
 				Map.of("ids", postIds), rs -> {
 					PostRow row = new PostRow(rs.getLong("id"), rs.getLong("author_id"),
-							PostCategory.valueOf(rs.getString("category")), PostStatus.valueOf(rs.getString("status")),
-							rs.getString("title"), rs.getString("content"), rs.getInt("version"),
-							rs.getInt("view_count"), instant(rs, "created_at"));
+							PostCategory.valueOf(rs.getString("category")), rs.getObject("meetup_id", Long.class),
+							PostStatus.valueOf(rs.getString("status")), rs.getString("title"),
+							rs.getString("content"), rs.getInt("version"), rs.getInt("view_count"),
+							instant(rs, "created_at"));
 					found.put(row.id(), row);
 				});
 		postIds.stream().filter(found::containsKey).forEach(id -> result.put(id, found.get(id)));
@@ -286,6 +288,12 @@ public class PostQueryRepository {
 	public Set<Long> findBookmarked(Long userId, Collection<Long> postIds) {
 		return findPostIdsOf("SELECT post_id FROM post_bookmark WHERE user_id = :userId AND post_id IN (:ids)",
 				userId, postIds);
+	}
+
+	/** 이 글들 가운데 이 계정이 신고한 것. */
+	public Set<Long> findReported(Long userId, Collection<Long> postIds) {
+		return findPostIdsOf("SELECT target_id AS post_id FROM report WHERE reporter_id = :userId "
+				+ "AND target_type = 'POST' AND target_id IN (:ids)", userId, postIds);
 	}
 
 	/** 이 글들 가운데 이 계정이 좋아요를 누른 것. */

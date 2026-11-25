@@ -83,8 +83,9 @@ public class PostController {
 	}
 
 	@Operation(summary = "글쓰기",
-			description = "글을 쓴다. 모임 홍보 · 모임 후기는 모임을 연결해야 하는데, 모임을 연결하는 기능이 생기기 전이라 "
-					+ "지금은 meetupId를 보내면 404 MEETUP_NOT_FOUND다. 로그인이 필요하다.")
+			description = "글을 쓴다. 모임 홍보 · 모임 후기는 모임을 꼭 연결해야 하고(meetupId가 없으면 400), 연결할 모임은 "
+					+ "카테고리마다 고를 수 있는 것이 다르다(GET /api/v1/me/linkable-meetups). 없거나 삭제된 모임이면 404 MEETUP_NOT_FOUND, "
+					+ "그 카테고리에 연결할 수 없는 모임이면 409 MEETUP_NOT_LINKABLE이다. 로그인이 필요하다.")
 	@ResponseStatus(HttpStatus.CREATED)
 	@PostMapping
 	public ApiResult<PostCreateResponse> create(
@@ -105,7 +106,8 @@ public class PostController {
 
 	@Operation(summary = "글 수정",
 			description = "글을 고친다. 바꾸지 않은 값도 모두 보낸다(meetupId는 null이라도 키를 보낸다). "
-					+ "제목이나 본문이 달라졌을 때만 새 버전을 만든다. 작성자만 할 수 있고 가려진 글은 고칠 수 없다. 로그인이 필요하다.")
+					+ "제목이나 본문이 달라졌을 때만 새 버전을 만든다. meetupId나 category를 바꿨을 때만 연결할 수 있는 모임인지 다시 "
+					+ "검사한다(404 MEETUP_NOT_FOUND, 409 MEETUP_NOT_LINKABLE). 작성자만 할 수 있고 가려진 글은 고칠 수 없다. 로그인이 필요하다.")
 	@PatchMapping("/{postId}")
 	public ApiResult<Void> update(
 			@Parameter(hidden = true) @AuthenticationPrincipal Long userId,

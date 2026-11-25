@@ -50,6 +50,11 @@ public class GuestbookEntry extends BaseTimeEntity {
 		return entry;
 	}
 
+	/** 신고로 가린다. 누구에게도 보이지 않고 글 수에서도 빠진다. */
+	public void hide() {
+		this.status = GuestbookEntryStatus.HIDDEN;
+	}
+
 	public boolean isHidden() {
 		return status == GuestbookEntryStatus.HIDDEN;
 	}

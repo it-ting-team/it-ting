@@ -13,7 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * 커뮤니티 글({@code post}). 작성자 · 카테고리 · 상태 · 조회수만 두고, 제목과 본문은 {@link PostVersion}에 있다.
+ * 커뮤니티 글({@code post}). 작성자 · 카테고리 · 연결한 모임 · 상태 · 조회수만 두고, 제목과 본문은 {@link PostVersion}에 있다.
  * 지워도 줄을 남긴다(삭제된 글 안내, 답글 · 신고의 참조).
  */
 @Entity
@@ -31,6 +31,10 @@ public class Post extends BaseTimeEntity {
 	@Column(nullable = false)
 	private PostCategory category;
 
+	/** 글에 연결한 모임의 id. 연결하지 않았으면 null. 연결한 뒤 모임이 바뀌거나 지워져도 그대로 둔다. */
+	@Column(name = "meetup_id")
+	private Long meetupId;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private PostStatus status;
@@ -45,23 +49,30 @@ public class Post extends BaseTimeEntity {
 	protected Post() {
 	}
 
-	public static Post create(Long authorId, PostCategory category) {
+	public static Post create(Long authorId, PostCategory category, Long meetupId) {
 		Post post = new Post();
 		post.authorId = authorId;
 		post.category = category;
+		post.meetupId = meetupId;
 		post.status = PostStatus.PUBLIC;
 		post.viewCount = 0;
 		return post;
 	}
 
-	public void changeCategory(PostCategory category) {
+	public void change(PostCategory category, Long meetupId) {
 		this.category = category;
+		this.meetupId = meetupId;
 	}
 
 	/** 지운다. 달린 댓글을 지우는 일은 서비스가 함께 한다. */
 	public void delete(Instant now) {
 		this.status = PostStatus.DELETED;
 		this.deletedAt = now;
+	}
+
+	/** 신고로 가린다. 공개 글에만 부른다. 관리자가 복구하면 공개로 돌아온다. */
+	public void hide() {
+		this.status = PostStatus.HIDDEN;
 	}
 
 	public boolean isWrittenBy(Long userId) {
@@ -90,6 +101,10 @@ public class Post extends BaseTimeEntity {
 
 	public PostCategory getCategory() {
 		return category;
+	}
+
+	public Long getMeetupId() {
+		return meetupId;
 	}
 
 	public PostStatus getStatus() {

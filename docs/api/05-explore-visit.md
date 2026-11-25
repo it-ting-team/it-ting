@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 새 학기 안내 | 뜰 때 | [`GET /api/v1/terms`](00-common.md#get-apiv1terms), [`GET /api/v1/campuses`](00-common.md#get-apiv1campuses) | 새 학기 이름의 표기, 지난 학기에 고른 캠퍼스를 처음에 골라 두기(내 계정 조회의 `campusFloorId`로 찾는다) |
 | 새 학기 안내 | "이 층으로 정하기" | `POST /api/v1/me/burrow/move` | 완료 토스트 |
-| 탐색 | 들어올 때, 들판을 옮길 때 | `GET /api/v1/terms/{termId}/fields/{campusFloorId}` | 들판 지도와 자리 번호마다의 화면 위치, 두더지 움직임, 안내판과 가까운 주인 카드를 띄우는 때, 나와 같은 관심사 수, 빈 상태 |
+| 탐색 | 들어올 때, 들판을 옮길 때 | `GET /api/v1/terms/{termId}/fields/{campusFloorId}` | 들판 지도와 자리 번호마다의 화면 위치, 두더지 움직임, 가장 가까운 주인의 방노트, 나와 같은 관심사 수, 빈 상태 |
 | 탐색 | 들어올 때 | `GET /api/v1/me/daily-recommendation` | 추천 친구 버튼의 빨간 점 |
 | 캠퍼스-층 고르기 | 열 때 | [`GET /api/v1/campuses`](00-common.md#get-apiv1campuses), [`GET /api/v1/terms`](00-common.md#get-apiv1terms) | 층 번호 검색, "현재 위치" 배지, 학기가 하나면 학기 줄 숨기기 |
 | 캠퍼스-층 고르기 | 열 때, 학기를 바꿀 때 | `GET /api/v1/terms/{termId}/fields` | "비어 있음" 표시 |
@@ -128,7 +128,7 @@ GET /api/v1/terms/4/fields
 
 ### 주는 방식
 
-- 지우지 않은 캠퍼스-층을 모두 준다. 입구가 하나도 없는 층도 `isEmpty`를 `true`로 해서 준다.
+- 캠퍼스와 층이 모두 지워지지 않은 곳을 모두 준다. 입구가 하나도 없는 층도 `isEmpty`를 `true`로 해서 준다.
 - 캠퍼스 이름과 층 번호는 담지 않는다. 프론트엔드가 [`GET /api/v1/campuses`](00-common.md#get-apiv1campuses)의 목록과 `campusFloorId`로 맞춘다.
 - 순서는 캠퍼스 목록과 같다. 캠퍼스는 `campus.sort_order`가 작은 것부터, 층은 층 번호가 작은 것부터다.
 - 내 땅굴도 센다. 내 땅굴만 놓인 층은 `isEmpty`가 `false`다. 누가 부르든 같은 값이 온다.
@@ -159,7 +159,7 @@ GET /api/v1/terms/4/fields
 
 ## GET /api/v1/terms/{termId}/fields/{campusFloorId}
 
-들판 하나에 놓인 땅굴 입구를 모두 준다. 탐색에 들어올 때와 캠퍼스-층 고르기의 "들어가기"로 들판을 옮길 때 부른다. 입구마다 안내판과 가까운 주인 카드에 보여 줄 값이 함께 들어 있다.
+들판 하나에 놓인 땅굴 입구를 모두 준다. 탐색에 들어올 때와 캠퍼스-층 고르기의 "들어가기"로 들판을 옮길 때 부른다. 입구마다 방노트에서 보여 줄 값이 함께 들어 있다.
 
 - 로그인: 필요
 - 명세: 탐색 1 ~ 3, 6
@@ -192,16 +192,17 @@ GET /api/v1/terms/4/fields/12
 | `items[].burrowId` | 숫자 | 땅굴의 id | `burrow_entrance.burrow_id` |
 | `items[].isMine` | 참/거짓 | 내 땅굴인지 | 계산: `burrow.user_id`가 요청한 사람인지 |
 | `items[].owner` | 객체 | 땅굴 주인의 [사용자 표시](00-common.md#사용자-표시) | |
+| `items[].intro` | 문자열 | 주인의 자기소개. 쓰지 않았으면 `null` | `user_profile.intro` |
 | `items[].interests` | 목록 | 주인의 [관심사 태그](00-common.md#관심사-태그). 고른 순서이고, 나와 겹치는 것은 `isShared`가 `true`다 | |
 | `items[].answers` | 목록 | 주인의 [질문과 답변](#질문과-답변) 3개 | |
 
 ### 주는 방식
 
 - 그 학기 · 그 층의 `burrow_entrance`를 모두 준다. `slot`이 작은 것부터다.
-- 나누지 않고 한 번에 모두 준다. 지도에 입구를 한꺼번에 그려야 하고, 두더지가 움직일 때마다 가까운 주인의 카드가 바뀌므로 카드의 값도 미리 준다.
+- 나누지 않고 한 번에 모두 준다. 지도에 입구를 한꺼번에 그려야 하고, 두더지가 움직일 때마다 가까운 주인의 방노트가 바뀌므로 그 값도 미리 준다.
 - 내 땅굴의 입구도 준다. `isMine`이 `true`다. 프론트엔드는 내 두더지를 이 자리에서 솟아나오게 한다.
 - `isMine`이 `false`인 항목이 없으면 다른 땅굴이 없는 들판이다. 프론트엔드가 빈 상태와 "다른 캠퍼스-층 가보기"를 보여 준다.
-- 안내판의 "나와 같은 관심사 수"는 주지 않는다. 프론트엔드가 `interests`에서 `isShared`가 `true`인 것을 센다.
+- 프론트엔드가 `interests`에서 `isShared`가 `true`인 것을 세어 나와 같은 관심사 수를 표시한다.
 - 탈퇴한 사람의 땅굴은 탈퇴할 때 입구까지 지워지므로 나오지 않는다. 정지된 사람의 땅굴은 그대로 준다.
 - 지난 학기 들판에는 새 학기에 아직 접속하지 않은 사람의 땅굴만 있다. 이사한 사람의 자리는 비어 있다.
 - 입구가 하나도 없으면 `items`는 `[]`다.
@@ -231,6 +232,7 @@ GET /api/v1/terms/4/fields/12
           "floor": 2,
           "isWithdrawn": false
         },
+        "intro": "주말마다 달리고 캠핑 가는 14기입니다.",
         "interests": [
           { "id": 12, "name": "러닝", "interestCategoryId": 3, "isShared": true },
           { "id": 61, "name": "캠핑", "interestCategoryId": 5, "isShared": false },
@@ -256,6 +258,7 @@ GET /api/v1/terms/4/fields/12
           "floor": 2,
           "isWithdrawn": false
         },
+        "intro": null,
         "interests": [
           { "id": 12, "name": "러닝", "interestCategoryId": 3, "isShared": false },
           { "id": 47, "name": "인디 음악", "interestCategoryId": 1, "isShared": false },
@@ -273,7 +276,7 @@ GET /api/v1/terms/4/fields/12
 }
 ```
 
-"새벽산책"의 안내판에는 나와 같은 관심사가 1개(러닝)라고 보인다. 내 땅굴의 관심사는 `isShared`가 모두 `false`다.
+"새벽산책"의 방노트에서 나와 같은 관심사는 러닝이다. 내 땅굴의 관심사는 `isShared`가 모두 `false`다.
 
 ### 에러
 
@@ -306,9 +309,9 @@ POST /api/v1/me/burrow/move
 ### 서버가 하는 일
 
 1. 내 땅굴의 입구가 이미 이번 학기 들판에 있으면 아무것도 바꾸지 않고, 요청 본문도 보지 않고, 지금의 값으로 답한다. 같은 요청이 두 번 와도 한 번만 옮긴다.
-2. `campusFloorId`가 지우지 않은 캠퍼스-층인지 본다. 아니면 `404`와 `CAMPUS_FLOOR_NOT_FOUND`.
+2. 본문을 읽고 `campusFloorId`가 정수인지 검증한다. 캠퍼스와 층이 모두 지워지지 않은 곳에서 목적지를 찾는다.
 3. 아래 표의 값을 한 트랜잭션으로 저장한다.
-4. 자리 번호가 같은 순간에 들어온 다른 사람과 겹치면 서버가 번호를 다시 골라 저장한다. 그래도 저장하지 못하면 모두 되돌리고 `500`과 `INTERNAL_ERROR`로 답한다.
+4. 자리 번호가 같은 순간에 들어온 다른 사람과 겹치면 트랜잭션을 되돌린 뒤 새 트랜잭션에서 한 번 다시 시도한다. 다시 충돌하면 변경을 되돌리고 `500`과 `INTERNAL_ERROR`로 답한다.
 
 | 요청의 값 | 저장하는 곳 |
 |---|---|
@@ -350,7 +353,9 @@ POST /api/v1/me/burrow/move
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `400` | `INVALID_INPUT` | 최초 이사 요청의 본문이 없거나 형식이 잘못됨. `campusFloorId`가 빠졌거나 `null`이거나 정수 id 형식이 아니면 `fields`에 `campusFloorId`를 담음 |
 | `404` | `CAMPUS_FLOOR_NOT_FOUND` | 없거나 지운 캠퍼스-층 |
+| `500` | `INTERNAL_ERROR` | 열린 학기, 내 프로필, 땅굴 또는 입구가 없거나 자리 충돌을 한 번 다시 시도한 뒤에도 저장하지 못함 |
 
 ## GET /api/v1/me/regular-burrows
 
@@ -527,7 +532,7 @@ GET /api/v1/me/daily-recommendation
 | 이름 | 타입 | 설명 | 값이 오는 곳 |
 |---|---|---|---|
 | `hasReceived` | 참/거짓 | 오늘 추천을 받았는지 | 계산: `daily_recommendation`에 요청한 사람의 오늘 날짜 줄이 있는지 |
-| `recommendedOn` | 날짜 | 서버가 오늘로 보는 추천 기준 날짜 | 계산: 지금 시각의 추천 기준 날짜 |
+| `recommendedOn` | 날짜 | 한국 시각(Asia/Seoul)의 오늘 날짜. 자정에 바뀐다 | 계산: 지금 시각을 한국 날짜로 바꾼 값 |
 | `items` | 목록 | 오늘 추천된 사람. 0 ~ 3명 | |
 | `items[].burrowId` | 숫자 | 그 사람의 땅굴 id | `burrow.id` |
 | `items[].owner` | 객체 | 추천된 사람의 [사용자 표시](00-common.md#사용자-표시). "땅굴 방문하기"는 `owner.id`로 남의 땅굴을 부른다 | `daily_recommendation_member.target_user_id`의 계정 |
@@ -715,6 +720,7 @@ GET /api/v1/users/52/burrow
 - 가구, 무드, 우체통의 모습은 담지 않는다. 방명록 글의 내용도 담지 않고 글 수만 준다.
 - 내 계정 id로 부르면 `isMine`이 `true`, `isRegular`가 `false`, `chat.status`가 `NONE`이다.
 - 정지된 사람의 땅굴도 준다.
+- `isRegular`는 요청한 사람이 단골로 담았는지에 따라 정한다. `chat`은 [대화 버튼의 상태](#대화-버튼의-상태)의 순서로 정한다.
 
 ### 응답 예시
 
@@ -746,15 +752,15 @@ GET /api/v1/users/52/burrow
       { "slot": 3, "introQuestionId": 21, "question": "최근에 산 것 중 가장 잘 산 것은?", "answer": "가볍게 접히는 캠핑 의자를 잘 샀어요" }
     ],
     "guestbookCount": 4,
-    "isRegular": true,
-    "chat": { "status": "REQUEST_SENT", "chatRoomId": null },
+    "isRegular": false,
+    "chat": { "status": "NONE", "chatRoomId": null },
     "entrance": { "termId": 4, "campusFloorId": 12, "slot": 7 }
   },
   "error": null
 }
 ```
 
-겹치는 관심사는 1개(러닝)이고, 단골로 담았으며, 내가 보낸 대화 요청이 살아 있어 버튼은 "요청 보냄"이다.
+겹치는 관심사는 1개(러닝)다.
 
 ### 에러
 
@@ -774,7 +780,7 @@ GET /api/v1/users/52/burrow
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
 | 경로 | `burrowId` | 숫자 | ✓ | 글을 남길 땅굴의 id |
-| 본문 | `content` | 문자열 | ✓ | 본문. 1 ~ 50자. 공백만으로는 쓸 수 없다 |
+| 본문 | `content` | 문자열 | ✓ | 입력한 그대로 1 ~ 50자. 공백만 있는 글은 쓸 수 없으며, 앞뒤 공백도 글자 수에 포함한다 |
 
 ```text
 POST /api/v1/burrows/27/guestbook-entries
@@ -873,7 +879,7 @@ POST /api/v1/chat-requests
 4. 두 사람이 모두 나가지 않은 1:1 대화방이 있으면 `409`와 `CHAT_ROOM_ALREADY_EXISTS`.
 5. 내가 그 사람에게 보낸 살아 있는 요청이 있으면 `409`와 `CHAT_REQUEST_ALREADY_SENT`.
 6. 그 사람이 나에게 보낸 살아 있는 요청이 `PENDING`이면 `409`와 `CHAT_REQUEST_ALREADY_RECEIVED`. 요청을 새로 만들지 않는다.
-7. 그 사람이 나에게 보낸 살아 있는 요청이 `REJECTED`면 내가 거절한 요청이다. 요청을 새로 만들지 않고 그 요청을 내가 수락한 것으로 처리한 뒤 끝낸다. 대화방과 참여자를 만들고, 요청을 `ACCEPTED`로 바꾸고, 수락 안내 메시지를 넣고, 그 사람에게 수락 알림을 만든다([대화 요청 수락](06-chat.md#post-apiv1chat-requestschatrequestidaccept)의 5 ~ 7, 9와 같다). 인사를 보냈으면 만든 대화방에 내가 보낸 첫 메시지로 넣는다.
+7. 그 사람이 나에게 보낸 살아 있는 요청이 `REJECTED`면 내가 거절한 요청이다. 요청을 새로 만들지 않고 그 요청을 내가 수락한 것으로 처리한 뒤 끝낸다. 대화방과 참여자를 만들고, 요청을 `ACCEPTED`로 바꾸고, 수락 안내 메시지를 넣고, 그 사람에게 수락 알림을 만든다([대화 요청 수락](06-chat.md#post-apiv1chat-requestschatrequestidaccept)의 5 ~ 7, 9와 같다). 인사를 보냈으면 만든 대화방에 내가 보낸 첫 메시지(`TEXT`)로 넣고, 그 사람에게 새 메시지 알림(`CHAT_MESSAGE_RECEIVED`)도 만든다. 인사가 없으면 수락 알림만 만든다. 이때 대화방에 메시지가 생긴 것을 실시간 소식 `CHAT_MESSAGE_CREATED`로 알린다.
 8. `chat_request`에 한 줄을 만든다. `sender_id`는 요청한 사람, `receiver_id`는 받을 사람, `message`는 인사(없으면 `NULL`), `status`는 `PENDING`이다.
 9. 받을 사람에게 대화 요청 알림(`CHAT_REQUEST_RECEIVED`)을 만든다([알림 API](09-notification.md#알림의-종류)).
 
@@ -949,7 +955,7 @@ POST /api/v1/chat-requests
 ## 명세에 없어 이 문서에서 정한 것
 
 - **들판을 가리키는 법**: 들판을 학기 아래의 자원으로 두고 `termId`와 `campusFloorId`로 가리킨다. DB에 들판 테이블이 없어 들판만의 id가 없다.
-- **들판의 입구를 한 번에 모두 주기**: 나누지 않는다. 안내판과 가까운 주인 카드의 값(관심사, 질문과 답변)까지 입구마다 담는다. 두더지가 움직일 때마다 서버를 부르지 않는다.
+- **들판의 입구를 한 번에 모두 주기**: 입구마다 방노트의 자기소개, 관심사, 질문과 답변을 함께 담는다. 프론트엔드는 이 값으로 가장 가까운 주인의 방노트를 갱신한다.
 - **새 학기를 서버가 지키기**: 고르지 않은 계정은 `nextStep`이 `NEW_TERM`이고 다른 API를 부르면 `NEW_TERM_INCOMPLETE`다. 온보딩을 마치지 않은 계정과 같은 방식이다. 새 학기 안내가 쓰도록 내 계정 조회가 `campusFloorId`도 준다.
 - **이사의 주소**: 새 자원을 만들지 않고 땅굴의 위치를 옮기는 행동이라 `POST /api/v1/me/burrow/move`로 둔다.
 - **이사를 두 번 불러도 한 번만 옮기기**: 이미 이사한 계정이 다시 부르면 바꾸지 않고 지금 값을 준다. 온보딩 확정과 같은 방식이다.
@@ -968,7 +974,6 @@ POST /api/v1/chat-requests
 
 ## 구현 단계로 넘기는 것
 
-- 들판에 땅굴이 아주 많아졌을 때 입구를 나눠 주는 방법
-- 오늘의 추천 기준 날짜가 바뀌는 시각(DB 설계에서도 구현 단계로 넘겼다)
+- 들판 상세는 입구를 한 번에 주고 주인 정보·관심사·질문과 답변을 묶어서 읽는다. 응답 크기가 문제가 되면 입구를 나눠 주는 방법을 검토한다(KAN-46).
 - 캠퍼스 · 층이나 기수를 고르지 않고 전체에서 추천받을 수 있는지(명세의 보류한 결정이다)
-- 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
+- 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준. 대화 요청은 KAN-55에서 제한하지 않기로 했다(살아 있는 요청은 두 사람 사이에 하나뿐이라 한 사람에게 여러 번 보낼 수는 없다)

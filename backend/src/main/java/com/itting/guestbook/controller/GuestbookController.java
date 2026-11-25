@@ -1,19 +1,26 @@
 package com.itting.guestbook.controller;
 
 import com.itting.global.response.ApiResult;
+import com.itting.guestbook.dto.GuestbookEntryCreateRequest;
 import com.itting.guestbook.dto.GuestbookEntryListResponse;
+import com.itting.guestbook.dto.GuestbookEntryListResponse.GuestbookEntryResponse;
 import com.itting.guestbook.service.GuestbookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "04 내 땅굴", description = "내 땅굴 조회, 두더지 · 내 정보 저장, 방명록 목록 · 삭제")
@@ -28,6 +35,16 @@ public class GuestbookController {
 
 	public GuestbookController(GuestbookService guestbookService) {
 		this.guestbookService = guestbookService;
+	}
+
+	@Operation(summary = "방명록 쓰기", description = "다른 사람의 땅굴에 공개 방명록 글을 남긴다.",
+			tags = "05 탐색 · 방문")
+	@ResponseStatus(HttpStatus.CREATED)
+	@PostMapping("/burrows/{burrowId}/guestbook-entries")
+	public ApiResult<GuestbookEntryResponse> createEntry(@PathVariable Long burrowId,
+			@Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+			@Valid @RequestBody GuestbookEntryCreateRequest request) {
+		return ApiResult.ok(guestbookService.createEntry(burrowId, userId, request.content()));
 	}
 
 	@Operation(summary = "방명록 목록",

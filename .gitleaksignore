@@ -1,0 +1,9 @@
+# gitleaks가 비밀값으로 잘못 잡은 것(docs/ci.md의 "비밀값"). 한 줄에 하나, gitleaks가 출력한 Fingerprint를 쓴다.
+# 지금 줄에는 gitleaks:allow 주석을 달고, 주석을 달기 전에 이미 푸시한 커밋의 같은 줄만 여기에 둔다.
+# KAN-59: RFC 8291 부록 A의 공개 예시 값과 테스트용 예시 값
+0b4ee6c7569f661b4a995a008ecfa88af1b59d98:backend/src/test/java/com/itting/notification/PushSubscriptionApiTests.java:generic-api-key:55
+2c24eb68adf057ee071fdff8664820900aa1843c:backend/src/test/java/com/itting/notification/service/WebPushEncryptionTests.java:generic-api-key:27
+2c24eb68adf057ee071fdff8664820900aa1843c:backend/src/test/java/com/itting/notification/service/WebPushEncryptionTests.java:generic-api-key:32
+2c24eb68adf057ee071fdff8664820900aa1843c:backend/src/test/java/com/itting/notification/service/WebPushEncryptionTests.java:generic-api-key:37
+# KAN-53: 사진 메타데이터 테스트의 가짜 위치 글자(상수 이름 SECRET)
+db9202de19ef9ab3f23f972a731b097c2479d71e:backend/src/test/java/com/itting/support/TestImages.java:generic-api-key:21

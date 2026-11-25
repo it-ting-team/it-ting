@@ -1,0 +1,35 @@
+# 공용 HTTPS 프록시(Caddy). 서버에서 밖으로 여는 포트는 여기의 80 · 443뿐이다.
+# 테스트 서버(deploy/test)와 나중의 운영 서버가 Docker 네트워크 it-ting-edge로 붙는다.
+# 띄우는 일은 deploy/deploy.sh가 한다. 주소는 테스트 서버의 .env에서 읽는다:
+#   docker compose --env-file ../test/.env up -d
+
+name: it-ting-edge
+
+services:
+  caddy:
+    image: caddy:2.11
+    restart: unless-stopped
+    ports:
+      - "${EDGE_HTTP_PORT:-80}:80"
+      - "${EDGE_HTTPS_PORT:-443}:443"
+    environment:
+      TEST_HOST: ${TEST_HOST:?test/.env에 TEST_HOST가 필요합니다}
+      TEST_MAIL_HOST: ${TEST_MAIL_HOST:?test/.env에 TEST_MAIL_HOST가 필요합니다}
+    volumes:
+      # 파일 하나가 아니라 폴더를 붙인다. 배포가 Caddyfile을 바꿔도 컨테이너가 새 파일을 본다.
+      - ./caddy:/etc/caddy:ro
+      # 발급받은 인증서. 지우면 다시 발급받는다(Let's Encrypt 발급 횟수 제한에 주의).
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+    mem_limit: 128m
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  edge:
+    name: it-ting-edge
+    external: true

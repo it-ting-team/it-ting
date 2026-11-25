@@ -454,7 +454,7 @@ GET /api/v1/me/notification-settings
 | `isCommunityOn` | 참/거짓 | 커뮤니티 알림을 켰는지 | `notification_setting.community_on` |
 | `isBurrowOn` | 참/거짓 | 땅굴 알림을 켰는지 | `notification_setting.burrow_on` |
 | `isNoticeOn` | 참/거짓 | 공지 알림을 켰는지 | `notification_setting.notice_on` |
-| `pushPublicKey` | 문자열 | 브라우저가 푸시 구독을 만들 때 쓰는 공개 키. 서버 설정에 아직 키가 없으면 `null`이다(브라우저 푸시를 만드는 KAN-59 전까지) | 서버 설정 `itting.push.public-key` |
+| `pushPublicKey` | 문자열 | 브라우저가 푸시 구독을 만들 때 쓰는 공개 키. 서버 설정의 푸시 키(공개 키, 개인 키, 연락처) 가운데 하나라도 없거나 키가 틀리면 `null`이다. 이때 서버는 푸시를 보내지 않는다 | 서버 설정 `itting.push.public-key` |
 
 ### 주는 방식
 
@@ -568,10 +568,10 @@ PATCH /api/v1/me/notification-settings
 
 | 위치 | 이름 | 타입 | 필수 | 설명 |
 |---|---|---|---|---|
-| 본문 | `endpoint` | 문자열 | ✓ | 브라우저가 준 푸시 수신 주소. `https://`로 시작한다. 2,000자까지 |
+| 본문 | `endpoint` | 문자열 | ✓ | 브라우저가 준 푸시 수신 주소. `https://`로 시작하는 ASCII 글이다(공백 없음). 2,000자까지 |
 | 본문 | `keys` | 객체 | ✓ | 푸시를 암호화하는 키 |
-| 본문 | `keys.p256dh` | 문자열 | ✓ | 브라우저가 준 공개 키 |
-| 본문 | `keys.auth` | 문자열 | ✓ | 브라우저가 준 인증 값 |
+| 본문 | `keys.p256dh` | 문자열 | ✓ | 브라우저가 준 공개 키. base64url 글이고 255자까지 |
+| 본문 | `keys.auth` | 문자열 | ✓ | 브라우저가 준 인증 값. base64url 글이고 255자까지 |
 
 ```text
 POST /api/v1/me/push-subscriptions
@@ -589,8 +589,8 @@ POST /api/v1/me/push-subscriptions
 
 ### 서버가 하는 일
 
-1. 입력값의 모양을 본다. 세 값이 있는지와 `endpoint`의 모양 · 길이다. 어긋나면 `400`과 `INVALID_INPUT`.
-2. `push_subscription`에서 같은 `endpoint`의 줄을 찾는다.
+1. 입력값의 모양을 본다. 세 값이 있는지, `endpoint`의 모양 · 길이, 두 키의 모양 · 길이다. 어긋나면 `400`과 `INVALID_INPUT`이고 `fields`의 `field`는 `endpoint`, `keys`, `keys.p256dh`, `keys.auth`다.
+2. `push_subscription`에서 같은 `endpoint`의 줄을 찾는다. 같은 주소가 동시에 들어와도 오류 없이 줄 하나를 둔다.
 3. 없으면 `user_id`를 나로 해서 새 줄을 넣고 `201`로 답한다.
 4. 있으면 그 줄의 `user_id`를 나로, 키를 보낸 값으로 바꾸고 `200`으로 답한다. 이 브라우저를 다른 계정이 등록해 두었던 경우에도 내 것으로 바뀐다.
 
@@ -907,13 +907,36 @@ POST /api/v1/me/withdraw
 - **탈퇴의 본인 확인**: 비밀번호는 따로 확인하는 API 없이 탈퇴 API가 함께 확인한다. Google 확인은 10분 동안 유효하다.
 - **탈퇴할 때 대화방과 알림**: 내가 들어 있는 모든 대화방에 "탈퇴했습니다" 안내 메시지를 넣는다. 예정 모임의 대화방에는 "나갔습니다"를 따로 넣지 않는다. 내가 받은 알림은 지우고, 내가 일으킨 남의 알림은 남긴다.
 - **이미 등록된 브라우저를 다시 등록할 때**: 새로 만들지 않고 그 줄의 주인과 키를 바꾼다. 브라우저 하나가 두 계정의 푸시를 받지 않는다.
+- **브라우저 푸시를 보내는 일 (KAN-59)**: 알림이 생기면(알림을 만든 트랜잭션이 커밋된 뒤) 그 계정에 등록된 모든 브라우저로 푸시를 보낸다. 요청을 기다리게 하지 않도록 따로 보낸다.
+  - **내용**: 알림 목록의 한 줄([알림 한 줄](09-notification.md#알림의-모양))과 같은 모양의 JSON이다(`id`, `type`, `category`, `actor`, `target`, `isRead`, `createdAt`). 문구와 눌렀을 때 갈 주소는 프론트엔드의 서비스 워커가 `type`, `actor.nickname`, `target`으로 만든다. 알림 목록과 푸시의 글이 같은 곳에서 만들어진다.
+  - **새 메시지 알림**: 메시지마다 푸시를 하나씩 보낸다. 푸시를 덮어쓰는 `Topic`을 붙이지 않으므로 앞의 푸시 위에 쌓인다. 메시지 내용은 담지 않는다. 같은 대화방의 안 읽은 알림은 한 줄이라 푸시가 여러 번 와도 `id`가 같다. 쌓아 보여 주는 모양은 프론트엔드와 기기가 정한다.
+  - **저장하는 값**: `endpoint`는 2,000자까지(ASCII, 대소문자 구분), `keys.p256dh` · `keys.auth`는 각각 255자까지(base64url)다([알림 · 공지 DB](../db/notification.md#push_subscription)).
+  - **표준과 시간**: 푸시 암호화는 RFC 8291(`aes128gcm`), 서버 서명은 RFC 8292(VAPID)를 따른다. 푸시 서비스가 받지 못할 때 보관하는 시간(`TTL`)은 하루, `Urgency`는 `normal`이다.
+  - **실패**: 푸시 서비스가 `404`나 `410`으로 답하면 "없는 구독"이라 그 줄을 지운다. 그 밖의 실패(연결 오류, `4xx`, `5xx`)는 로그만 남기고 다시 보내지 않는다. 푸시는 알림 목록을 보충하는 것이라 놓쳐도 알림 목록에 남는다.
+  - **키 설정**: 서버 설정 `itting.push.public-key`, `itting.push.private-key`, `itting.push.subject`(연락처 `mailto:`)를 `.env`나 환경 변수(`ITTING_PUSH_PUBLIC_KEY`, `ITTING_PUSH_PRIVATE_KEY`, `ITTING_PUSH_SUBJECT`)로 넣는다. 키는 `backend/`에서 `./gradlew vapidKeys`로 만든다. 하나라도 비어 있으면 서버는 정상으로 뜨고 푸시만 보내지 않는다(`pushPublicKey`도 `null`이다).
+  - **보내는 주소의 제한**: 푸시 주소는 사용자가 등록한 값이라, 서버가 요청을 보내는 곳을 `https://` 주소로, 서버 안쪽(내 PC, 사설망, 링크 로컬)이 아닌 곳으로 제한한다. 리다이렉트는 따라가지 않는다.
+
+[KAN-60](../work/KAN-60.md)에서 정했다. 로그인과 같은 `state` · 쿠키 · PKCE 장치는 [로그인 · 회원가입 API](02-auth.md#구현하며-정한-것)에 적었다.
+
+- **Google 확인이 돌아가는 주소**(KAN-60): 서버 설정 `itting.frontend-url` 뒤에 붙인다. 프론트엔드가 아직 없어 서버가 먼저 정했다.
+  - `LINK` 확인됨: `/settings/google?verified=true`, 못 함: `/settings/google?error=<code>`
+  - `WITHDRAW` 확인됨: `/settings/withdraw`, 못 함: `/settings/withdraw?error=<code>`
+  - `verify`를 부를 때 로그인이 풀려 있음: `/login`. `purpose`가 틀림: `/settings`
+  - 돌아왔는데 로그인이 풀려 있음: `/login`
+  - `state`가 없거나 쿠키와 다르거나 이미 썼거나 10분이 지났을 때는 어느 화면에서 시작했는지 믿을 수 없어 로그인 실패와 같은 `/login?error=GOOGLE_LOGIN_FAILED`로 보낸다.
+- **확인 기록을 두는 모양**(KAN-60): Redis의 `itting:google-verification:<세션 id>` 하나에 `purpose`, Google 식별자, Google 이메일, 끝나는 시각을 둔다. 한 세션에 하나라서 `LINK`를 받은 뒤 `WITHDRAW`를 받으면(그 반대도) 앞의 기록을 덮어쓴다. `purpose`가 다르면 읽지 않는다. 10분이 지났는지는 서버 시계로 보고 Redis의 만료는 치우는 용도다. `WITHDRAW` 기록을 읽고 지우는 일은 KAN-61이 같은 서비스(`GoogleVerificationService`)로 한다.
+- **확인은 시작한 세션에서만 받는다**(KAN-60): 시작할 때 계정 id와 세션 id를 시도와 함께 기억한다. 다른 세션이나 다른 계정으로 돌아오면 Google에서 계정 정보를 받지 않고 `GOOGLE_VERIFICATION_FAILED`로 보낸다. 검사에 어긋나 기록을 만들지 않을 때는 앞에 받아 둔 유효한 기록도 건드리지 않는다.
+- **`verify`에 로그인하지 않고 오면**(KAN-60): 브라우저가 이동하는 주소라 JSON `401` 대신 프론트엔드의 로그인 화면(`/login`)으로 `302`를 준다. 로그인 검사가 이 주소만 이렇게 답한다. 세션은 있는데 계정이 없거나 탈퇴했어도 로그인 화면으로 보내고 시도를 만들지 않는다.
+- **온보딩을 마치지 않은 계정이 `verify`를 부르면**(KAN-60): `403`과 `ONBOARDING_INCOMPLETE` JSON이다. `verify`에 "온보딩 중에도"가 없어 다른 설정 API와 같이 막는다. 온보딩 중인 계정은 설정 화면에 들어올 수 없어 정상 흐름에서는 부르지 않는다. 콜백과 로그인 시작은 로그인 없이 부르는 API라 "온보딩 중에도" · "새 학기를 고르기 전에도"를 모두 붙였다.
+- **같은 Google 계정을 다시 연결할 때**(KAN-60): `PUT /api/v1/me/google-link`는 이미 그 Google 계정이 연결된 계정이면 바꾸지 않고 성공한다. `GOOGLE_ALREADY_LINKED`는 다른 Google 계정이 연결돼 있을 때만이다. 확인 기록은 연결했든 `GOOGLE_ACCOUNT_DUPLICATED` · `GOOGLE_ALREADY_LINKED`로 못 했든 지운다. 다시 연결하려면 다시 확인받는다.
+- **같은 Google 계정을 두 계정이 동시에 연결할 때**(KAN-60): 둘 다 확인을 받았어도 `user.google_sub`의 UNIQUE가 한쪽만 통과시키고, 진 쪽은 `409`와 `GOOGLE_ACCOUNT_DUPLICATED`다.
+- **코드가 주소로만 가는 에러**(KAN-60): `GOOGLE_ACCOUNT_MISMATCH`, `GOOGLE_VERIFICATION_FAILED`, `GOOGLE_LOGIN_FAILED`는 JSON 응답으로 나가지 않고 돌아가는 주소의 `error`로만 쓴다. `AuthErrorCode`에 있는 상태 값(`409`, `400`, `401`)은 쓰이지 않는다.
 
 ## 구현 단계로 넘기는 것
 
 - 지금 비밀번호를 여러 번 틀렸을 때 막는 횟수와 시간(KAN-58에서는 막지 않았다. 로그인 API와 같은 규칙으로 함께 정한다)
-- Google 확인을 시작할 때 계정을 다시 고르게 하는 방법, 확인 기록을 임시 저장소에 두는 모양
-- 푸시 구독의 주소와 키를 저장하는 형식과 길이, 푸시를 보내는 방법, 푸시 공개 키를 만들어 넣는 일(둘 곳은 서버 설정 `itting.push.public-key`로 정했고, 값은 KAN-59가 넣는다)
-- 로그인이 만료된 브라우저에 푸시가 계속 가지 않게 하는 방법
+- Google 확인을 시작할 때 계정을 다시 고르게 하는 방법(`prompt=select_account`를 붙일지. KAN-60은 정하지 않았다. 지금은 붙이지 않아 Google의 기본 동작을 따른다. 지금 Google에 로그인된 계정이 아닌 다른 계정을 고르려면 사용자가 Google 화면에서 직접 계정을 바꾼다)
+- 로그인이 만료된 브라우저에 푸시가 계속 가지 않게 하는 방법(KAN-59에서도 정하지 않았다. 로그아웃할 때 프론트엔드가 먼저 등록을 지우는 것으로 둔다. 로그인은 14일 동안 유지되고, 만료된 브라우저는 푸시 서비스가 `404` · `410`으로 답할 때까지 줄이 남는다)
 - 탈퇴한 사람의 프로필 사진 파일을 저장소에서 지우는 때
 - 공지를 올리고 고치는 API와 본문의 길이(11 운영 · 관리자). 제목은 100자 이하로 정했다(KAN-58, [알림 · 공지 DB](../db/notification.md#notice))
 - 회원 탈퇴의 비밀번호 칸이 가리키는 공통 규칙, 비밀번호 변경의 "취소"가 확인을 거치는지(명세의 "아직 정하지 않은 것". 화면의 일이다)

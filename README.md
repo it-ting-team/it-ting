@@ -140,6 +140,24 @@ cd backend
 | http://localhost:8080/swagger-ui.html | API 문서(Swagger). `prod` 프로필에서는 열리지 않는다 |
 | http://localhost:8080/actuator/health | 헬스체크 |
 
+### 브라우저 푸시 키
+
+브라우저 푸시를 실제로 보내 보려면 VAPID 키를 만들어 `.env`에 넣는다. 키를 비워 두면 서버는 정상으로 뜨고 푸시만 보내지 않는다.
+
+```bash
+cd backend
+./gradlew -q vapidKeys    # ITTING_PUSH_PUBLIC_KEY=..., ITTING_PUSH_PRIVATE_KEY=... 두 줄을 출력한다(파일은 만들지 않는다)
+```
+
+출력된 두 줄을 `.env`에 붙여 넣고, 푸시 서비스가 문제를 알릴 연락처 `ITTING_PUSH_SUBJECT=mailto:<팀 이메일 주소>`도 적는다. 개인 키(`ITTING_PUSH_PRIVATE_KEY`)는 비밀값이라 공유하지 않는다.
+
+### Google 로그인 설정
+
+Google 로그인과 설정의 Google 연동을 실제로 써 보려면 Google Cloud 콘솔에서 "웹 애플리케이션" OAuth 클라이언트를 만들어 값을 `.env`에 넣는다. 비워 두면 서버는 정상으로 뜨고 Google 로그인 · 연동만 실패한다.
+
+1. "승인된 리디렉션 URI"에 `.env`의 `ITTING_GOOGLE_REDIRECT_URI`와 같은 주소(로컬은 `http://localhost:8080/api/v1/oauth/google/callback`)를 등록한다.
+2. 클라이언트 ID와 보안 비밀을 `ITTING_GOOGLE_CLIENT_ID`, `ITTING_GOOGLE_CLIENT_SECRET`에 적는다. 보안 비밀은 비밀값이라 공유하지 않는다.
+
 ### 프로필
 
 | 프로필 | 쓰는 곳 | 설정 파일 |
@@ -159,6 +177,15 @@ cd backend
 - 엔티티와 테이블이 다르면 서버가 뜨지 않는다(`ddl-auto: validate`).
 
 로컬 DB를 처음 상태로 되돌리려면 `docker compose down -v` 후 다시 띄운다. 데이터가 모두 지워진다.
+
+## 배포
+
+| 무엇 | 올라가는 것 | 다시 배포되는 때 | 주소 |
+|---|---|---|---|
+| 테스트 서버 (GCP) | 프론트엔드 + 백엔드, 실제 데이터 | `dev` → `test` PR을 병합할 때 | 첫 배포 뒤에 적는다 |
+| 목 사이트 (Vercel) | 프론트엔드만, 목 데이터 | `dev`에 `frontend/` 변경이 병합될 때 | 첫 배포 뒤에 적는다 |
+
+구성, 처음 만드는 법, 로그 보기, 되돌리기는 [테스트 서버와 목 사이트](docs/infra/test-server.md)에 있다.
 
 ## AI 에이전트
 
@@ -211,6 +238,7 @@ bash scripts/sync-agent-skills.sh
 - [브랜치 전략](docs/branch-strategy.md)
 - [커밋 메시지 규칙](docs/commit-convention.md)
 - [CI](docs/ci.md)
+- [테스트 서버와 목 사이트](docs/infra/test-server.md)
 - [서비스 명세](docs/spec/)
 - [DB 설계](docs/db/)
 - [API 공통 규칙](docs/api-convention.md), [API 명세](docs/api/)
