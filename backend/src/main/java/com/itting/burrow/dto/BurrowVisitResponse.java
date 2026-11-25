@@ -15,7 +15,7 @@ public record BurrowVisitResponse(Long burrowId, boolean isMine, UserDisplayResp
 		ChatResponse chat, EntranceResponse entrance) {
 
 	public record ChatResponse(
-			@Schema(description = "대화 상태. 채팅 기능이 연결되기 전까지 NONE") ChatStatus status,
+			@Schema(description = "대화 상태. 내 땅굴이면 NONE") ChatStatus status,
 			@Schema(description = "대화방 id. CHATTING이 아니면 null", nullable = true) Long chatRoomId) {
 	}
 
