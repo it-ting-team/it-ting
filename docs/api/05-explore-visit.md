@@ -720,7 +720,7 @@ GET /api/v1/users/52/burrow
 - 가구, 무드, 우체통의 모습은 담지 않는다. 방명록 글의 내용도 담지 않고 글 수만 준다.
 - 내 계정 id로 부르면 `isMine`이 `true`, `isRegular`가 `false`, `chat.status`가 `NONE`이다.
 - 정지된 사람의 땅굴도 준다.
-- `isRegular`는 요청한 사람이 단골로 담았는지에 따라 정한다. 대화 요청과 대화방(KAN-55 · KAN-56)이 연결되기 전까지 `chat`은 `{"status":"NONE","chatRoomId":null}`이다.
+- `isRegular`는 요청한 사람이 단골로 담았는지에 따라 정한다. `chat`은 [대화 버튼의 상태](#대화-버튼의-상태)의 순서로 정한다.
 
 ### 응답 예시
 

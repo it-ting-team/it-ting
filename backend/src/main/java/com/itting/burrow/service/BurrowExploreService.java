@@ -55,12 +55,14 @@ public class BurrowExploreService {
 	private final UserAnswerRepository answerRepository;
 	private final GuestbookEntryRepository guestbookRepository;
 	private final RegularBurrowRepository regularBurrowRepository;
+	private final ChatRelationReader chatRelationReader;
 
 	public BurrowExploreService(TermService termService, CampusService campusService,
 			BurrowEntranceRepository entranceRepository, BurrowRepository burrowRepository, UserRepository userRepository,
 			UserProfileRepository profileRepository, UserDisplayService userDisplayService,
 			InterestTagService interestTagService, UserAnswerRepository answerRepository,
-			GuestbookEntryRepository guestbookRepository, RegularBurrowRepository regularBurrowRepository) {
+			GuestbookEntryRepository guestbookRepository, RegularBurrowRepository regularBurrowRepository,
+			ChatRelationReader chatRelationReader) {
 		this.termService = termService;
 		this.campusService = campusService;
 		this.entranceRepository = entranceRepository;
@@ -72,6 +74,7 @@ public class BurrowExploreService {
 		this.answerRepository = answerRepository;
 		this.guestbookRepository = guestbookRepository;
 		this.regularBurrowRepository = regularBurrowRepository;
+		this.chatRelationReader = chatRelationReader;
 	}
 
 	public FieldListResponse getFields(Long termId) {
@@ -122,10 +125,10 @@ public class BurrowExploreService {
 
 		boolean isMine = viewerId.equals(ownerId);
 		boolean isRegular = !isMine && regularBurrowRepository.existsByUserIdAndBurrowId(viewerId, burrow.getId());
-		// 채팅이 추가되면 저장된 관계를 읽는다. KAN-55, KAN-56.
+		ChatResponse chat = isMine ? new ChatResponse(ChatStatus.NONE, null) : chatRelationReader.read(viewerId, ownerId);
 		return new BurrowVisitResponse(burrow.getId(), isMine, userDisplayService.get(ownerId),
 				profile.getIntro(), interestTagService.getTags(ownerId, viewerId), answers, guestbookCount,
-				isRegular, new ChatResponse(ChatStatus.NONE, null),
+				isRegular, chat,
 				new EntranceResponse(entrance.getTermId(), entrance.getCampusFloorId(), entrance.getSlot()));
 	}
 
