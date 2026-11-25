@@ -193,8 +193,8 @@ erDiagram
 
 ### 남은 일
 
-- 글에 모임 연결하기(A): KAN-48 병합 뒤 Jira에 "[BE] 08 커뮤니티 ④: 글에 모임 연결" 티켓을 만든다. `GET /api/v1/me/linkable-meetups`, `post.meetup_id`, 모임 연결 검사, `MEETUP_NOT_FOUND`를 모임 영역 코드로 옮기기, 상세의 `meetup` 카드
-- 붙지 않은 사진과 2주 뒤 버전 · 사진 지우기(E, KAN-51 G): KAN-56이 `chat_message_image`를 만든 뒤 따로 티켓
+- 글에 모임 연결하기(A): [KAN-65](https://it-ting.atlassian.net/browse/KAN-65) "[BE] 08 커뮤니티 ④: 글에 모임 연결". KAN-48 병합 뒤 시작한다. `GET /api/v1/me/linkable-meetups`, `post.meetup_id`, 모임 연결 검사, `MEETUP_NOT_FOUND`를 모임 영역 코드로 옮기기, 상세의 `meetup` 카드
+- 붙지 않은 사진과 2주 뒤 버전 · 사진 지우기(E, KAN-51 G): [KAN-66](https://it-ting.atlassian.net/browse/KAN-66) "[BE] 사진 · 삭제한 글 정리 예약 작업". KAN-56이 `chat_message_image`를 만든 뒤 시작한다.
 - KAN-63(테스트 서버): `ITTING_IMAGES_STORAGE_DIR`(서버를 다시 띄워도 남는 볼륨)과 `ITTING_IMAGES_PUBLIC_BASE_URL`을 넣어야 서버가 뜬다
 - KAN-56(채팅 ②): 메시지 사진은 이 API로 올리고, "다른 곳에 붙은 사진" 검사에 `chat_message_image`를 더한다
 - 운영 서버를 열 때: 외부 저장소(GCS 등) 구현을 `ImageStorage`에 더한다
