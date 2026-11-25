@@ -178,6 +178,15 @@ Google 로그인과 설정의 Google 연동을 실제로 써 보려면 Google Cl
 
 로컬 DB를 처음 상태로 되돌리려면 `docker compose down -v` 후 다시 띄운다. 데이터가 모두 지워진다.
 
+## 배포
+
+| 무엇 | 올라가는 것 | 다시 배포되는 때 | 주소 |
+|---|---|---|---|
+| 테스트 서버 (GCP) | 프론트엔드 + 백엔드, 실제 데이터 | `dev` → `test` PR을 병합할 때 | 첫 배포 뒤에 적는다 |
+| 목 사이트 (Vercel) | 프론트엔드만, 목 데이터 | `dev`에 `frontend/` 변경이 병합될 때 | 첫 배포 뒤에 적는다 |
+
+구성, 처음 만드는 법, 로그 보기, 되돌리기는 [테스트 서버와 목 사이트](docs/infra/test-server.md)에 있다.
+
 ## AI 에이전트
 
 Claude Code와 Codex는 같은 규칙과 스킬을 쓴다.
@@ -229,6 +238,7 @@ bash scripts/sync-agent-skills.sh
 - [브랜치 전략](docs/branch-strategy.md)
 - [커밋 메시지 규칙](docs/commit-convention.md)
 - [CI](docs/ci.md)
+- [테스트 서버와 목 사이트](docs/infra/test-server.md)
 - [서비스 명세](docs/spec/)
 - [DB 설계](docs/db/)
 - [API 공통 규칙](docs/api-convention.md), [API 명세](docs/api/)

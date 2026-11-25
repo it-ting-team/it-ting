@@ -47,9 +47,11 @@ npm run typecheck && npm run lint && npm test && npm run build && npm run smoke 
 | `NEXT_PUBLIC_API_REAL_AREAS` | 비움 | 이 영역만 실제 서버 (예 `common,auth,events`) |
 | `NEXT_PUBLIC_API_MOCK_AREAS` | 비움 | `real` 이어도 목으로 둘 영역 |
 | `API_PROXY_TARGET` | `http://localhost:8080` | `/api/v1/*` 를 넘길 백엔드 (서버 전용, `off` 면 안 넘김) |
+| `NEXT_OUTPUT` | 비움 | `standalone` 이면 standalone 으로 빌드 (서버 전용, `frontend/Dockerfile` 만 씀) |
 
 - `NEXT_PUBLIC_*` 는 **빌드할 때** JS 에 박힌다. 바꾸면 `npm run build` 를 다시 하거나 개발 서버를 다시 켠다. 비밀값은 넣지 않는다
 - `API_PROXY_TARGET` 도 `next build` 때 정해진다 (rewrites 가 빌드 결과에 들어감). `next start` 만 다시 해서는 안 바뀐다
+- 배포용 값은 저장소의 `deploy/test/frontend.build.env`(테스트 서버) · `deploy/mock/frontend.build.env`(목 사이트, Vercel)에 있다. 배포 방법은 `docs/infra/test-server.md`
 
 ## 목 서버 ↔ 실제 서버
 
