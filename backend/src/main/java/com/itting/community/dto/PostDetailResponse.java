@@ -4,13 +4,15 @@ import java.time.Instant;
 import java.util.List;
 
 import com.itting.community.domain.PostCategory;
+import com.itting.meetup.dto.MeetupListResponse.MeetupCardResponse;
 import com.itting.user.dto.UserDisplayResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * {@code GET /api/v1/posts/{postId}}의 {@code data}.
  *
- * @param meetup 글에 연결한 모임의 카드. 모임을 연결하는 기능(08 커뮤니티 ③)이 생기기 전이라 지금은 늘 null이다
+ * @param meetup 글에 연결한 모임의 카드. 연결하지 않았거나 모임이 삭제됐으면 null이다. 모임이 취소되거나 모집 완료가 되면
+ *        글은 그대로이고 카드의 {@code recruitStatus}만 바뀐다
  */
 public record PostDetailResponse(
 		@Schema(description = "글의 id", example = "204") Long id,
@@ -21,7 +23,8 @@ public record PostDetailResponse(
 		@Schema(description = "작성자") UserDisplayResponse author,
 		@Schema(description = "작성자의 관심사 가운데 나와 겹치는 것. 내 글이면 []") List<SharedInterest> authorSharedInterests,
 		@Schema(description = "글에 붙인 관심사 대분류. 없으면 []") List<PostInterestCategoryResponse> interestCategories,
-		@Schema(description = "글에 연결한 모임의 카드. 연결하지 않았거나 모임이 삭제됐으면 null", nullable = true) Object meetup,
+		@Schema(description = "글에 연결한 모임의 카드. 연결하지 않았거나 모임이 삭제됐으면 null. 모임이 취소되거나 모집 완료가 되면 "
+				+ "카드의 recruitStatus가 바뀐다", nullable = true) MeetupCardResponse meetup,
 		@Schema(description = "쓴 시각", example = "2026-11-19T02:30:00Z") Instant createdAt,
 		@Schema(description = "제목이나 본문을 고친 적이 있는지", example = "false") boolean isEdited,
 		@Schema(description = "조회수", example = "87") int viewCount,

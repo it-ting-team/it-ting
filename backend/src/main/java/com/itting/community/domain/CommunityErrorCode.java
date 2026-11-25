@@ -27,10 +27,11 @@ public enum CommunityErrorCode implements ErrorCode {
 	COMMENT_EDIT_NOT_ALLOWED(HttpStatus.CONFLICT, "신고로 가려진 댓글은 고칠 수 없습니다."),
 
 	/**
-	 * 글에 연결하려는 모임이 없거나 삭제됨. 모임 테이블이 생기기 전이라 지금은 어떤 모임 id에도 이 코드로 답한다.
-	 * 모임 테이블(07 모임 ①)이 생긴 뒤 글에 모임을 연결하는 티켓에서 모임 영역의 코드로 바꾼다(KAN-53 A).
+	 * 있는 모임이지만 그 카테고리의 글에는 연결할 수 없다. 모임 홍보인데 내가 연 모집 중인 모임이 아니거나, 모임 후기인데 내가
+	 * 열었거나 참여한 지난 모임이 아니거나, 자유인데 내가 열었거나 참여한 모임이 아니거나, 취소된 모임일 때. 없거나 삭제된
+	 * 모임은 모임 영역의 {@code MeetupErrorCode.MEETUP_NOT_FOUND}로 답한다.
 	 */
-	MEETUP_NOT_FOUND(HttpStatus.NOT_FOUND, "없거나 삭제된 모임입니다."),
+	MEETUP_NOT_LINKABLE(HttpStatus.CONFLICT, "이 글에 연결할 수 없는 모임입니다."),
 
 	/**
 	 * 신고할 대상이 없음. 없거나, 삭제됐거나, 이미 가려진 대상과 탈퇴한 사용자, 가려지거나 삭제된 글의 댓글이다.
