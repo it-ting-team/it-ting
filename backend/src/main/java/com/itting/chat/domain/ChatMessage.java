@@ -49,6 +49,14 @@ public class ChatMessage extends BaseCreatedTimeEntity {
 		return create(chatRoomId, ChatMessageType.ACCEPTED, accepterId, null);
 	}
 
+	public static ChatMessage joined(Long chatRoomId, Long userId) {
+		return create(chatRoomId, ChatMessageType.JOINED, userId, null);
+	}
+
+	public static ChatMessage left(Long chatRoomId, Long userId) {
+		return create(chatRoomId, ChatMessageType.LEFT, userId, null);
+	}
+
 	private static ChatMessage create(Long chatRoomId, ChatMessageType type, Long senderId, String content) {
 		ChatMessage message = new ChatMessage();
 		message.chatRoomId = chatRoomId;

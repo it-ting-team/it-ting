@@ -73,6 +73,10 @@ public class ChatRoomMember {
 		return lastReadMessageId;
 	}
 
+	public void leave(Instant now) {
+		leftAt = now;
+	}
+
 	/** 복합 기본키 {@code (chat_room_id, user_id)}. */
 	public record Key(Long chatRoomId, Long userId) implements Serializable {
 	}

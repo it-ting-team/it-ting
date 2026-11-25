@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
+	Optional<ChatRoom> findByMeetupId(Long meetupId);
+
 	/**
 	 * 두 사람이 모두 나가지 않은 1:1 대화방의 id. 한 사람이라도 나갔으면(읽기 전용이 됐으면) 열린 방이 아니다. 대화 요청은
 	 * 두 사람이 살아 있는 요청이 없을 때만 보내므로 보통 하나이고, 없으면 비어 있다.
