@@ -20,6 +20,24 @@ public enum AuthErrorCode implements ErrorCode {
 
 	GOOGLE_ACCOUNT_DUPLICATED(HttpStatus.CONFLICT, "이미 가입한 Google 계정입니다."),
 
+	/** 이미 다른 Google 계정이 연결된 계정이 연동하려 했다. 확인 · 연동에서 쓴다. */
+	GOOGLE_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 다른 Google 계정이 연결돼 있습니다."),
+
+	/** 탈퇴 전 확인에서 받은 Google 계정이 내 계정에 연결된 Google 계정과 다르다. 돌아가는 주소의 {@code error}로만 쓴다. */
+	GOOGLE_ACCOUNT_MISMATCH(HttpStatus.CONFLICT, "연결된 Google 계정과 다른 계정입니다."),
+
+	/** 설정에서 Google 확인을 취소했거나 마치지 못했다. 돌아가는 주소의 {@code error}로만 쓴다. */
+	GOOGLE_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "Google 계정을 확인하지 못했습니다."),
+
+	/** Google 확인을 받지 않았거나 받은 지 10분이 지났다. */
+	GOOGLE_VERIFICATION_REQUIRED(HttpStatus.CONFLICT, "Google 계정 확인이 필요합니다."),
+
+	/** 비밀번호가 없는 계정(Google로만 가입)이 연동을 해제하려 했다. 해제하면 로그인할 방법이 없어진다. */
+	GOOGLE_UNLINK_NOT_ALLOWED(HttpStatus.CONFLICT, "비밀번호가 없는 계정은 Google 연동을 해제할 수 없습니다."),
+
+	/** Google 로그인을 취소했거나 마치지 못했다. 로그인 화면 주소의 {@code error}로만 쓴다. */
+	GOOGLE_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "Google 로그인을 마치지 못했습니다."),
+
 	VERIFICATION_CODE_MISMATCH(HttpStatus.BAD_REQUEST, "인증 코드가 맞지 않습니다."),
 
 	/** 코드를 보낸 적이 없거나, 유효 시간이 지났거나, 너무 많이 틀려 지웠다. */

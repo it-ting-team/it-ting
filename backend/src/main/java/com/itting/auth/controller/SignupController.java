@@ -46,6 +46,7 @@ public class SignupController {
 
 	@Operation(summary = "계정 만들기(땅굴 파기)",
 			description = "SSAFY 인증 코드를 확인하고 계정과 프로필을 만든 뒤 로그인시킨다. 가입 쿠키가 있어야 한다. "
+					+ "이메일 가입이면 password가 필수이고, Google 가입(Google 콜백이 만든 가입 쿠키)이면 보내지 않는다. "
 					+ "성공하면 가입 쿠키를 지우고 세션 쿠키 ITTING_SESSION을 준다.")
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)

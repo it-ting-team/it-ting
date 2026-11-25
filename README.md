@@ -151,6 +151,13 @@ cd backend
 
 출력된 두 줄을 `.env`에 붙여 넣고, 푸시 서비스가 문제를 알릴 연락처 `ITTING_PUSH_SUBJECT=mailto:<팀 이메일 주소>`도 적는다. 개인 키(`ITTING_PUSH_PRIVATE_KEY`)는 비밀값이라 공유하지 않는다.
 
+### Google 로그인 설정
+
+Google 로그인과 설정의 Google 연동을 실제로 써 보려면 Google Cloud 콘솔에서 "웹 애플리케이션" OAuth 클라이언트를 만들어 값을 `.env`에 넣는다. 비워 두면 서버는 정상으로 뜨고 Google 로그인 · 연동만 실패한다.
+
+1. "승인된 리디렉션 URI"에 `.env`의 `ITTING_GOOGLE_REDIRECT_URI`와 같은 주소(로컬은 `http://localhost:8080/api/v1/oauth/google/callback`)를 등록한다.
+2. 클라이언트 ID와 보안 비밀을 `ITTING_GOOGLE_CLIENT_ID`, `ITTING_GOOGLE_CLIENT_SECRET`에 적는다. 보안 비밀은 비밀값이라 공유하지 않는다.
+
 ### 프로필
 
 | 프로필 | 쓰는 곳 | 설정 파일 |

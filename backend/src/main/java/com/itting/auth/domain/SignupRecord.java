@@ -7,7 +7,9 @@ import java.time.Instant;
  *
  * @param token 가입 쿠키의 값
  * @param method 가입 방법
- * @param email 이메일 가입에서 인증한 이메일
+ * @param email 이메일 가입에서 인증한 이메일. Google 가입이면 null
+ * @param googleSub Google 가입에서 Google이 알려 준 계정 식별자. 이메일 가입이면 null
+ * @param googleEmail Google 가입에서 Google이 알려 준 이메일. 이메일 가입이면 null
  * @param expiresAt 이 시각부터 가입을 이어 갈 수 없다
  * @param generation SSAFY 인증 코드를 보낸 기수. 보내기 전에는 null
  * @param mattermostId SSAFY 인증 코드를 보낸 Mattermost ID. 보내기 전에는 null
@@ -18,6 +20,8 @@ public record SignupRecord(
 		String token,
 		SignupMethod method,
 		String email,
+		String googleSub,
+		String googleEmail,
 		Instant expiresAt,
 		Integer generation,
 		String mattermostId,

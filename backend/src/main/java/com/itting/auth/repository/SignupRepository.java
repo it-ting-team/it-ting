@@ -42,13 +42,27 @@ public class SignupRepository {
 
 	/** 이메일 가입 기록을 만들고 토큰을 준다. 토큰은 추측할 수 없는 무작위 32바이트다. */
 	public String createEmailSignup(String email, Instant now, Duration ttl) {
-		byte[] bytes = new byte[32];
-		random.nextBytes(bytes);
-		String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+		String token = newToken();
 		String key = KEY + token;
 		redis.opsForHash().putAll(key, Map.of(
 				"method", SignupMethod.EMAIL.name(),
 				"email", email,
+				"expiresAt", millis(now.plus(ttl))));
+		redis.expire(key, ttl);
+		return token;
+	}
+
+	/**
+	 * Google 가입 기록을 만들고 토큰을 준다(처음 쓰는 Google 계정이 콜백으로 돌아왔을 때). 토큰은 추측할 수 없는 무작위
+	 * 32바이트다. 이메일 가입 기록과 달리 이메일 칸 없이 Google 식별자와 Google 이메일을 둔다.
+	 */
+	public String createGoogleSignup(String googleSub, String googleEmail, Instant now, Duration ttl) {
+		String token = newToken();
+		String key = KEY + token;
+		redis.opsForHash().putAll(key, Map.of(
+				"method", SignupMethod.GOOGLE.name(),
+				"googleSub", googleSub,
+				"googleEmail", googleEmail,
 				"expiresAt", millis(now.plus(ttl))));
 		redis.expire(key, ttl);
 		return token;
@@ -71,6 +85,8 @@ public class SignupRepository {
 				token,
 				SignupMethod.valueOf((String) hash.get("method")),
 				(String) hash.get("email"),
+				(String) hash.get("googleSub"),
+				(String) hash.get("googleEmail"),
 				instant(hash.get("expiresAt")),
 				hash.containsKey("generation") ? Integer.valueOf((String) hash.get("generation")) : null,
 				(String) hash.get("mattermostId"),
@@ -145,6 +161,12 @@ public class SignupRepository {
 		if (token != null && !token.isBlank()) {
 			redis.delete(KEY + token);
 		}
+	}
+
+	private String newToken() {
+		byte[] bytes = new byte[32];
+		random.nextBytes(bytes);
+		return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 	}
 
 	private static String millis(Instant instant) {

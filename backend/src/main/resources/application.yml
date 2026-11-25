@@ -71,6 +71,19 @@ itting:
     private-key: ${ITTING_PUSH_PRIVATE_KEY:}
     # 푸시 서비스가 문제를 알릴 연락처. mailto:팀주소 형식
     subject: ${ITTING_PUSH_SUBJECT:}
+  # Google 로그인 · 연동(docs/api/02-auth.md, docs/api/10-settings.md). OAuth 클라이언트는 Google Cloud 콘솔에서 사람이
+  # 만들어 값을 .env나 환경 변수 ITTING_GOOGLE_*로 넣는다. 이름에 하이픈이 있어 자동 연결이 안 되므로 여기서 직접 잇는다.
+  # 값이 비어 있어도 서버는 정상으로 뜨고, Google이 거절해 로그인 · 확인이 실패로 끝난다(따로 검사하지 않는다).
+  google:
+    client-id: ${ITTING_GOOGLE_CLIENT_ID:}
+    # 비밀값이라 .env나 환경 변수에만 두고 공유하지 않는다.
+    client-secret: ${ITTING_GOOGLE_CLIENT_SECRET:}
+    # Google이 브라우저를 돌려보낼 콜백의 전체 주소. Google Cloud 콘솔의 "승인된 리디렉션 URI"와 같아야 한다.
+    redirect-uri: ${ITTING_GOOGLE_REDIRECT_URI:}
+    # 아래 셋은 Google의 주소다. 가짜 Google 서버로 바꿔 볼 때만 덮어쓴다.
+    authorization-uri: ${ITTING_GOOGLE_AUTHORIZATION_URI:https://accounts.google.com/o/oauth2/v2/auth}
+    token-uri: ${ITTING_GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
+    userinfo-uri: ${ITTING_GOOGLE_USERINFO_URI:https://openidconnect.googleapis.com/v1/userinfo}
   # 비밀번호 재설정 링크(docs/api/02-auth.md)
   password-reset:
     link-ttl: 30m
