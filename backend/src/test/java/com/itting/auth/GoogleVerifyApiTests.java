@@ -62,7 +62,7 @@ class GoogleVerifyApiTests {
 
 	private static final String LINK_FAILED = FRONTEND + "/settings/google?error=GOOGLE_VERIFICATION_FAILED";
 
-	private static final String WITHDRAW_FAILED = FRONTEND + "/settings/withdraw?error=GOOGLE_VERIFICATION_FAILED";
+	private static final String WITHDRAW_FAILED = FRONTEND + "/settings/leave?error=GOOGLE_VERIFICATION_FAILED";
 
 	@Autowired
 	MockMvc mockMvc;
@@ -297,7 +297,7 @@ class GoogleVerifyApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/settings/withdraw");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/settings/leave");
 		Optional<GoogleVerification> record = verifications.find(sessionId(session), GoogleOAuthPurpose.WITHDRAW);
 		assertThat(record).isPresent();
 		assertThat(record.get().googleSub()).isEqualTo(googleSub(EMAIL));
@@ -314,7 +314,7 @@ class GoogleVerifyApiTests {
 
 		MockHttpServletResponse response = google.callback(attempt, code, session).andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/settings/withdraw?error=GOOGLE_ACCOUNT_MISMATCH");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/settings/leave?error=GOOGLE_ACCOUNT_MISMATCH");
 		assertThat(verifications.find(sessionId(session), GoogleOAuthPurpose.WITHDRAW)).isEmpty();
 	}
 
@@ -327,7 +327,7 @@ class GoogleVerifyApiTests {
 
 		MockHttpServletResponse response = google.callback(attempt, code, session).andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/settings/withdraw?error=GOOGLE_ACCOUNT_MISMATCH");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/settings/leave?error=GOOGLE_ACCOUNT_MISMATCH");
 		assertThat(verifications.find(sessionId(session), GoogleOAuthPurpose.WITHDRAW)).isEmpty();
 	}
 

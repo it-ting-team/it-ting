@@ -920,7 +920,7 @@ POST /api/v1/me/withdraw
 
 - **Google 확인이 돌아가는 주소**(KAN-60): 서버 설정 `itting.frontend-url` 뒤에 붙인다. 프론트엔드가 아직 없어 서버가 먼저 정했다.
   - `LINK` 확인됨: `/settings/google?verified=true`, 못 함: `/settings/google?error=<code>`
-  - `WITHDRAW` 확인됨: `/settings/withdraw`, 못 함: `/settings/withdraw?error=<code>`
+  - `WITHDRAW` 확인됨: `/settings/leave`, 못 함: `/settings/leave?error=<code>`
   - `verify`를 부를 때 로그인이 풀려 있음: `/login`. `purpose`가 틀림: `/settings`
   - 돌아왔는데 로그인이 풀려 있음: `/login`
   - `state`가 없거나 쿠키와 다르거나 이미 썼거나 10분이 지났을 때는 어느 화면에서 시작했는지 믿을 수 없어 로그인 실패와 같은 `/login?error=GOOGLE_LOGIN_FAILED`로 보낸다.
