@@ -218,7 +218,7 @@ public class GoogleOAuthService {
 				return redirects.suspended(suspension.get().reason(), suspension.get().endsAt());
 			}
 			sessionService.start(request, response, user.getId(), user.getRole());
-			return redirects.home();
+			return redirects.loggedIn();
 		}
 		// 처음 쓰는 Google 계정. 계정은 회원가입 3을 마칠 때 만든다. 이 브라우저의 이전 가입 진행 기록은 덮어쓴다.
 		signupRepository.delete(previousSignupToken);

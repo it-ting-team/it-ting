@@ -148,7 +148,7 @@ class GoogleLoginApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/auth/google");
 		assertThat(response.getContentAsString()).isEmpty();
 		assertThat(TestUsers.lastSessionCookieHeader(response))
 				.contains("Max-Age=1209600", "Path=/", "Secure", "HttpOnly", "SameSite=Lax");
@@ -194,7 +194,7 @@ class GoogleLoginApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/auth/google");
 		mockMvc.perform(get("/api/v1/me").cookie(sessionCookie(response)))
 				.andExpect(jsonPath("$.data.userId").value(userId))
 				.andExpect(jsonPath("$.data.nextStep").value("HOME"));
@@ -230,7 +230,7 @@ class GoogleLoginApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/signup/ssafy?method=google");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/signup/ssafy?via=google");
 		assertThat(hasCookie(response, "ITTING_SESSION")).isFalse();
 	}
 
@@ -244,7 +244,7 @@ class GoogleLoginApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/signup/ssafy?method=google");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/signup/ssafy?via=google");
 		assertThat(lastCookieHeader(response, "ITTING_SIGNUP"))
 				.contains("Max-Age=3600", "Path=/api/v1", "Secure", "HttpOnly", "SameSite=Lax");
 		assertThat(hasCookie(response, "ITTING_SESSION")).isFalse();
@@ -296,7 +296,7 @@ class GoogleLoginApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/auth/google");
 		assertThat(hasCookie(response, "ITTING_SESSION")).isTrue();
 	}
 
@@ -364,7 +364,7 @@ class GoogleLoginApiTests {
 		MockHttpServletResponse second = google.callback(attempt, google.codeFor(attempt, googleSub(EMAIL), EMAIL))
 				.andReturn().getResponse();
 
-		assertThat(location(first)).isEqualTo(FRONTEND + "/");
+		assertThat(location(first)).isEqualTo(FRONTEND + "/auth/google");
 		assertThat(location(second)).isEqualTo(LOGIN_FAILED);
 		assertThat(hasCookie(second, "ITTING_SESSION")).isFalse();
 		assertThat(fakeGoogle.tokenRequests()).hasSize(1);
@@ -393,7 +393,7 @@ class GoogleLoginApiTests {
 		clock.advance(Duration.ofMinutes(10).minusSeconds(1));
 		MockHttpServletResponse response = google.callback(attempt, code).andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo(FRONTEND + "/");
+		assertThat(location(response)).isEqualTo(FRONTEND + "/auth/google");
 	}
 
 	// GET /api/v1/oauth/google/callback: Google의 실패

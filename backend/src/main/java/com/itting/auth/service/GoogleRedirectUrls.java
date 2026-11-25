@@ -14,11 +14,15 @@ import org.springframework.web.util.UriComponentsBuilder;
 /**
  * Google에 다녀온 브라우저를 보낼 프론트엔드 주소({@code docs/api/02-auth.md}의 "구현하며 정한 것"). 서버 설정
  * {@code itting.frontend-url} 뒤에 경로를 붙인다. 쿼리의 값은 모두 엄격하게 인코딩한다.
+ *
+ * <p>경로는 프론트엔드의 화면 주소와 같아야 한다({@code frontend/src/api/auth/google.ts}의 {@code GOOGLE_RETURN}).
+ * 한쪽을 바꾸면 다른 쪽과 API 문서도 함께 바꾼다.
  */
 @Component
 class GoogleRedirectUrls {
 
-	private static final String HOME = "/";
+	/** 로그인된 뒤의 화면. 프론트엔드가 여기서 {@code GET /api/v1/me}의 {@code nextStep}을 보고 다음 화면으로 넘긴다. */
+	private static final String LOGGED_IN = "/auth/google";
 
 	private static final String SIGNUP = "/signup/ssafy";
 
@@ -28,7 +32,7 @@ class GoogleRedirectUrls {
 
 	private static final String SETTINGS_GOOGLE = "/settings/google";
 
-	private static final String SETTINGS_WITHDRAW = "/settings/withdraw";
+	private static final String SETTINGS_WITHDRAW = "/settings/leave";
 
 	private final FrontendProperties frontend;
 
@@ -37,13 +41,13 @@ class GoogleRedirectUrls {
 	}
 
 	/** 로그인됨. 프론트엔드가 {@code GET /api/v1/me}의 {@code nextStep}으로 갈 곳을 정한다. */
-	URI home() {
-		return build(HOME);
+	URI loggedIn() {
+		return build(LOGGED_IN);
 	}
 
 	/** 처음 쓰는 Google 계정. 회원가입 3(SSAFY 인증)을 진행 표시 없이 보여 준다. */
 	URI signup() {
-		return build(SIGNUP, "method", "google");
+		return build(SIGNUP, "via", "google");
 	}
 
 	/** 로그인이 풀려 있음({@code verify}, 콜백). */

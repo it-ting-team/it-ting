@@ -136,7 +136,7 @@ class GoogleLinkApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo("http://localhost:3000/");
+		assertThat(location(response)).isEqualTo("http://localhost:3000/auth/google");
 		mockMvc.perform(get("/api/v1/me").cookie(sessionCookie(response)))
 				.andExpect(jsonPath("$.data.userId").value(userId));
 	}
@@ -374,7 +374,7 @@ class GoogleLinkApiTests {
 				.andExpect(status().isFound())
 				.andReturn().getResponse();
 
-		assertThat(location(response)).isEqualTo("http://localhost:3000/signup/ssafy?method=google");
+		assertThat(location(response)).isEqualTo("http://localhost:3000/signup/ssafy?via=google");
 	}
 
 	@Test
