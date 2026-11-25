@@ -217,6 +217,17 @@ sequenceDiagram
 - 메모리 어림(2.0 ~ 2.2GB)은 실제보다 컸다. 로컬에서 띄운 직후 합계는 약 1GB였다. 부하가 걸렸을 때는 재 보지 않았다. `e2-small`(2GB)로도 뜰 수 있으므로 VM을 만들기 전에 크기를 다시 정해도 된다.
 - 계획의 "목 설정 빌드"는 `frontend/`에서 `npm run build && npm run start`로 볼 생각이었으나, 내 PC에 의존성을 깔지 않고 Docker 이미지로 대신 확인했다.
 
+### 첫 배포에서 한 것 (2026-11-25)
+
+PR #50을 병합한 뒤 서버를 만들고 처음 배포하면서 더한 것과 고친 것이다.
+
+- 서버 준비: 사용자가 GCP 프로젝트 `it-ting-server`, VM `it-ting-test`(`e2-medium`, 디스크 50GB), 고정 IP, 방화벽, 가비아 DNS 레코드 둘을 만들고 `deploy/setup-server.sh`를 실행했다. 서버의 Compose는 v5.8.0이고 설정 파일 둘을 읽는 것을 확인했다
+- `deploy/set-env.sh`를 더했다. 내 PC의 `.env`에 있는 값을 서버의 `.env`로 보내고 이름만 화면에 찍는다. 16기 Mattermost 웹후크 5개와 Google 클라이언트를 이 방법으로 넣었다
+- 목 사이트: Vercel 프로젝트 `diguldigul-mock`을 만들고 `deploy-mock`을 실행해 https://diguldigul-mock.vercel.app 에 올렸다. 첫 화면 · 로그인 · 모임 · 실험실 화면 200, `/api`는 404(백엔드 없음). 처음에는 아이디 시크릿 둘이 빈 값으로 들어가 "시크릿 확인"에서 멈췄다(`frontend/` 안에서 명령을 실행한 탓). 문서의 명령과 설명을 고쳤다
+- 테스트 서버 첫 배포(`dev` → `test`, PR #52): 검사와 이미지 올리기는 성공했고 서버가 이미지를 받는 단계에서 `unauthorized`로 멈췄다. 조직 설정에서 공개 패키지가 막혀 있어 Package creation의 Public을 켠 뒤 패키지 둘을 공개로 바꿨다. 문서에 이 순서를 적었다
+- 배포 결과를 Discord의 배포 채널로 보내는 단계를 두 워크플로에 더했다(시크릿 `DISCORD_WEBHOOK_DEPLOY_URL`). 사용자가 첫 배포를 다시 돌리기 전에 넣자고 했다
+- PR #52의 Codex 리뷰가 프론트엔드와 백엔드의 Google 로그인 돌아오는 주소가 다른 것 세 건(P1)을 찾았다: 가입은 `method=google`인데 화면은 `via=google`을 봄, 로그인 성공 뒤 `/`에서 다음 화면으로 넘기지 않음, 탈퇴 확인 뒤 `/settings/withdraw` 화면이 없음. 배포 설정과 무관하게 이미 dev에 있던 문제라 사용자가 "먼저 배포하고 바로 고친다"로 정했다. 따로 티켓으로 고친다
+
 ### 남은 일
 
 사용자가 할 일(순서와 명령은 `docs/infra/test-server.md`):
@@ -233,7 +244,8 @@ sequenceDiagram
 
 그 뒤에 할 일:
 
-- 첫 배포 뒤 `README.md`의 배포 표에 두 주소를 적는다
+- Google 로그인 돌아오는 주소 맞추기(위 Codex P1 세 건)
+- 15기 Mattermost 웹후크와 브라우저 푸시 키를 서버 `.env`에 넣기
 - 실시간 소식 API(KAN-57)가 병합되면 `deploy/test/frontend.build.env`의 `NEXT_PUBLIC_API_MOCK_AREAS` 값을 비운다
 - 테스트 서버에서 드러나는 프론트엔드와 백엔드의 어긋남은 영역별 티켓으로 만든다
 - Jira KAN-63의 설명은 아직 "프론트엔드 배포는 범위 밖"으로 적혀 있다. 이 문서의 범위로 고친다

@@ -4,7 +4,7 @@
 
 | | 테스트 서버 (GCP) | 목 사이트 (Vercel) |
 |---|---|---|
-| 주소 | `https://<TEST_HOST>` (예: `https://test.example.com`) | `https://<프로젝트 이름>.vercel.app` |
+| 주소 | https://test.diguldigul.site | https://diguldigul-mock.vercel.app |
 | 올라가는 것 | 프론트엔드, 백엔드, MySQL, Redis, Mailpit | 프론트엔드만 |
 | 데이터 | 실제 DB. 프론트엔드가 모든 영역을 실제 API로 부른다 | 브라우저 안의 목 데이터 |
 | 다시 배포되는 때 | `dev` → `test` PR을 병합할 때 | `dev`에 `frontend/` 변경이 병합될 때 |
@@ -47,6 +47,7 @@ VM 한 대(GCP Compute Engine `e2-medium`, 서울)에 Docker Compose 묶음 둘�
 | `deploy/mock/frontend.build.env` | 목 사이트용 프론트엔드 빌드 값(비밀값 아님) |
 | `deploy/deploy.sh` | 서버에서 이미지를 받아 다시 띄우는 스크립트 |
 | `deploy/setup-server.sh` | 새 서버를 처음 준비하는 스크립트(Docker, 배포 사용자, 배포 폴더, `.env`) |
+| `deploy/set-env.sh` | 서버의 `.env`에 값을 넣는 스크립트. 값을 화면에 찍지 않는다 |
 
 서버에는 `deploy/` 폴더가 `/opt/it-ting/`으로 복사된다. 서버에만 있는 파일은 `/opt/it-ting/test/.env` 하나다.
 
@@ -65,6 +66,10 @@ VM 한 대(GCP Compute Engine `e2-medium`, 서울)에 Docker Compose 묶음 둘�
 3. 검사가 실패하면 이미지를 만들지 않고 서버는 그대로다.
 
 같은 커밋을 다시 배포하려면 GitHub → Actions → `deploy-test` → Run workflow에서 브랜치 `test`를 고르고 `image_tag`를 비워 실행한다.
+
+### 배포 결과 알림
+
+두 배포 워크플로는 끝나면 성공 · 실패, 주소, 커밋, 실행 주소를 Discord의 배포 채널로 보낸다. 웹후크는 시크릿 `DISCORD_WEBHOOK_DEPLOY_URL`에 있다. PR 알림 채널(`DISCORD_WEBHOOK_PR_URL`)과는 다른 채널이다. 시크릿이 없으면 알림만 건너뛰고 배포는 그대로 된다. 취소된 실행은 알리지 않는다.
 
 ### 되돌리기
 
@@ -190,7 +195,19 @@ gcloud compute ssh it-ting-test --project=it-ting-server --zone=asia-northeast3-
 
 ### 4. 서버의 `.env`에 남은 값 넣기
 
-스크립트가 끝에 "아직 빈 값"을 보여 준다. 서버에 들어가 직접 넣는다. 값은 비밀값이라 다른 곳에 붙여 넣지 않는다.
+스크립트가 끝에 "아직 빈 값"을 보여 준다. 값은 비밀값이라 채팅이나 문서에 붙여 넣지 않는다. 넣는 방법은 둘이다.
+
+내 PC의 `.env`에 같은 이름으로 적어 둔 값을 서버로 보낸다. `deploy/set-env.sh`가 받아 서버의 `.env`에 넣고 이름만 화면에 찍는다. 저장소 폴더에서 실행한다.
+
+```bash
+grep -E '^(MATTERMOST_WEBHOOK_URLS_(15|16)|ITTING_GOOGLE_CLIENT_(ID|SECRET))=' .env | ssh -i ~/.ssh/it-ting-deploy deploy@test.<도메인> "bash /opt/it-ting/set-env.sh"
+```
+
+- `test/.env.example`에 있는 이름만 받는다. 주소와 DB 값(`TEST_HOST`, `MYSQL_*`), 빈 값은 받지 않는다.
+- 보낼 때마다 그 이름의 값 전체가 바뀐다. 웹후크처럼 여러 개를 쉼표로 잇는 값은 늘 전체를 보낸다.
+- 서버가 이미 떠 있으면 `ssh … "bash /opt/it-ting/deploy.sh"`를 실행해야 반영된다.
+
+또는 서버에 들어가 직접 고친다.
 
 ```bash
 gcloud compute ssh it-ting-test --project=it-ting-server --zone=asia-northeast3-a
@@ -202,10 +219,10 @@ sudo -u deploy nano /opt/it-ting/test/.env
 | `TEST_HOST`, `TEST_MAIL_HOST` | 스크립트가 채웠다. `test.<도메인>`, `mail-test.<도메인>` |
 | `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` | 스크립트가 무작위로 만들었다 |
 | `MAILPIT_UI_AUTH` | 스크립트가 `team:<무작위>`로 만들었다. 받은 메일 화면에 들어갈 때 이 파일에서 읽는다 |
-| `MATTERMOST_WEBHOOK_URLS_15`, `_16` | 로컬 `.env`와 같은 웹후크. 비우면 그 기수는 SSAFY 인증이 `503`이라 가입을 끝낼 수 없다 |
+| `MATTERMOST_WEBHOOK_URLS_15`, `_16` | 그 기수 Mattermost 서버의 웹후크. 여러 사람의 것을 쉼표로 이으면 돌아가며 쓰고, 실패하면 다음 것으로 보낸다. 비우면 그 기수는 SSAFY 인증이 `503`이라 가입을 끝낼 수 없다 |
 | `ITTING_PUSH_*`, `ITTING_GOOGLE_*` | 선택. 비우면 서버는 뜨고 그 기능만 실패한다 |
 
-Google 로그인을 켜려면 Google Cloud 콘솔의 OAuth 클라이언트 "승인된 리디렉션 URI"에 `https://<TEST_HOST>/api/v1/oauth/google/callback`을 더한다.
+Google 로그인을 켜려면 Google Cloud 콘솔(프로젝트 `it-ting-server`)에서 "웹 애플리케이션" OAuth 클라이언트를 만들고 "승인된 리디렉션 URI"에 `https://<TEST_HOST>/api/v1/oauth/google/callback`을 넣는다. 동의 화면의 게시 상태가 "테스트"인 동안에는 테스트 사용자로 등록한 Google 계정만 로그인할 수 있다. 푸시 키는 `backend/`에서 `./gradlew -q vapidKeys`로 만든다(`README.md`의 "브라우저 푸시 키").
 
 ### 5. GitHub 시크릿과 변수
 
@@ -224,6 +241,7 @@ ssh-keyscan -t ed25519 test.<도메인> | gh secret set TEST_SSH_KNOWN_HOSTS
 | `TEST_SSH_USER` | 시크릿 | `deploy` |
 | `TEST_SSH_KEY` | 시크릿 | 배포용 개인 키(`~/.ssh/it-ting-deploy`의 내용) |
 | `TEST_SSH_KNOWN_HOSTS` | 시크릿 | 서버의 호스트 키. 다른 서버로 잘못 붙지 않게 한다 |
+| `DISCORD_WEBHOOK_DEPLOY_URL` | 시크릿 | 배포 결과를 받을 Discord 채널의 웹후크. 저장소 Settings → Secrets and variables → Actions에서 넣는다 |
 
 PowerShell에서는 `<`를 쓸 수 없다. `Get-Content -Raw ~/.ssh/it-ting-deploy | gh secret set TEST_SSH_KEY`로 넣는다.
 
@@ -231,36 +249,39 @@ PowerShell에서는 `<`를 쓸 수 없다. `Get-Content -Raw ~/.ssh/it-ting-depl
 
 1. 규칙 세트 `protect-main-dev`의 대상에 `test`를 더한다([CI의 처음 한 번](../ci.md#처음-한-번-저장소-관리자)).
 2. `dev` → `test` PR을 만들어 병합한다. `deploy-test`가 돈다.
-3. 처음에는 "서버가 이미지를 받아 다시 띄우기"에서 실패할 수 있다. GHCR에 처음 올라간 패키지가 비공개라 서버가 받지 못하는 것이다. GitHub → 조직 `it-ting-team` → Packages에서 `it-ting-backend`, `it-ting-frontend`를 열고 Package settings → Change visibility → Public으로 바꾼다.
+3. 처음에는 "서버가 이미지를 받아 다시 띄우기"에서 `unauthorized`로 실패한다. GHCR에 처음 올라간 패키지가 비공개라 서버가 받지 못하는 것이다. 패키지 둘(`it-ting-backend`, `it-ting-frontend`)을 공개로 바꾼다.
+   - 패키지 화면(조직 `it-ting-team` → Packages → 패키지) → Package settings → 맨 아래 Danger Zone → Change visibility → Public
+   - Public을 고를 수 없으면 조직 Settings → Packages → Package creation에서 Public을 켜고 저장한 뒤 다시 한다
 4. Actions의 실패한 실행에서 Re-run failed jobs를 누른다.
 5. `https://<TEST_HOST>/`가 열리고 가입 · 로그인이 되는지 본다.
 
 ## 처음 한 번: 목 사이트 만들기
 
-Vercel 계정과 토큰이 걸린 일이라 사람이 한다.
+Vercel 계정과 토큰이 걸린 일이라 사람이 한다. 로그인과 토큰 입력은 값을 묻는 방식이라 터미널에서 직접 실행한다.
 
-1. Vercel에 가입한다(무료 요금제 Hobby).
-2. 내 PC의 `frontend/` 폴더에서 프로젝트를 만든다. 브라우저에서 로그인을 묻고, 새 프로젝트를 만들지 물으면 그렇다고 답한다. 프로젝트 이름이 주소(`<이름>.vercel.app`)가 된다.
+1. 내 PC의 `frontend/` 폴더에서 Vercel에 로그인하고 프로젝트를 만든다. 계정이 없으면 로그인 화면에서 무료 요금제(Hobby)로 가입한다. 프로젝트 이름이 주소(`<이름>.vercel.app`)가 된다.
 
    ```bash
    cd frontend
-   npx vercel@66.6.0 link
-   cat .vercel/project.json
+   npx vercel@66.6.0 login
+   npx vercel@66.6.0 link --yes --project <프로젝트 이름>
    ```
 
+   - "Failed to connect … to project"라고 나오는 것은 괜찮다. CLI가 저장소를 Vercel에 연결하려다 실패한 것이고, 우리는 연결하지 않는다. 올리는 일은 GitHub Actions가 한다.
+   - CLI가 `frontend/.gitignore` 끝에 `.vercel`, `.env*`를 덧붙이고 `frontend/.env.local`을 만든다. `.gitignore`의 변경은 되돌린다(`git checkout -- frontend/.gitignore`). 필요한 줄은 이미 있다.
    - Vercel 화면의 프로젝트 설정에서 Root Directory는 비워 둔다. 워크플로가 `frontend/` 안에서 명령을 실행한다.
-   - 저장소를 Vercel에 연결(Git 연결)하지 않는다. 올리는 일은 GitHub Actions가 한다.
-3. Vercel → Account Settings → Tokens에서 토큰을 만든다.
-4. 시크릿 셋을 넣는다. `orgId`와 `projectId`는 위 `project.json`에 있다.
+2. Vercel → Account Settings → Tokens에서 토큰을 만든다.
+3. 저장소 폴더(`frontend/`의 위)에서 시크릿 셋을 넣는다. 앞의 두 줄은 방금 만들어진 `frontend/.vercel/project.json`에서 아이디를 읽어 넣는다. `frontend/` 안에서 실행하면 파일을 찾지 못해 빈 값이 들어간다.
 
    ```bash
-   gh secret set VERCEL_ORG_ID --body "<orgId>"
-   gh secret set VERCEL_PROJECT_ID --body "<projectId>"
+   node -e "process.stdout.write(require('./frontend/.vercel/project.json').orgId)" | gh secret set VERCEL_ORG_ID
+   node -e "process.stdout.write(require('./frontend/.vercel/project.json').projectId)" | gh secret set VERCEL_PROJECT_ID
    gh secret set VERCEL_TOKEN
    ```
 
    마지막 명령은 값을 물으면 토큰을 붙여 넣는다.
-5. Actions → `deploy-mock` → Run workflow에서 브랜치 `dev`로 실행한다. 끝나면 로그에 주소가 나온다.
+4. Actions → `deploy-mock` → Run workflow에서 브랜치 `dev`로 실행한다. 끝나면 로그와 Discord 알림에 주소가 나온다.
+5. 주소가 `https://diguldigul-mock.vercel.app`와 다르면 `deploy-mock.yml`의 `MOCK_SITE_URL`을 고친다. 알림에 적히는 주소다.
 
 목 사이트의 설정은 `deploy/mock/frontend.build.env`에 있다: 모든 영역 목, 실험실 켬(목 서버 손잡이 배지), 로그인 검사는 명세대로. 시연 계정은 `frontend/src/data/auth.ts` 맨 위에 있다.
 

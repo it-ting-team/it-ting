@@ -146,3 +146,54 @@ jobs:
           curl --fail --silent --show-error --output /dev/null --retry 6 --retry-delay 10 --retry-all-errors \
             "https://${TEST_HOST}/"
           echo "https://${TEST_HOST} 에 배포했습니다 (이미지 ${IMAGE_TAG})."
+
+  notify:
+    name: Discord 알림
+    needs: [build, deploy]
+    # 배포를 시도한 실행의 결과를 배포 채널로 알린다. 취소한 실행과 test가 아닌 브랜치의 실행은 알리지 않는다.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/test' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: 배포 결과 보내기
+        env:
+          DISCORD_WEBHOOK_DEPLOY_URL: ${{ secrets.DISCORD_WEBHOOK_DEPLOY_URL }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          TEST_HOST: ${{ vars.TEST_HOST }}
+          ROLLBACK_TAG: ${{ inputs.image_tag }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_DEPLOY_URL" ]; then
+            echo "::warning::시크릿 DISCORD_WEBHOOK_DEPLOY_URL이 없어 알림을 보내지 않습니다. docs/infra/test-server.md"
+            exit 0
+          fi
+          if [ "$DEPLOY_RESULT" = "success" ]; then
+            head="✅ **테스트 서버 배포 성공**"
+          elif [ "$BUILD_RESULT" = "failure" ]; then
+            head="❌ **테스트 서버 배포 실패** (검사 · 이미지 단계, 서버는 그대로)"
+          else
+            head="❌ **테스트 서버 배포 실패** (서버에 배포 단계)"
+          fi
+          if [ -n "$ROLLBACK_TAG" ]; then
+            what="되돌리기: 이미지 ${ROLLBACK_TAG:0:7}"
+          else
+            # 병합 커밋이면 첫 줄("Merge pull request …") 대신 그 아래의 PR 제목을 쓴다.
+            title=$(printf '%s\n' "$COMMIT_MESSAGE" | awk 'NR == 1 { first = $0; next } NF { print; found = 1; exit } END { if (!found) print first }')
+            what="커밋: ${COMMIT_SHA:0:7} ${title}"
+          fi
+          content="${head}
+          주소: https://${TEST_HOST}
+          ${what}
+          실행한 사람: ${ACTOR}
+          ${RUN_URL}"
+          payload=$(jq -n --arg content "$content" \
+            '{content: $content, allowed_mentions: {parse: []}}')
+          curl --fail-with-body --silent --show-error \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "$DISCORD_WEBHOOK_DEPLOY_URL"
