@@ -31,13 +31,15 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 다른 영역이 읽기 구현(요청 수, 가장 최근 요청자, 갈 곳의 이름 · 시작 시각)을 등록했을 때 알림 API가 그 값을 싣는지.
- * 모임 · 요청 수 · 대화 요청은 아직 구현이 없어 가짜를 등록하고, 글은 커뮤니티가 등록한 실제 구현이 제목을 싣는다.
+ * 모임 · 모임 요청 수는 아직 구현이 없어 가짜를 등록하고, 대화 요청 수는 채팅의 실제 구현이 있어도 이 테스트의 값을 쓰도록 가짜를
+ * 먼저 쓰게 한다({@code @Primary}). 글은 커뮤니티가 등록한 실제 구현이 제목을 싣는다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -134,7 +136,9 @@ class NotificationReaderApiTests {
 			return hostId -> 2;
 		}
 
+		/** 채팅이 등록한 실제 구현이 있으므로 이 가짜를 먼저 쓰게 한다. 실제 구현은 {@code ChatRequestPopupApiTests}가 본다. */
 		@Bean
+		@Primary
 		ChatRequestReader chatRequestReader() {
 			return new ChatRequestReader() {
 				@Override

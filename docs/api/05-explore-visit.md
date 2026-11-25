@@ -879,7 +879,7 @@ POST /api/v1/chat-requests
 4. 두 사람이 모두 나가지 않은 1:1 대화방이 있으면 `409`와 `CHAT_ROOM_ALREADY_EXISTS`.
 5. 내가 그 사람에게 보낸 살아 있는 요청이 있으면 `409`와 `CHAT_REQUEST_ALREADY_SENT`.
 6. 그 사람이 나에게 보낸 살아 있는 요청이 `PENDING`이면 `409`와 `CHAT_REQUEST_ALREADY_RECEIVED`. 요청을 새로 만들지 않는다.
-7. 그 사람이 나에게 보낸 살아 있는 요청이 `REJECTED`면 내가 거절한 요청이다. 요청을 새로 만들지 않고 그 요청을 내가 수락한 것으로 처리한 뒤 끝낸다. 대화방과 참여자를 만들고, 요청을 `ACCEPTED`로 바꾸고, 수락 안내 메시지를 넣고, 그 사람에게 수락 알림을 만든다([대화 요청 수락](06-chat.md#post-apiv1chat-requestschatrequestidaccept)의 5 ~ 7, 9와 같다). 인사를 보냈으면 만든 대화방에 내가 보낸 첫 메시지로 넣는다.
+7. 그 사람이 나에게 보낸 살아 있는 요청이 `REJECTED`면 내가 거절한 요청이다. 요청을 새로 만들지 않고 그 요청을 내가 수락한 것으로 처리한 뒤 끝낸다. 대화방과 참여자를 만들고, 요청을 `ACCEPTED`로 바꾸고, 수락 안내 메시지를 넣고, 그 사람에게 수락 알림을 만든다([대화 요청 수락](06-chat.md#post-apiv1chat-requestschatrequestidaccept)의 5 ~ 7, 9와 같다). 인사를 보냈으면 만든 대화방에 내가 보낸 첫 메시지(`TEXT`)로 넣고, 그 사람에게 새 메시지 알림(`CHAT_MESSAGE_RECEIVED`)도 만든다. 인사가 없으면 수락 알림만 만든다. 이때 대화방에 메시지가 생긴 것을 실시간 소식 `CHAT_MESSAGE_CREATED`로 알린다.
 8. `chat_request`에 한 줄을 만든다. `sender_id`는 요청한 사람, `receiver_id`는 받을 사람, `message`는 인사(없으면 `NULL`), `status`는 `PENDING`이다.
 9. 받을 사람에게 대화 요청 알림(`CHAT_REQUEST_RECEIVED`)을 만든다([알림 API](09-notification.md#알림의-종류)).
 
@@ -976,4 +976,4 @@ POST /api/v1/chat-requests
 
 - 들판 상세는 입구를 한 번에 주고 주인 정보·관심사·질문과 답변을 묶어서 읽는다. 응답 크기가 문제가 되면 입구를 나눠 주는 방법을 검토한다(KAN-46).
 - 캠퍼스 · 층이나 기수를 고르지 않고 전체에서 추천받을 수 있는지(명세의 보류한 결정이다)
-- 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준
+- 방명록과 대화 요청을 짧은 시간에 너무 많이 보내는 것을 막는 기준. 대화 요청은 KAN-55에서 제한하지 않기로 했다(살아 있는 요청은 두 사람 사이에 하나뿐이라 한 사람에게 여러 번 보낼 수는 없다)
