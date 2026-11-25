@@ -141,6 +141,12 @@ class ImageUploadApiTests {
 		upload("broken.jpg", "image/jpeg", Arrays.copyOf(TestImages.jpeg(), 20))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.error.fields[0].message").value(ImageRules.FORMAT_MESSAGE));
+		upload("header-only.webp", "image/webp", TestImages.webpHeaderOnly())
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.fields[0].message").value(ImageRules.FORMAT_MESSAGE));
+		upload("cut.jpg", "image/jpeg", Arrays.copyOf(TestImages.jpeg(), TestImages.jpeg().length - 2))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.fields[0].message").value(ImageRules.FORMAT_MESSAGE));
 		byte[] tooLarge = Arrays.copyOf(TestImages.jpeg(), (int) ImageRules.MAX_BYTES + 1);
 		upload("large.jpg", "image/jpeg", tooLarge)
 				.andExpect(status().isBadRequest())

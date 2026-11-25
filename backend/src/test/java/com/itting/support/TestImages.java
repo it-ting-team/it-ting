@@ -9,7 +9,11 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.CRC32;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 /**
  * 사진 올리기 테스트에 쓰는 작은 사진. 촬영 위치처럼 지워져야 하는 메타데이터에는 {@link #SECRET}을 넣어, 저장한 파일에 그 글자가
@@ -48,6 +52,60 @@ public final class TestImages {
 		writeJpegSegment(out, 0xFE, ("comment " + SECRET).getBytes(StandardCharsets.UTF_8));
 		out.write(plain, 2, plain.length - 2);
 		return out.toByteArray();
+	}
+
+	/**
+	 * 스캔이 여러 개인 프로그레시브 JPEG. 두 번째 스캔(SOS) 앞에 위치 글자를 담은 주석(COM)을 넣고, EOI 뒤에도 위치 글자를 붙인다.
+	 */
+	public static byte[] progressiveJpegWithMetadataBetweenScans() {
+		byte[] plain = progressiveJpeg();
+		int second = -1;
+		int scans = 0;
+		for (int i = 2; i + 1 < plain.length; i++) {
+			if ((plain[i] & 0xFF) == 0xFF && (plain[i + 1] & 0xFF) == 0xDA && ++scans == 2) {
+				second = i;
+				break;
+			}
+		}
+		if (second < 0) {
+			throw new IllegalStateException("스캔이 하나뿐인 JPEG입니다.");
+		}
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		out.write(plain, 0, second);
+		writeJpegSegment(out, 0xFE, ("comment " + SECRET).getBytes(StandardCharsets.UTF_8));
+		out.write(plain, second, plain.length - second);
+		out.writeBytes(("trailer " + SECRET).getBytes(StandardCharsets.UTF_8));
+		return out.toByteArray();
+	}
+
+	/** 16x16 프로그레시브 JPEG. 스캔이 여러 개다. */
+	public static byte[] progressiveJpeg() {
+		BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB);
+		for (int x = 0; x < 16; x++) {
+			for (int y = 0; y < 16; y++) {
+				image.setRGB(x, y, (x * 16) << 16 | (y * 16) << 8);
+			}
+		}
+		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+		ImageWriteParam param = writer.getDefaultWriteParam();
+		param.setProgressiveMode(ImageWriteParam.MODE_DEFAULT);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try (ImageOutputStream stream = ImageIO.createImageOutputStream(out)) {
+			writer.setOutput(stream);
+			writer.write(null, new IIOImage(image, null, null), param);
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		finally {
+			writer.dispose();
+		}
+		return out.toByteArray();
+	}
+
+	/** {@code RIFF} · 크기 · {@code WEBP} 머리만 있고 그림 청크가 없는 12바이트 파일. */
+	public static byte[] webpHeaderOnly() {
+		return riff(new byte[0]);
 	}
 
 	/** {@code tEXt} 청크가 든 PNG. */

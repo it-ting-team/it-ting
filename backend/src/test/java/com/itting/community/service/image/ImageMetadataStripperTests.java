@@ -69,6 +69,18 @@ class ImageMetadataStripperTests {
 	}
 
 	@Test
+	void 프로그레시브_JPEG의_스캔_사이와_EOI_뒤의_메타데이터도_뺀다() throws Exception {
+		byte[] original = TestImages.progressiveJpegWithMetadataBetweenScans();
+		assertThat(TestImages.containsSecret(original)).isTrue();
+
+		byte[] stripped = ImageMetadataStripper.strip(original, ImageFormat.JPEG);
+
+		assertThat(TestImages.containsSecret(stripped)).isFalse();
+		assertThat(stripped).isEqualTo(TestImages.progressiveJpeg());
+		assertThat(ImageIO.read(new ByteArrayInputStream(stripped)).getWidth()).isEqualTo(16);
+	}
+
+	@Test
 	void PNG의_글자_청크를_뺀다() throws Exception {
 		byte[] original = TestImages.pngWithText();
 		assertThat(TestImages.containsSecret(original)).isTrue();
@@ -115,6 +127,31 @@ class ImageMetadataStripperTests {
 		assertThatThrownBy(() -> ImageMetadataStripper.strip(Arrays.copyOf(png, 20), ImageFormat.PNG))
 				.isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> ImageMetadataStripper.strip(Arrays.copyOf(webp, 20), ImageFormat.WEBP))
+				.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void 그림이_없거나_끝이_잘린_파일은_받지_않는다() {
+		byte[] jpeg = TestImages.jpeg();
+		byte[] png = TestImages.png();
+		byte[] webp = TestImages.webp();
+
+		// JPEG: EOI가 없음(스캔 데이터 중간에서 잘림), SOS 없이 EOI
+		assertThatThrownBy(() -> ImageMetadataStripper.strip(Arrays.copyOf(jpeg, jpeg.length - 2), ImageFormat.JPEG))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> ImageMetadataStripper.strip(new byte[] { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF,
+				(byte) 0xD9 }, ImageFormat.JPEG)).isInstanceOf(IllegalArgumentException.class);
+		// PNG: 마지막 청크(IEND)가 없음, CRC가 틀림
+		assertThatThrownBy(() -> ImageMetadataStripper.strip(Arrays.copyOf(png, png.length - 12), ImageFormat.PNG))
+				.isInstanceOf(IllegalArgumentException.class);
+		byte[] badCrc = png.clone();
+		badCrc[8 + 8 + 13] ^= 0x01;
+		assertThatThrownBy(() -> ImageMetadataStripper.strip(badCrc, ImageFormat.PNG))
+				.isInstanceOf(IllegalArgumentException.class);
+		// WebP: 머리만 있음, RIFF 크기와 파일 길이가 다름
+		assertThatThrownBy(() -> ImageMetadataStripper.strip(TestImages.webpHeaderOnly(), ImageFormat.WEBP))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> ImageMetadataStripper.strip(Arrays.copyOf(webp, webp.length + 4), ImageFormat.WEBP))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
