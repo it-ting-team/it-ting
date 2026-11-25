@@ -30,8 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 글 목록, 상세, 인기 글과 관심사, 다음 읽을 글을 준다({@code docs/api/08-community.md}). 데이터를 바꾸지 않는다.
- *
- * <p>내가 신고했는지({@code isReportedByMe})는 신고 테이블이 생기는 08 커뮤니티 ③(KAN-53)까지 늘 false다.
+ * 내가 신고했는지({@code isReportedByMe})는 내 신고 줄이 있는지로 정한다. 내용은 그대로 주고, 접어 보여 주는 것은 프론트엔드가 한다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -108,7 +107,7 @@ public class PostQueryService {
 				queryRepository.findBookmarked(userId, ids).contains(postId),
 				mine,
 				hidden,
-				false,
+				queryRepository.findReported(userId, ids).contains(postId),
 				mine && !hidden);
 	}
 
@@ -134,8 +133,11 @@ public class PostQueryService {
 		return row;
 	}
 
-	/** 글 카드. 받은 id의 순서를 따른다. 수와 내 상태는 글마다가 아니라 목록 전체를 한 번에 센다. */
-	private List<PostCardResponse> cards(Long userId, List<Long> postIds) {
+	/**
+	 * 글 카드. 받은 id의 순서를 따르고 없는 id는 뺀다. 수와 내 상태는 글마다가 아니라 목록 전체를 한 번에 센다.
+	 * 내 활동({@link MyPostQueryService})도 쓴다.
+	 */
+	List<PostCardResponse> cards(Long userId, List<Long> postIds) {
 		Map<Long, PostRow> rows = queryRepository.findRows(postIds);
 		Map<Long, UserDisplayResponse> authors = userDisplayService.getAll(rows.values().stream()
 				.map(PostRow::authorId)
@@ -146,6 +148,7 @@ public class PostQueryService {
 		Map<Long, Long> likes = queryRepository.countLikes(postIds);
 		Map<Long, Long> comments = queryRepository.countComments(postIds);
 		Set<Long> bookmarked = queryRepository.findBookmarked(userId, postIds);
+		Set<Long> reported = queryRepository.findReported(userId, postIds);
 		return rows.values().stream()
 				.map(row -> new PostCardResponse(row.id(), row.category(), row.title(), preview(row.content()),
 						thumbnails.get(row.id()),
@@ -157,7 +160,7 @@ public class PostQueryService {
 						comments.getOrDefault(row.id(), 0L),
 						bookmarked.contains(row.id()),
 						row.status() == PostStatus.HIDDEN,
-						false))
+						reported.contains(row.id())))
 				.toList();
 	}
 

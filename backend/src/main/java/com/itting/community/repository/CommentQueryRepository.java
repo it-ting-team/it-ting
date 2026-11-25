@@ -124,6 +124,17 @@ public class CommentQueryRepository {
 				Map.of("userId", userId, "ids", commentIds), Long.class));
 	}
 
+	/** 이 댓글들 가운데 이 계정이 신고한 것. */
+	public Set<Long> findReported(Long userId, Collection<Long> commentIds) {
+		if (commentIds.isEmpty()) {
+			return Set.of();
+		}
+		return new HashSet<>(jdbc.queryForList(
+				"SELECT target_id FROM report WHERE reporter_id = :userId AND target_type = 'COMMENT' "
+						+ "AND target_id IN (:ids)",
+				Map.of("userId", userId, "ids", commentIds), Long.class));
+	}
+
 	private static CommentRow row(ResultSet rs) throws SQLException {
 		return new CommentRow(rs.getLong("id"), rs.getLong("author_id"), rs.getObject("parent_id", Long.class),
 				rs.getObject("mention_user_id", Long.class), PostStatus.valueOf(rs.getString("status")),

@@ -1,5 +1,10 @@
 package com.itting.support;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -101,7 +106,21 @@ public class TestcontainersConfiguration {
 			registry.add("itting.push.public-key", () -> "");
 			registry.add("itting.push.private-key", () -> "");
 			registry.add("itting.push.subject", () -> "");
+			// 올린 사진은 로컬의 .local-images가 아니라 테스트용 임시 폴더에 둔다.
+			registry.add("itting.images.storage-dir", () -> IMAGE_DIR.toString());
 		};
+	}
+
+	/** 테스트가 올린 사진을 두는 임시 폴더. 운영체제의 임시 폴더 아래에 만든다. */
+	public static final Path IMAGE_DIR = createImageDir();
+
+	private static Path createImageDir() {
+		try {
+			return Files.createTempDirectory("itting-images-");
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 }

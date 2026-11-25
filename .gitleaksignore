@@ -5,3 +5,5 @@
 2c24eb68adf057ee071fdff8664820900aa1843c:backend/src/test/java/com/itting/notification/service/WebPushEncryptionTests.java:generic-api-key:27
 2c24eb68adf057ee071fdff8664820900aa1843c:backend/src/test/java/com/itting/notification/service/WebPushEncryptionTests.java:generic-api-key:32
 2c24eb68adf057ee071fdff8664820900aa1843c:backend/src/test/java/com/itting/notification/service/WebPushEncryptionTests.java:generic-api-key:37
+# KAN-53: 사진 메타데이터 테스트의 가짜 위치 글자(상수 이름 SECRET)
+db9202de19ef9ab3f23f972a731b097c2479d71e:backend/src/test/java/com/itting/support/TestImages.java:generic-api-key:21

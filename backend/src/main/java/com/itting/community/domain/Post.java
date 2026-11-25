@@ -64,6 +64,11 @@ public class Post extends BaseTimeEntity {
 		this.deletedAt = now;
 	}
 
+	/** 신고로 가린다. 공개 글에만 부른다. 관리자가 복구하면 공개로 돌아온다. */
+	public void hide() {
+		this.status = PostStatus.HIDDEN;
+	}
+
 	public boolean isWrittenBy(Long userId) {
 		return authorId.equals(userId);
 	}

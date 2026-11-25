@@ -1,10 +1,16 @@
 package com.itting.guestbook.repository;
 
+import java.util.Optional;
+
 import com.itting.guestbook.domain.GuestbookEntry;
 import com.itting.guestbook.domain.GuestbookEntryStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface GuestbookEntryRepository extends JpaRepository<GuestbookEntry, Long> {
 
@@ -13,5 +19,10 @@ public interface GuestbookEntryRepository extends JpaRepository<GuestbookEntry, 
 
 	/** 땅굴에 달린 글 가운데 이 상태인 것을 한 페이지. 순서는 {@code pageable}의 정렬을 따른다. */
 	Page<GuestbookEntry> findByBurrowIdAndStatus(Long burrowId, GuestbookEntryStatus status, Pageable pageable);
+
+	/** 글을 트랜잭션이 끝날 때까지 잠근다. 신고를 받을 때 같은 글의 신고가 차례로 세어지게 한다. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT e FROM GuestbookEntry e WHERE e.id = :id")
+	Optional<GuestbookEntry> findByIdForUpdate(@Param("id") Long id);
 
 }
