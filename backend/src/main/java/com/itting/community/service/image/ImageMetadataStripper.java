@@ -64,7 +64,8 @@ public final class ImageMetadataStripper {
 	private static byte[] stripJpeg(byte[] b) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream(b.length);
 		out.write(b, 0, 2);
-		Integer orientation = null;
+		// 회전 방향은 EXIF(APP1)가 어느 구간 뒤에 있든 남기도록, 쓰기 전에 먼저 찾아 둔다.
+		Integer orientation = findOrientation(b);
 		boolean orientationWritten = false;
 		boolean sawFrame = false;
 		boolean sawScan = false;
@@ -91,9 +92,6 @@ public final class ImageMetadataStripper {
 			int length = u16be(b, pos + 2);
 			int end = pos + 2 + length;
 			require(length >= 2 && end <= b.length);
-			if (marker == 0xE1 && orientation == null) {
-				orientation = exifOrientation(b, pos + 4, end);
-			}
 			if (JPEG_FRAMES.contains(marker)) {
 				sawFrame = true;
 			}
@@ -130,6 +128,40 @@ public final class ImageMetadataStripper {
 				out.write(b, scanStart, pos - scanStart);
 			}
 		}
+	}
+
+	/**
+	 * 첫 스캔(SOS) 앞의 구간 가운데 처음 나오는 EXIF APP1에서 회전 방향을 읽는다. 구조를 검사하지 않고, 읽을 수 없으면 null이다
+	 * (구조는 {@link #stripJpeg}가 검사한다).
+	 */
+	private static Integer findOrientation(byte[] b) {
+		int pos = 2;
+		while (pos + 3 < b.length && (b[pos] & 0xFF) == 0xFF) {
+			int marker = b[pos + 1] & 0xFF;
+			if (marker == 0xFF) {
+				pos++;
+				continue;
+			}
+			if (marker == JPEG_SOS || marker == JPEG_EOI) {
+				return null;
+			}
+			if ((marker >= 0xD0 && marker <= 0xD7) || marker == 0x01) {
+				pos += 2;
+				continue;
+			}
+			int end = pos + 2 + u16be(b, pos + 2);
+			if (end > b.length) {
+				return null;
+			}
+			if (marker == 0xE1) {
+				Integer orientation = exifOrientation(b, pos + 4, end);
+				if (orientation != null) {
+					return orientation;
+				}
+			}
+			pos = end;
+		}
+		return null;
 	}
 
 	/**

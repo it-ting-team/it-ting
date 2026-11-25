@@ -43,9 +43,22 @@ public final class TestImages {
 	 * @param orientation EXIF의 회전 방향(1 ~ 8). null이면 넣지 않는다
 	 */
 	public static byte[] jpegWithMetadata(Integer orientation) {
+		return jpegWithMetadata(orientation, false);
+	}
+
+	/**
+	 * EXIF(회전 방향과 위치 글자), XMP, 주석이 든 JPEG.
+	 *
+	 * @param orientation EXIF의 회전 방향(1 ~ 8). null이면 넣지 않는다
+	 * @param app2First true면 EXIF보다 앞에 APP2(색 프로필 자리) 구간을 둔다
+	 */
+	public static byte[] jpegWithMetadata(Integer orientation, boolean app2First) {
 		byte[] plain = jpeg();
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		out.write(plain, 0, 2);
+		if (app2First) {
+			writeJpegSegment(out, 0xE2, "ICC_PROFILE\0\1\1".getBytes(StandardCharsets.US_ASCII));
+		}
 		writeJpegSegment(out, 0xE1, exif(orientation));
 		writeJpegSegment(out, 0xE1, ("http://ns.adobe.com/xap/1.0/\0<x:xmpmeta>" + SECRET + "</x:xmpmeta>")
 				.getBytes(StandardCharsets.UTF_8));

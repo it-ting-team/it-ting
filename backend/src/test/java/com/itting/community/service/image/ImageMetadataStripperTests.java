@@ -54,6 +54,17 @@ class ImageMetadataStripperTests {
 	}
 
 	@Test
+	void EXIF보다_앞에_다른_구간이_있어도_회전_방향을_남긴다() {
+		byte[] stripped = ImageMetadataStripper.strip(TestImages.jpegWithMetadata(6, true), ImageFormat.JPEG);
+
+		assertThat(TestImages.containsSecret(stripped)).isFalse();
+		List<byte[]> app1 = jpegSegments(stripped, 0xE1);
+		assertThat(app1).hasSize(1);
+		assertThat(app1.getFirst()[25]).isEqualTo((byte) 6);
+		assertThat(jpegSegments(stripped, 0xE2)).hasSize(1);
+	}
+
+	@Test
 	void JPEG에_회전_방향이_없으면_EXIF를_남기지_않는다() {
 		byte[] stripped = ImageMetadataStripper.strip(TestImages.jpegWithMetadata(null), ImageFormat.JPEG);
 
