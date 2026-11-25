@@ -8,12 +8,14 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.itting.community.domain.CommunityErrorCode;
 import com.itting.community.domain.Post;
+import com.itting.community.domain.PostCategory;
 import com.itting.community.domain.PostImage;
 import com.itting.community.domain.PostInterest;
 import com.itting.community.domain.PostVersion;
@@ -33,6 +35,7 @@ import com.itting.global.error.CommonErrorCode;
 import com.itting.global.response.ApiError;
 import com.itting.interest.domain.InterestCategory;
 import com.itting.interest.repository.InterestCategoryRepository;
+import com.itting.meetup.service.MeetupLinkService;
 import jakarta.validation.Validator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +46,8 @@ import org.springframework.validation.beanvalidation.SpringValidatorAdapter;
 /**
  * 글을 쓰고 고치고 지우고, 조회수를 올린다({@code docs/api/08-community.md}).
  *
- * <p>글에 모임을 연결하는 기능은 모임 테이블이 생긴 뒤 08 커뮤니티 ③(KAN-53)에서 더한다. 그 전에는 연결할 수 있는
- * 모임이 하나도 없으므로 {@code meetupId}가 오면 늘 {@code MEETUP_NOT_FOUND}다.
+ * <p>글에 연결하는 모임은 글의 카테고리마다 고를 수 있는 것이 다르다. 고를 수 있는지는 모임 영역({@link MeetupLinkService})이
+ * 답하고, 이 서비스는 카테고리를 모임 쪽 기준으로 바꿔 묻는다. 검사한 뒤 저장하기 전에 모임이 바뀌어도 잠그지 않는다.
  */
 @Service
 public class PostService {
@@ -61,6 +64,8 @@ public class PostService {
 
 	private final InterestCategoryRepository interestCategoryRepository;
 
+	private final MeetupLinkService meetupLinkService;
+
 	private final SpringValidatorAdapter validator;
 
 	private final Clock clock;
@@ -68,25 +73,27 @@ public class PostService {
 	public PostService(PostRepository postRepository, PostVersionRepository postVersionRepository,
 			PostInterestRepository postInterestRepository, PostImageRepository postImageRepository,
 			UploadedImageRepository uploadedImageRepository, InterestCategoryRepository interestCategoryRepository,
-			Validator validator, Clock clock) {
+			MeetupLinkService meetupLinkService, Validator validator, Clock clock) {
 		this.postRepository = postRepository;
 		this.postVersionRepository = postVersionRepository;
 		this.postInterestRepository = postInterestRepository;
 		this.postImageRepository = postImageRepository;
 		this.uploadedImageRepository = uploadedImageRepository;
 		this.interestCategoryRepository = interestCategoryRepository;
+		this.meetupLinkService = meetupLinkService;
 		this.validator = new SpringValidatorAdapter(validator);
 		this.clock = clock;
 	}
 
 	/**
-	 * 1. 입력(모양, 없는 대분류, 쓸 수 없는 사진) → 2. 모임 → 3. 글 · 버전 1 · 태그 · 사진을 한 번에 저장.
+	 * 1. 입력(모양, 없는 대분류, 쓸 수 없는 사진) → 2. 모임(없으면 404, 그 카테고리에 못 쓰면 409)
+	 * → 3. 글 · 버전 1 · 태그 · 사진을 한 번에 저장.
 	 */
 	@Transactional
 	public PostCreateResponse create(Long userId, PostCreateRequest request) {
 		validate(userId, null, request);
-		assertMeetupLinkable(request);
-		Post post = postRepository.save(Post.create(userId, request.category()));
+		assertMeetupLinkable(userId, request.category(), request.linkedMeetupId());
+		Post post = postRepository.save(Post.create(userId, request.category(), request.linkedMeetupId()));
 		postVersionRepository.save(PostVersion.create(post.getId(), 1, request.title(), request.content()));
 		attachInterests(post.getId(), request.interestCategoryIds());
 		attachImages(post.getId(), request.imageIds());
@@ -110,12 +117,14 @@ public class PostService {
 			throw new BusinessException(CommunityErrorCode.POST_EDIT_NOT_ALLOWED);
 		}
 		validate(userId, postId, request);
-		// 지금 연결한 모임은 늘 없으므로, 보낸 모임이 있으면 모임을 바꾼 것이다.
-		assertMeetupLinkable(request);
+		// 모임도 카테고리도 그대로면 그사이 모임이 모집 완료나 취소가 됐어도 검사하지 않는다.
+		if (!Objects.equals(post.getMeetupId(), request.linkedMeetupId()) || post.getCategory() != request.category()) {
+			assertMeetupLinkable(userId, request.category(), request.linkedMeetupId());
+		}
 
 		PostVersion latest = postVersionRepository.findTopByPostIdOrderByVersionDesc(postId)
 				.orElseThrow(() -> new IllegalStateException("버전이 없는 글: " + postId));
-		post.changeCategory(request.category());
+		post.change(request.category(), request.linkedMeetupId());
 		// 아래 태그 · 사진 떼기가 영속성 컨텍스트를 비우므로, 엔티티를 고치는 일은 여기까지 마친다.
 		postInterestRepository.deleteAllOfPost(postId);
 		postImageRepository.deleteAllOfPost(postId);
@@ -169,10 +178,14 @@ public class PostService {
 		postImageRepository.saveAll(images);
 	}
 
-	/** 모임 테이블이 생기기 전이라 연결할 수 있는 모임이 없다. 모임을 꼭 연결해야 하는 카테고리는 입력 검사에서 막았다. */
-	private void assertMeetupLinkable(PostInput input) {
-		if (input.linkedMeetupId() != null) {
-			throw new BusinessException(CommunityErrorCode.MEETUP_NOT_FOUND);
+	/**
+	 * 연결할 모임이 이 카테고리의 글에 쓸 수 있는지. 없거나 삭제된 모임이면 모임 영역의 {@code MEETUP_NOT_FOUND}(404),
+	 * 있지만 쓸 수 없으면 {@code MEETUP_NOT_LINKABLE}(409). 모임을 꼭 연결해야 하는 카테고리에 모임이 없는 것은 입력
+	 * 검사에서 막았다.
+	 */
+	private void assertMeetupLinkable(Long userId, PostCategory category, Long meetupId) {
+		if (meetupId != null && !meetupLinkService.isLinkable(userId, meetupId, category.linkScope())) {
+			throw new BusinessException(CommunityErrorCode.MEETUP_NOT_LINKABLE);
 		}
 	}
 

@@ -127,14 +127,14 @@ class PostWriteApiTests {
 	}
 
 	@Test
-	void 모임_홍보와_후기에_모임이_없으면_400_모임을_보내면_404_MEETUP_NOT_FOUND다() throws Exception {
+	void 모임_홍보와_후기에_모임이_없으면_400_없는_모임을_보내면_404_MEETUP_NOT_FOUND다() throws Exception {
 		create(body("PROMOTION", "제목", "본문", "[]", "[]", "null"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.error.fields[*].field").value(contains("meetupId")));
-		create(body("REVIEW", "제목", "본문", "[]", "[]", "19"))
+		create(body("REVIEW", "제목", "본문", "[]", "[]", "999999"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error.code").value("MEETUP_NOT_FOUND"));
-		create(body("FREE", "제목", "본문", "[]", "[]", "19"))
+		create(body("FREE", "제목", "본문", "[]", "[]", "999999"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error.code").value("MEETUP_NOT_FOUND"));
 	}
@@ -183,7 +183,7 @@ class PostWriteApiTests {
 				""")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.error.fields[*].field").value(contains("meetupId")));
-		update(postId, body("FREE", "제목", "본문", "[]", "[]", "19"))
+		update(postId, body("FREE", "제목", "본문", "[]", "[]", "999999"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error.code").value("MEETUP_NOT_FOUND"));
 		update(postId, body("FREE", "제목", "본문", "[]", "[]", "\"모임\""))
