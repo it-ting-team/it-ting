@@ -10,6 +10,9 @@ next-env.d.ts
 # 스모크 스크린샷 · 보고서 (npm run smoke)
 shots/
 
+# Vercel CLI 가 만드는 프로젝트 연결 정보 (vercel link)
+.vercel/
+
 # 개인 환경 변수 (목록·설명은 .env.example)
 .env.local
 .env.*.local

@@ -44,6 +44,11 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
+// 실행 jar의 이름을 버전과 상관없이 app.jar로 고정한다. Docker 이미지(backend/Dockerfile)가 이 이름으로 가져간다.
+tasks.named('bootJar') {
+	archiveFileName = 'app.jar'
+}
+
 // 브라우저 푸시(VAPID) 키 한 쌍을 만들어 .env에 붙여 넣을 두 줄로 출력한다. 파일은 만들지 않는다.
 // 실행: ./gradlew -q vapidKeys (-q를 붙이면 두 줄만 나온다)
 tasks.register('vapidKeys', JavaExec) {

@@ -16,8 +16,12 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 | `docs/commit-convention.md` | 커밋 메시지, 작성자, 서명 |
 | `docs/ci.md` | PR CI 검사 목록, 실패했을 때 고치는 법 |
 | `docs/work/` | 작업 계획서 · 완료 보고서(`KAN-<번호>.md`). 템플릿은 `_template.md` |
+| `docs/infra/` | 서버 구성과 운영. 테스트 서버(GCP)와 목 사이트(Vercel)는 `test-server.md` |
 | `compose.yaml` | 로컬 MySQL, Redis |
+| `deploy/` | 테스트 서버 배포 설정. 공용 프록시 `edge/`, 테스트 서버 `test/`, 목 사이트 빌드 값 `mock/`, 서버에서 도는 `deploy.sh` |
+| `backend/Dockerfile`, `frontend/Dockerfile` | 테스트 서버에 올리는 이미지 |
 | `.github/workflows/ci.yml`, `scripts/ci/` | PR CI. 결과는 요약 job `ci` 하나로 모인다 |
+| `.github/workflows/deploy-test.yml`, `deploy-mock.yml` | 배포. `test`에 병합되면 테스트 서버, `dev`에 프론트엔드 변경이 병합되면 목 사이트 |
 | `.agents/skills/` | 스킬 원본 |
 | `.claude/skills/` | 스킬 사본 (Claude Code용) |
 
@@ -31,6 +35,7 @@ Claude Code와 Codex가 이 저장소에서 일할 때 따르는 규칙이다. C
 | 브랜치 만들기 | `docs/branch-strategy.md` |
 | 커밋 | `docs/commit-convention.md` |
 | PR 만들기 | 스킬 `pr-create` |
+| 배포 설정 · 서버 환경 변수 바꾸기 | `docs/infra/test-server.md` |
 
 명세(`docs/spec/`)와 API 명세(`docs/api/`)의 번호는 같은 화면을 가리킨다. 예: `docs/spec/07-meetup.md` ↔ `docs/api/07-meetup.md` ↔ `docs/db/meetup.md`.
 
