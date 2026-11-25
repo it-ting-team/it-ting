@@ -181,6 +181,7 @@ erDiagram
   - 프로그레시브 JPEG의 스캔 사이에 든 주석 · EXIF와 EOI 뒤에 붙은 바이트가 남았다. 스캔 데이터(FF 00 이스케이프, RSTn)를 건너며 EOI까지 모든 구간을 거르고 EOI 뒤는 버린다
   - 그림이 없는 12바이트 WebP, 끝이 잘린 JPEG가 저장됐다. JPEG는 SOF · SOS · EOI, PNG는 IHDR · IDAT · IEND와 CRC, WebP는 RIFF 크기와 그림 청크를 확인해 아니면 `400 INVALID_INPUT`
   - 고치기 전 코드에서 실패하는 테스트를 먼저 더했다(`ImageMetadataStripperTests` 2개, `ImageUploadApiTests`의 실패 경우 2개)
+- Codex 재리뷰(`dd148a5`) P1 1건 고침: EXIF(APP1)보다 앞에 APP2 같은 구간이 있으면 회전 방향을 읽기 전에 "이미 썼다"로 처리해 회전 방향이 사라졌다. 첫 스캔 앞의 구간에서 회전 방향을 먼저 찾아 둔다. 고치기 전 코드에서 실패하는 테스트(`EXIF보다_앞에_다른_구간이_있어도_회전_방향을_남긴다`)를 먼저 더했다. 함께 다시 보인 12바이트 WebP 지적은 `744920b`에서 고친 것이다
 - PR CI: 비밀값 검사(gitleaks)가 테스트 도우미의 가짜 위치 글자 상수(`TestImages.SECRET`)를 API 키로 잘못 잡았다. 그 줄에 `gitleaks:allow`를 달고, 이미 푸시한 커밋의 줄은 `.gitleaksignore`에 적었다(`docs/ci.md`의 "비밀값이 잡혔을 때" 4)
 
 ### 계획과 달라진 점
