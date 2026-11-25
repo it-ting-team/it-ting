@@ -16,7 +16,8 @@ public enum MeetupErrorCode implements ErrorCode {
 	MEETUP_APPLICATION_ALREADY_CONFIRMED(HttpStatus.CONFLICT, "이미 참여가 확정된 신청입니다."),
 	MEETUP_PARTICIPATION_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "지금은 참여를 취소할 수 없습니다."),
 	MEETUP_FULL(HttpStatus.CONFLICT, "모임의 정원이 찼습니다."),
-	MEETUP_KICK_NOT_ALLOWED(HttpStatus.CONFLICT, "지금은 참여자를 내보낼 수 없습니다.");
+	MEETUP_KICK_NOT_ALLOWED(HttpStatus.CONFLICT, "지금은 참여자를 내보낼 수 없습니다."),
+	MEETUP_NOT_LIKED(HttpStatus.CONFLICT, "먼저 모임을 찜해야 합니다.");
 
 	private final HttpStatus status;
 	private final String message;
