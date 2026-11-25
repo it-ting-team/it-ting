@@ -107,7 +107,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | --- | --- | --- | --- | --- |
 | `id` | `BIGINT` | PK | NOT NULL, PK로 유일 | 자동 증가 대화방 ID |
 | `type` | `ENUM` | — | NOT NULL, 개별 UNIQUE 없음, `DIRECT`, `MEETUP` | 1:1 또는 모임 대화방 |
-| `meetup_id` | `BIGINT` | 논리 참조 → `meetup.id` | NULL 허용, UNIQUE, `MEETUP`일 때 필수 | 연결된 모임. 1:1 방에서는 비움. `meetup` 테이블이 없는 동안은 물리 FK를 걸지 않고, 모임 대화방을 붙이는 작업이 새 마이그레이션으로 FK를 더한다 |
+| `meetup_id` | `BIGINT` | FK → `meetup.id` | NULL 허용, UNIQUE, `MEETUP`일 때 필수 | 연결된 모임. 1:1 방에서는 비움. KAN-48이 별도 마이그레이션으로 FK를 추가한다 |
 | `notice` | `TEXT` | — | NULL 허용, 개별 UNIQUE 없음 | 모임 대화방 상단에 주최자가 쓰는 공지 한 건 |
 | `created_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 1:1 요청 수락 또는 모임 생성 시각 |
 | `updated_at` | `DATETIME` | — | NOT NULL, 개별 UNIQUE 없음 | 행이 마지막으로 바뀐 시각 |
