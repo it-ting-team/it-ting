@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 회원가입 3의 "땅굴 파기"({@code POST /api/v1/users}). SSAFY 인증 코드를 확인하고 계정을 만든다.
+ * 이메일 가입과 Google 가입이 같은 길을 쓰고, 계정을 만드는 곳만 다르다.
  * 계정과 프로필은 {@link UserService}가 한 트랜잭션으로 만들고, 그 뒤에 가입 진행 기록을 지운다.
  */
 @Service
@@ -45,7 +46,7 @@ public class SignupService {
 	}
 
 	/**
-	 * @param password 이메일 가입이면 필수. 규칙 검사는 요청 DTO가 했다
+	 * @param password 이메일 가입이면 필수. Google 가입이면 쓰지 않는다. 규칙 검사는 요청 DTO가 했다
 	 * @return 만든 계정의 id
 	 */
 	public Long signUp(String signupToken, String password, String code, Long campusFloorId) {
@@ -53,11 +54,7 @@ public class SignupService {
 		SignupRecord record = signupRepository.find(signupToken)
 				.filter(found -> !found.isExpired(now))
 				.orElseThrow(() -> new BusinessException(AuthErrorCode.SIGNUP_EXPIRED));
-		if (record.method() != SignupMethod.EMAIL) {
-			// Google 가입은 02 ④에서 만든다. 그 전에는 Google 가입 기록이 생기지 않는다.
-			throw new IllegalStateException("Google 가입은 아직 처리하지 않는다: " + record.method());
-		}
-		if (password == null) {
+		if (record.method() == SignupMethod.EMAIL && password == null) {
 			throw BusinessException.invalidInput("password", "필수 값입니다.");
 		}
 		SsafyCodeCheck verified = verifySsafyCode(record, code, now);
@@ -69,8 +66,13 @@ public class SignupService {
 		}
 
 		// 기수와 아이디는 코드를 확인한 순간의 값을 쓴다. 그 사이 코드를 다시 보내 기록이 바뀌어도 어긋나지 않는다.
-		Long userId = userService.createEmailUser(record.email(), passwordEncoder.encode(password),
-				verified.mattermostId(), verified.generation(), campusFloorId, now);
+		// Google 가입이면 password는 쓰지 않는다. 보냈어도 규칙 검사(요청 DTO)만 하고 저장하지 않는다.
+		Long userId = switch (record.method()) {
+			case EMAIL -> userService.createEmailUser(record.email(), passwordEncoder.encode(password),
+					verified.mattermostId(), verified.generation(), campusFloorId, now);
+			case GOOGLE -> userService.createGoogleUser(record.googleSub(), record.googleEmail(),
+					verified.mattermostId(), verified.generation(), campusFloorId, now);
+		};
 		signupRepository.delete(signupToken);
 		return userId;
 	}

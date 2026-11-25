@@ -53,6 +53,18 @@ public class TestUsers {
 		return userId;
 	}
 
+	/** {@link #createGoogleOnlyUser}가 넣는 Google 식별자. 가짜 Google이 돌려줄 {@code sub}도 이 값으로 맞춘다. */
+	public static String googleSub(String googleEmail) {
+		return "google-" + googleEmail;
+	}
+
+	/** 계정에 Google 계정을 연결해 둔다(이메일로 가입하고 Google을 연동한 계정). */
+	public void linkGoogle(long userId, String googleEmail) {
+		jdbcTemplate.update("UPDATE `user` SET google_sub = ?, google_email = ? WHERE id = ?",
+				googleSub(googleEmail), googleEmail, userId);
+		entityManager.clear();
+	}
+
 	public long createAdmin() {
 		return insertUser(null, null, null, "ADMIN", "ACTIVE");
 	}
@@ -125,7 +137,7 @@ public class TestUsers {
 					""", new String[] { "id" });
 			statement.setString(1, email);
 			statement.setString(2, passwordHash);
-			statement.setString(3, googleEmail == null ? null : "google-" + googleEmail);
+			statement.setString(3, googleEmail == null ? null : googleSub(googleEmail));
 			statement.setString(4, googleEmail);
 			statement.setString(5, "mm-" + System.nanoTime());
 			statement.setString(6, role);

@@ -3,6 +3,7 @@ package com.itting.auth.service;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 
 import com.itting.auth.domain.AuthErrorCode;
 import com.itting.auth.domain.NextStep;
@@ -62,11 +63,19 @@ public class LoginService {
 		}
 
 		// 비밀번호가 맞은 뒤에만 정지 사실을 알린다. 비밀번호를 모르는 사람은 남의 정지 여부를 알 수 없다.
-		Instant now = Instant.now(clock);
-		userSuspensionRepository.findActive(user.getId(), now).stream().findFirst().ifPresent(suspension -> {
-			throw new BusinessException(AuthErrorCode.ACCOUNT_SUSPENDED, toDetail(suspension));
+		findSuspension(user.getId()).ifPresent(detail -> {
+			throw new BusinessException(AuthErrorCode.ACCOUNT_SUSPENDED, detail);
 		});
 		return new LoginResult(user.getId(), user.getRole(), nextStepService.of(user));
+	}
+
+	/**
+	 * 지금 정지 중이면 정지 사유와 끝나는 시각. 정지 기록이 겹치면 가장 늦게 끝나는 것이다. Google 로그인도 이것으로 정지를 본다.
+	 */
+	@Transactional(readOnly = true)
+	public Optional<SuspensionDetailResponse> findSuspension(Long userId) {
+		Instant now = Instant.now(clock);
+		return userSuspensionRepository.findActive(userId, now).stream().findFirst().map(LoginService::toDetail);
 	}
 
 	/** 계정이 없거나 비밀번호가 없는 계정(Google로만 가입)이어도 같은 시간이 걸리게 비교한다. */

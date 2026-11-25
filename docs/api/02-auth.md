@@ -919,7 +919,20 @@ POST /api/v1/password-resets/3fa9c1d27b4e4f0a9c51/complete
 - **재설정 링크**(KAN-41): `{프론트엔드 주소}/password-reset/{token}`. 프론트엔드 주소는 서버 설정 `itting.frontend-url`이다. 정지된 계정도 재설정할 수 있다.
 - **입력 모양을 먼저 본다**(KAN-39): `POST /api/v1/ssafy-verifications`와 `POST /api/v1/users`는 가입 진행 기록을 찾기 전에 입력값의 모양부터 본다.
 
+[KAN-60](../work/KAN-60.md)에서 정했다. 설정에서 시작하는 Google 확인의 주소와 기록은 [설정 · 계정 API](10-settings.md#명세에-없어-이-문서에서-정한-것)에 적었다.
+
+- **Google 로그인이 돌아가는 주소**(KAN-60): 서버 설정 `itting.frontend-url` 뒤에 붙인다. 프론트엔드가 아직 없어 서버가 먼저 정했고, 화면을 만들 때 이 경로로 맞춘다.
+  - 로그인됨(이미 가입한 계정): `/`. 갈 곳은 프론트엔드가 `GET /api/v1/me`의 `nextStep`으로 정한다.
+  - 처음 쓰는 Google 계정: `/signup/ssafy?method=google`
+  - 로그인하지 못함: `/login?error=<code>`
+- **정지된 계정이 Google로 로그인했을 때**(KAN-60): 세션을 만들지 않고 `/login?error=ACCOUNT_SUSPENDED&reason=<사유>&endsAt=<ISO-8601 UTC>`로 보낸다. 이름은 이메일 로그인의 `error.detail`(`reason`, `endsAt`)과 같고, 값은 주소에 맞게 인코딩한다. 정지 기록이 겹치면 가장 늦게 끝나는 것이다. 로그인 전이라 프론트엔드가 다른 API로 물을 수 없고, 사유는 Google 로그인을 마친 본인의 브라우저로만 간다. 정지가 끝났거나 풀렸거나 아직 시작하지 않았으면 정지로 보지 않는다.
+- **로그인 실패 코드**(KAN-60): `GOOGLE_LOGIN_FAILED` 하나다. Google에서 취소했을 때(`error=access_denied`), 코드가 없을 때, `state`가 없거나 쿠키와 다르거나 이미 썼거나 10분이 지났을 때, Google과 통신하지 못했을 때, Google이 `sub`나 `email`을 주지 않았을 때다. 이 코드는 주소의 `error`로만 가고 JSON 응답으로는 나가지 않는다. `GOOGLE_VERIFICATION_FAILED` · `GOOGLE_ACCOUNT_MISMATCH`도 마찬가지다.
+- **로그인 시도를 기억하는 모양**(KAN-60): 시작할 때 `state`와 PKCE 검증값(`S256`)을 만들어 Redis `itting:oauth:google:<state>`에 10분 둔다. 같은 `state`를 `HttpOnly` · `Secure` · `SameSite=Lax` 쿠키 `ITTING_OAUTH`(`Path=/api/v1/oauth/google`, 10분)로도 주고, 콜백에서 둘이 같은지 본다. 콜백은 시도를 읽으면서 지우므로 한 번만 쓸 수 있고, 쿠키는 결과와 상관없이 지운다. 쿠키가 없으면 남이 시작한 로그인 주소를 내 브라우저가 열었을 때 남의 계정으로 로그인될 수 있어서 쿠키로 브라우저에 묶는다. 10분이 지났는지는 서버 시계로 보고 Redis의 만료는 치우는 용도다.
+- **Google에서 받는 값**(KAN-60): 범위는 `openid email`이다. 토큰 주소에서 받은 액세스 토큰으로 사용자 정보 주소를 불러 `sub`(255자 이하)와 `email`(254자 이하)을 받는다. 둘 중 하나라도 비어 있으면 실패다. ID 토큰의 서명은 검사하지 않는다. 연결 시간 3초, 읽기 시간 5초를 넘으면 실패로 본다.
+- **Google 설정 키**(KAN-60): `itting.google.client-id` · `client-secret` · `redirect-uri`(콜백의 전체 주소. Google Cloud 콘솔의 "승인된 리디렉션 URI"와 같아야 한다)와 Google의 주소 셋 `authorization-uri` · `token-uri` · `userinfo-uri`(기본값은 Google의 주소이고 가짜 서버로 바꿔 볼 때만 덮어쓴다). 환경 변수는 `ITTING_GOOGLE_CLIENT_ID`, `ITTING_GOOGLE_CLIENT_SECRET`, `ITTING_GOOGLE_REDIRECT_URI`, `ITTING_GOOGLE_AUTHORIZATION_URI`, `ITTING_GOOGLE_TOKEN_URI`, `ITTING_GOOGLE_USERINFO_URI`이고 `.env`에 둔다. 클라이언트 값은 사람이 Google Cloud 콘솔에서 만들어 넣는다.
+- **Google로 가입한 계정**(KAN-60): `user.google_sub`와 `google_email`을 채우고 `email`과 `password_hash`는 비운다. 그 사이 같은 Google 계정이 가입했으면 `409`와 `GOOGLE_ACCOUNT_DUPLICATED`다. 이메일 가입과 Google 가입이 한 계정으로 합쳐지는 일은 없다.
+
 ## 구현 단계로 넘기는 것
 
-- Google 로그인을 마친 뒤 돌아갈 프론트엔드 주소(이미 가입한 계정, 처음 쓰는 Google 계정, 실패한 경우)
-- 정지된 계정이 Google로 로그인했을 때 사유와 기간을 프론트엔드에 전하는 방법
+- Google로 가입하는데 `password`를 보낸 경우(KAN-60은 정하지 않았다. 지금은 모양만 검사하고 저장하지 않는다)
+- Google 설정(`itting.google.*`)이 비어 있을 때의 동작(KAN-60은 정하지 않았다. 지금은 따로 검사하지 않아 서버는 뜨고, Google이 요청을 거절한다)

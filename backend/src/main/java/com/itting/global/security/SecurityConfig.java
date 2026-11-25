@@ -3,6 +3,7 @@ package com.itting.global.security;
 import java.time.Duration;
 import java.util.List;
 
+import com.itting.global.config.FrontendProperties;
 import com.itting.global.error.CommonErrorCode;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -49,7 +50,16 @@ public class SecurityConfig {
 			PublicApi.of(HttpMethod.POST, "/api/v1/users"),
 			PublicApi.of(HttpMethod.POST, "/api/v1/password-resets"),
 			PublicApi.of(HttpMethod.GET, "/api/v1/password-resets/*"),
-			PublicApi.of(HttpMethod.POST, "/api/v1/password-resets/*/complete"));
+			PublicApi.of(HttpMethod.POST, "/api/v1/password-resets/*/complete"),
+			// Google 로그인. 설정의 Google 확인(/api/v1/oauth/google/verify)은 로그인이 필요해 여기 두지 않는다.
+			PublicApi.of(HttpMethod.GET, "/api/v1/oauth/google"),
+			PublicApi.of(HttpMethod.GET, "/api/v1/oauth/google/callback"));
+
+	/**
+	 * 로그인이 필요하지만 브라우저가 이동하는 주소. 로그인하지 않았으면 JSON {@code 401} 대신 프론트엔드의 로그인 화면으로 보낸다
+	 * ({@code docs/api/10-settings.md}의 {@code GET /api/v1/oauth/google/verify}).
+	 */
+	static final String GOOGLE_VERIFY = "/api/v1/oauth/google/verify";
 
 	/**
 	 * @param method 연 메서드. null이면 모든 메서드
@@ -69,7 +79,8 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository securityContextRepository,
-			CorsConfigurationSource corsConfigurationSource, SecurityErrorWriter errorWriter) throws Exception {
+			CorsConfigurationSource corsConfigurationSource, SecurityErrorWriter errorWriter,
+			FrontendProperties frontend) throws Exception {
 		// 허용하지 않은 출처를 거절할 때도 응답 틀로 답하게 CORS 필터를 직접 만들어 넣는다.
 		CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
 		corsFilter.setCorsProcessor(new ApiCorsProcessor(errorWriter));
@@ -97,8 +108,13 @@ public class SecurityConfig {
 							.anyRequest().permitAll();
 				})
 				.exceptionHandling(exception -> exception
-						.authenticationEntryPoint((request, response, e) ->
-								errorWriter.write(response, CommonErrorCode.UNAUTHENTICATED))
+						.authenticationEntryPoint((request, response, e) -> {
+							if (HttpMethod.GET.matches(request.getMethod()) && GOOGLE_VERIFY.equals(request.getRequestURI())) {
+								response.sendRedirect(frontend.frontendUrl() + "/login");
+								return;
+							}
+							errorWriter.write(response, CommonErrorCode.UNAUTHENTICATED);
+						})
 						.accessDeniedHandler((request, response, e) ->
 								errorWriter.write(response, CommonErrorCode.FORBIDDEN)));
 		return http.build();

@@ -916,10 +916,26 @@ POST /api/v1/me/withdraw
   - **키 설정**: 서버 설정 `itting.push.public-key`, `itting.push.private-key`, `itting.push.subject`(연락처 `mailto:`)를 `.env`나 환경 변수(`ITTING_PUSH_PUBLIC_KEY`, `ITTING_PUSH_PRIVATE_KEY`, `ITTING_PUSH_SUBJECT`)로 넣는다. 키는 `backend/`에서 `./gradlew vapidKeys`로 만든다. 하나라도 비어 있으면 서버는 정상으로 뜨고 푸시만 보내지 않는다(`pushPublicKey`도 `null`이다).
   - **보내는 주소의 제한**: 푸시 주소는 사용자가 등록한 값이라, 서버가 요청을 보내는 곳을 `https://` 주소로, 서버 안쪽(내 PC, 사설망, 링크 로컬)이 아닌 곳으로 제한한다. 리다이렉트는 따라가지 않는다.
 
+[KAN-60](../work/KAN-60.md)에서 정했다. 로그인과 같은 `state` · 쿠키 · PKCE 장치는 [로그인 · 회원가입 API](02-auth.md#구현하며-정한-것)에 적었다.
+
+- **Google 확인이 돌아가는 주소**(KAN-60): 서버 설정 `itting.frontend-url` 뒤에 붙인다. 프론트엔드가 아직 없어 서버가 먼저 정했다.
+  - `LINK` 확인됨: `/settings/google?verified=true`, 못 함: `/settings/google?error=<code>`
+  - `WITHDRAW` 확인됨: `/settings/withdraw`, 못 함: `/settings/withdraw?error=<code>`
+  - `verify`를 부를 때 로그인이 풀려 있음: `/login`. `purpose`가 틀림: `/settings`
+  - 돌아왔는데 로그인이 풀려 있음: `/login`
+  - `state`가 없거나 쿠키와 다르거나 이미 썼거나 10분이 지났을 때는 어느 화면에서 시작했는지 믿을 수 없어 로그인 실패와 같은 `/login?error=GOOGLE_LOGIN_FAILED`로 보낸다.
+- **확인 기록을 두는 모양**(KAN-60): Redis의 `itting:google-verification:<세션 id>` 하나에 `purpose`, Google 식별자, Google 이메일, 끝나는 시각을 둔다. 한 세션에 하나라서 `LINK`를 받은 뒤 `WITHDRAW`를 받으면(그 반대도) 앞의 기록을 덮어쓴다. `purpose`가 다르면 읽지 않는다. 10분이 지났는지는 서버 시계로 보고 Redis의 만료는 치우는 용도다. `WITHDRAW` 기록을 읽고 지우는 일은 KAN-61이 같은 서비스(`GoogleVerificationService`)로 한다.
+- **확인은 시작한 세션에서만 받는다**(KAN-60): 시작할 때 계정 id와 세션 id를 시도와 함께 기억한다. 다른 세션이나 다른 계정으로 돌아오면 Google에서 계정 정보를 받지 않고 `GOOGLE_VERIFICATION_FAILED`로 보낸다. 검사에 어긋나 기록을 만들지 않을 때는 앞에 받아 둔 유효한 기록도 건드리지 않는다.
+- **`verify`에 로그인하지 않고 오면**(KAN-60): 브라우저가 이동하는 주소라 JSON `401` 대신 프론트엔드의 로그인 화면(`/login`)으로 `302`를 준다. 로그인 검사가 이 주소만 이렇게 답한다. 세션은 있는데 계정이 없거나 탈퇴했어도 로그인 화면으로 보내고 시도를 만들지 않는다.
+- **온보딩을 마치지 않은 계정이 `verify`를 부르면**(KAN-60): `403`과 `ONBOARDING_INCOMPLETE` JSON이다. `verify`에 "온보딩 중에도"가 없어 다른 설정 API와 같이 막는다. 온보딩 중인 계정은 설정 화면에 들어올 수 없어 정상 흐름에서는 부르지 않는다. 콜백과 로그인 시작은 로그인 없이 부르는 API라 "온보딩 중에도" · "새 학기를 고르기 전에도"를 모두 붙였다.
+- **같은 Google 계정을 다시 연결할 때**(KAN-60): `PUT /api/v1/me/google-link`는 이미 그 Google 계정이 연결된 계정이면 바꾸지 않고 성공한다. `GOOGLE_ALREADY_LINKED`는 다른 Google 계정이 연결돼 있을 때만이다. 확인 기록은 연결했든 `GOOGLE_ACCOUNT_DUPLICATED` · `GOOGLE_ALREADY_LINKED`로 못 했든 지운다. 다시 연결하려면 다시 확인받는다.
+- **같은 Google 계정을 두 계정이 동시에 연결할 때**(KAN-60): 둘 다 확인을 받았어도 `user.google_sub`의 UNIQUE가 한쪽만 통과시키고, 진 쪽은 `409`와 `GOOGLE_ACCOUNT_DUPLICATED`다.
+- **코드가 주소로만 가는 에러**(KAN-60): `GOOGLE_ACCOUNT_MISMATCH`, `GOOGLE_VERIFICATION_FAILED`, `GOOGLE_LOGIN_FAILED`는 JSON 응답으로 나가지 않고 돌아가는 주소의 `error`로만 쓴다. `AuthErrorCode`에 있는 상태 값(`409`, `400`, `401`)은 쓰이지 않는다.
+
 ## 구현 단계로 넘기는 것
 
 - 지금 비밀번호를 여러 번 틀렸을 때 막는 횟수와 시간(KAN-58에서는 막지 않았다. 로그인 API와 같은 규칙으로 함께 정한다)
-- Google 확인을 시작할 때 계정을 다시 고르게 하는 방법, 확인 기록을 임시 저장소에 두는 모양
+- Google 확인을 시작할 때 계정을 다시 고르게 하는 방법(`prompt=select_account`를 붙일지. KAN-60은 정하지 않았다. 지금은 붙이지 않아 Google의 기본 동작을 따른다. 지금 Google에 로그인된 계정이 아닌 다른 계정을 고르려면 사용자가 Google 화면에서 직접 계정을 바꾼다)
 - 로그인이 만료된 브라우저에 푸시가 계속 가지 않게 하는 방법(KAN-59에서도 정하지 않았다. 로그아웃할 때 프론트엔드가 먼저 등록을 지우는 것으로 둔다. 로그인은 14일 동안 유지되고, 만료된 브라우저는 푸시 서비스가 `404` · `410`으로 답할 때까지 줄이 남는다)
 - 탈퇴한 사람의 프로필 사진 파일을 저장소에서 지우는 때
 - 공지를 올리고 고치는 API와 본문의 길이(11 운영 · 관리자). 제목은 100자 이하로 정했다(KAN-58, [알림 · 공지 DB](../db/notification.md#notice))

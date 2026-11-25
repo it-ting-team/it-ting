@@ -27,6 +27,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	/** 이메일로 가입한 계정이 있는지. 탈퇴한 계정은 이메일을 비워 두므로 걸리지 않는다. */
 	boolean existsByEmail(String email);
 
+	/** Google 계정 식별자로 찾는다. 탈퇴한 계정은 식별자를 비워 두므로 걸리지 않는다. */
+	Optional<User> findByGoogleSub(String googleSub);
+
+	/** 이 Google 계정을 쓰는 계정이 있는지. */
+	boolean existsByGoogleSub(String googleSub);
+
 	/** 이 Mattermost ID로 SSAFY 인증을 마친 계정이 있는지. 탈퇴한 계정은 비워 둔다. */
 	boolean existsByMattermostId(String mattermostId);
 
