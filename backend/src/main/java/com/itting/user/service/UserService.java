@@ -127,13 +127,13 @@ public class UserService {
 	}
 
 	/**
-	 * 비밀번호를 바꾼다.
+	 * 비밀번호를 바꾼다. Google 연동 · 해제와 같은 계정 행 잠금을 잡아, 겹쳐도 한쪽이 끝난 뒤에 읽는다.
 	 *
 	 * @return 바꿀 계정이 없거나 탈퇴했으면 false
 	 */
 	@Transactional
 	public boolean changePassword(Long userId, String passwordHash) {
-		return userRepository.findById(userId)
+		return userRepository.findByIdForUpdate(userId)
 				.filter(User::isActive)
 				.map(user -> {
 					user.changePassword(passwordHash);

@@ -11,11 +11,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.DynamicUpdate;
 
 /**
  * 계정({@code user}). 로그인 수단, SSAFY 인증, 온보딩 완료와 탈퇴 상태를 둔다.
  * 다른 사람에게 보여 주는 값은 {@link UserProfile}에 있다.
  */
+/*
+ * 바꾼 칼럼만 UPDATE한다. 잠그지 않고 읽은 계정을 고쳐 저장해도, 그 사이 다른 트랜잭션이 바꾼 칼럼(예: Google 연동 해제)을
+ * 읽은 때의 값으로 되돌리지 않는다.
+ */
+@DynamicUpdate
 @Entity
 @Table(name = "`user`")
 public class User extends BaseTimeEntity {

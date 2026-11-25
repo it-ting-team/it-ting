@@ -217,7 +217,7 @@ sequenceDiagram
 ### 확인한 것
 
 - 새 테스트 80개를 골라 돌려 모두 통과했다(실패 0, 오류 0, 건너뜀 0): `GoogleLoginApiTests` 23, `GoogleSignupApiTests` 10, `GoogleVerifyApiTests` 21, `GoogleLinkApiTests` 22, `GoogleLinkConcurrencyTests` 1, `GoogleSettingsTests` 3. 숫자는 Gradle 테스트 결과 XML에서 셌다
-- `./gradlew build` 통과. 테스트 542개, 실패 0(Gradle 결과 XML에서 셈. `verify`의 로그인 처리를 고친 뒤 다시 돌린 결과)
+- `./gradlew build` 통과. 테스트 544개, 실패 0(Gradle 결과 XML에서 셈. Codex 지적을 고친 뒤 다시 돌린 결과)
 - 계획의 "테스트" 표의 모든 줄을 테스트한다. 시간은 고정 `Clock`으로 넘겨 10분 직전(통과)과 10분(실패)을 모두 본다
 - 가짜 Google이 실제 Google처럼 클라이언트 id · 비밀, `redirect_uri`, 일회용 코드, PKCE를 확인하므로 콜백이 보내는 요청의 모양도 함께 확인한다
 - 테스트가 실제로 잡는지: 아래를 잠깐 바꾸면 해당 테스트가 실패했다(되돌리고 같은지 확인)
@@ -228,6 +228,7 @@ sequenceDiagram
   - `application.yml`의 `ITTING_GOOGLE_CLIENT_ID` 이름을 틀리게 바꾸기 → `GoogleSettingsTests` 실패
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
 - 로컬 코드 리뷰(스킬 `code-review`): P0 0건, P1 0건. 확인 필요로 남긴 것: 정지 사유가 주소에 남는 것(결정 B대로), userinfo의 `email_verified`를 보지 않는 것(이메일로 계정을 묶는 기능을 만들면 검사해야 함, 보류 G), 두 탭에서 연달아 시작하면 앞 탭이 `GOOGLE_LOGIN_FAILED`로 끝나는 것(안전한 쪽)
+- Codex 리뷰 P1 1건 고침: 비밀번호 변경이 잠그지 않고 읽은 계정을 연동 해제 뒤에 저장하면, 해제한 `google_sub` · `google_email`이 되살아났다. `UserService.changePassword`가 연동 · 해제와 같은 계정 행 잠금(`findByIdForUpdate`)을 잡고, `User`에 `@DynamicUpdate`를 붙여 바꾼 칼럼만 UPDATE한다. `PasswordChangeGoogleUnlinkRaceTests` 2개를 더했고, `@DynamicUpdate`를 빼면 첫 테스트가 실패하는 것(되살아남)을 확인했다
 - 진짜 Google로는 호출해 보지 않았다(Google Cloud OAuth 클라이언트가 없다)
 
 ### 계획과 달라진 점
