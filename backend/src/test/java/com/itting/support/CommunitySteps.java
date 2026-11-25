@@ -157,7 +157,7 @@ public class CommunitySteps {
 				userId);
 	}
 
-	/** 올린 사진. 올리는 API가 생기기 전이라 줄을 바로 넣는다. */
+	/** 올린 사진. 테스트의 준비 단계라 올리는 API를 거치지 않고 줄을 바로 넣는다. */
 	public long uploadImage(long uploaderId, String url) {
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		jdbcTemplate.update(connection -> {
@@ -175,6 +175,66 @@ public class CommunitySteps {
 		jdbcTemplate.update("""
 				INSERT INTO post_image (post_id, sort_order, image_id, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP(6))
 				""", postId, sortOrder, imageId);
+	}
+
+	/** 이 계정의 땅굴. 입구가 없으므로 땅굴 주인으로 API를 부르는 테스트에는 쓰지 않는다. */
+	public long insertBurrow(long userId) {
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+		jdbcTemplate.update(connection -> {
+			var statement = connection.prepareStatement(
+					"INSERT INTO burrow (user_id, created_at) VALUES (?, UTC_TIMESTAMP(6))", new String[] { "id" });
+			statement.setLong(1, userId);
+			return statement;
+		}, keyHolder);
+		return keyHolder.getKey().longValue();
+	}
+
+	/** 방명록 글. status는 PUBLIC이나 HIDDEN. */
+	public long insertGuestbook(long burrowId, long authorId, String status) {
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+		jdbcTemplate.update(connection -> {
+			var statement = connection.prepareStatement("""
+					INSERT INTO guestbook_entry (burrow_id, author_id, content, status, created_at, updated_at)
+					VALUES (?, ?, '놀러 왔어요', ?, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+					""", new String[] { "id" });
+			statement.setLong(1, burrowId);
+			statement.setLong(2, authorId);
+			statement.setString(3, status);
+			return statement;
+		}, keyHolder);
+		return keyHolder.getKey().longValue();
+	}
+
+	/** 접수한 신고. 글 · 댓글이면 버전 1을 적는다. */
+	public long insertReport(long reporterId, String targetType, long targetId) {
+		Integer version = "POST".equals(targetType) || "COMMENT".equals(targetType) ? 1 : null;
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+		jdbcTemplate.update(connection -> {
+			var statement = connection.prepareStatement("""
+					INSERT INTO report (reporter_id, target_type, target_id, target_version, reason, detail, status,
+					                    created_at, updated_at)
+					VALUES (?, ?, ?, ?, 'SPAM', NULL, 'RECEIVED', UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+					""", new String[] { "id" });
+			statement.setLong(1, reporterId);
+			statement.setString(2, targetType);
+			statement.setLong(3, targetId);
+			statement.setObject(4, version);
+			return statement;
+		}, keyHolder);
+		return keyHolder.getKey().longValue();
+	}
+
+	/**
+	 * 관리자가 대상을 복구한 기록. 관리자 API(11 관리자)가 생기기 전이라 줄을 바로 넣는다. 대상의 상태는 부르는 쪽이 바꾼다.
+	 *
+	 * @param restoredThroughReportId 복구 직전에 그 대상에 접수된 가장 큰 신고 id. 신고가 없었으면 null
+	 */
+	public void insertRestore(long adminId, String targetType, long targetId, Long restoredThroughReportId) {
+		jdbcTemplate.update("""
+				INSERT INTO report_action (action_type, admin_id, reason, created_at, target_type, target_id,
+				                           restored_through_report_id)
+				VALUES ('TARGET_RESTORED', ?, '문제없는 글', UTC_TIMESTAMP(6), ?, ?, ?)
+				""", adminId, targetType, targetId, restoredThroughReportId);
 	}
 
 	/** 이 계정이 고른 세부 관심사를 바꾼다. 고른 순서대로 sort_order를 1부터 준다. */

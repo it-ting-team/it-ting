@@ -288,6 +288,12 @@ public class PostQueryRepository {
 				userId, postIds);
 	}
 
+	/** 이 글들 가운데 이 계정이 신고한 것. */
+	public Set<Long> findReported(Long userId, Collection<Long> postIds) {
+		return findPostIdsOf("SELECT target_id AS post_id FROM report WHERE reporter_id = :userId "
+				+ "AND target_type = 'POST' AND target_id IN (:ids)", userId, postIds);
+	}
+
 	/** 이 글들 가운데 이 계정이 좋아요를 누른 것. */
 	public Set<Long> findLiked(Long userId, Collection<Long> postIds) {
 		return findPostIdsOf("SELECT post_id FROM post_like WHERE user_id = :userId AND post_id IN (:ids)",

@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 글의 댓글 목록을 준다({@code docs/api/08-community.md}의 {@code GET /api/v1/posts/{postId}/comments}).
  * 데이터를 바꾸지 않는다.
  *
- * <p>내가 신고했는지({@code isReportedByMe})는 신고 테이블이 생기는 08 커뮤니티 ③(KAN-53)까지 늘 false다.
+ * <p>내가 신고했는지({@code isReportedByMe})는 내 신고 줄이 있는지로 정한다.
  * 본문 · 좋아요 · 사용자 표시는 댓글마다가 아니라 한 페이지 전체를 한 번에 읽는다.
  */
 @Service
@@ -65,8 +65,9 @@ public class CommentQueryService {
 		Map<Long, Body> bodies = queryRepository.findBodies(ids);
 		Map<Long, Long> likes = queryRepository.countLikes(ids);
 		Set<Long> liked = queryRepository.findLiked(userId, ids);
+		Set<Long> reported = queryRepository.findReported(userId, ids);
 		Map<Long, UserDisplayResponse> displays = userDisplayService.getAll(userIds(all));
-		Assembler assembler = new Assembler(userId, bodies, likes, liked, displays);
+		Assembler assembler = new Assembler(userId, bodies, likes, liked, reported, displays);
 
 		Map<Long, List<CommentResponse>> repliesByParent = replies.stream()
 				.collect(Collectors.groupingBy(CommentRow::parentId,
@@ -97,7 +98,7 @@ public class CommentQueryService {
 
 	/** 한 페이지의 본문 · 좋아요 · 사용자 표시로 댓글 한 줄을 응답으로 만든다. */
 	private record Assembler(Long userId, Map<Long, Body> bodies, Map<Long, Long> likes, Set<Long> liked,
-			Map<Long, UserDisplayResponse> displays) {
+			Set<Long> reported, Map<Long, UserDisplayResponse> displays) {
 
 		CommentResponse assemble(CommentRow row) {
 			boolean hidden = row.status() == PostStatus.HIDDEN;
@@ -112,7 +113,7 @@ public class CommentQueryService {
 					liked.contains(row.id()),
 					row.authorId().equals(userId),
 					hidden,
-					false);
+					reported.contains(row.id()));
 		}
 
 		private CommentResponse.MentionUser mention(Long mentionUserId) {
