@@ -43,6 +43,13 @@ public class ChatRoom extends BaseTimeEntity {
 		return room;
 	}
 
+	public static ChatRoom createMeetup(Long meetupId) {
+		ChatRoom room = new ChatRoom();
+		room.type = ChatRoomType.MEETUP;
+		room.meetupId = meetupId;
+		return room;
+	}
+
 	public Long getId() {
 		return id;
 	}

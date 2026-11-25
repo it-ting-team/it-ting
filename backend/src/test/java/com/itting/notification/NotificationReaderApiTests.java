@@ -10,15 +10,17 @@ import static org.hamcrest.Matchers.nullValue;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
 
-import com.itting.notification.domain.NotificationTargetType;
+import com.itting.chat.domain.ChatRoom;
+import com.itting.chat.repository.ChatRoomRepository;
+import com.itting.meetup.domain.Meetup;
+import com.itting.meetup.domain.MeetupCategory;
+import com.itting.meetup.domain.MeetupDetails;
+import com.itting.meetup.domain.MeetupMode;
+import com.itting.meetup.repository.MeetupRepository;
 import com.itting.notification.service.ChatRequestReader;
 import com.itting.notification.service.MeetupRequestCountReader;
-import com.itting.notification.service.NotificationTargetReader;
-import com.itting.notification.service.NotificationTargetSummary;
 import com.itting.support.CommunitySteps;
 import com.itting.support.NotificationSteps;
 import com.itting.support.TestcontainersConfiguration;
@@ -38,8 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 다른 영역이 읽기 구현(요청 수, 가장 최근 요청자, 갈 곳의 이름 · 시작 시각)을 등록했을 때 알림 API가 그 값을 싣는지.
- * 모임 · 모임 요청 수는 아직 구현이 없어 가짜를 등록하고, 대화 요청 수는 채팅의 실제 구현이 있어도 이 테스트의 값을 쓰도록 가짜를
- * 먼저 쓰게 한다({@code @Primary}). 글은 커뮤니티가 등록한 실제 구현이 제목을 싣는다.
+ * 모임·모임 대화방·글은 실제 데이터를 읽는다. 모임 요청 수와 대화 요청은 테스트 구현을 쓰며,
+ * 실제 대화 요청 조회는 {@code ChatRequestPopupApiTests}에서 확인한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -62,6 +64,10 @@ class NotificationReaderApiTests {
 
 	@Autowired
 	CommunitySteps communitySteps;
+	@Autowired
+	MeetupRepository meetups;
+	@Autowired
+	ChatRoomRepository rooms;
 
 	Instant now;
 
@@ -91,7 +97,7 @@ class NotificationReaderApiTests {
 		latestRequesterId = other;
 		long post = communitySteps.insertPost(other, "FREE", "5층 라운지 커피머신", "본문", now);
 		long deletedPost = communitySteps.insertPost(other, "FREE", "DELETED", "지운 글", "본문", now);
-		steps.insert(me, "MEETUP_START_REMINDER", "MEETUP", 23L, null, now.minus(Duration.ofMinutes(1)), null);
+		steps.insert(me, "MEETUP_START_REMINDER", "MEETUP", createMeetup(), null, now.minus(Duration.ofMinutes(1)), null);
 		steps.insertPostCommented(me, other, post, now.minus(Duration.ofMinutes(2)), null);
 		steps.insertPostCommented(me, other, deletedPost, now.minus(Duration.ofMinutes(3)), null);
 
@@ -128,6 +134,23 @@ class NotificationReaderApiTests {
 				.andExpect(jsonPath("$.data.items[0].target.title").value("5층 라운지 커피머신"));
 	}
 
+	@Test
+	void 모임_대화방_알림은_연결된_모임의_이름을_싣는다() throws Exception {
+		Long roomId = rooms.saveAndFlush(ChatRoom.createMeetup(createMeetup())).getId();
+		steps.insert(me, "CHAT_MESSAGE_RECEIVED", "CHAT_ROOM", roomId, other, now, null);
+		mockMvc.perform(get("/api/v1/me/notifications").cookie(session))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.items[0].target.id").value(roomId))
+				.andExpect(jsonPath("$.data.items[0].target.title").value("퇴근길 러닝 크루"))
+				.andExpect(jsonPath("$.data.items[0].target.startsAt").value(nullValue()));
+	}
+
+	private Long createMeetup() {
+		MeetupDetails details = new MeetupDetails("퇴근길 러닝 크루", MeetupCategory.EXERCISE, null, 4, null, false,
+				MEETUP_STARTS_AT, null, MeetupMode.OFFLINE, "한강공원", null, null);
+		return meetups.saveAndFlush(new Meetup(other, details, null)).getId();
+	}
+
 	@TestConfiguration(proxyBeanMethods = false)
 	static class FakeReaders {
 
@@ -149,21 +172,6 @@ class NotificationReaderApiTests {
 				@Override
 				public Optional<Long> findLatestRequesterId(Long userId) {
 					return Optional.ofNullable(latestRequesterId);
-				}
-			};
-		}
-
-		@Bean
-		NotificationTargetReader meetupTargetReader() {
-			return new NotificationTargetReader() {
-				@Override
-				public NotificationTargetType targetType() {
-					return NotificationTargetType.MEETUP;
-				}
-
-				@Override
-				public Map<Long, NotificationTargetSummary> read(Collection<Long> targetIds) {
-					return Map.of(23L, new NotificationTargetSummary("퇴근길 러닝 크루", MEETUP_STARTS_AT));
 				}
 			};
 		}

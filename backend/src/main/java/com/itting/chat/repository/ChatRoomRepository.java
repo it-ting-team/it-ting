@@ -1,6 +1,7 @@
 package com.itting.chat.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.itting.chat.domain.ChatRoom;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,5 +24,13 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 			ORDER BY r.id DESC
 			""")
 	List<Long> findOpenDirectRoomIds(@Param("userId") Long userId, @Param("otherId") Long otherId);
+
+	@Query("""
+			SELECT r.id FROM ChatRoom r
+			WHERE r.meetupId = :meetupId
+			  AND EXISTS (SELECT 1 FROM ChatRoomMember m
+			              WHERE m.chatRoomId = r.id AND m.userId = :userId AND m.leftAt IS NULL)
+			""")
+	Optional<Long> findJoinedMeetupRoomId(@Param("meetupId") Long meetupId, @Param("userId") Long userId);
 
 }
