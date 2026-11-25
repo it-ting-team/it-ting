@@ -1,0 +1,14 @@
+# 이미지 안에서 새로 만드는 것
+node_modules
+.next
+out
+shots
+.vercel
+*.log
+
+# 개인 환경 변수가 이미지에 들어가지 않게 막는다. 빌드 값은 deploy/<환경>/frontend.build.env가 준다.
+.env*
+!.env.example
+
+Dockerfile
+.dockerignore

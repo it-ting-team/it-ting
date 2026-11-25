@@ -26,6 +26,8 @@ export default function config(phase: string): NextConfig {
 
   return {
     reactStrictMode: true,
+    // Docker 이미지(frontend/Dockerfile)만 standalone 으로 빌드해 node server.js 로 띄움. 그 밖(next start · 스모크 · Vercel)은 그대로
+    output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
     // next dev 가 frontend/AGENTS.md 를 만들지 않게 (에이전트 규칙은 팀 리포 맨 위 AGENTS.md 한 곳에서)
     agentRules: false,
     // 실험실 페이지는 page.lab.tsx. 켤 때만 페이지 확장자에 넣음

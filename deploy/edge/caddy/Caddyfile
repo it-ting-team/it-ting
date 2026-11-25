@@ -1,0 +1,27 @@
+# 공용 HTTPS 프록시. 주소는 환경 변수로 받는다(deploy/test/.env의 TEST_HOST, TEST_MAIL_HOST).
+# 인증서는 Let's Encrypt로 자동 발급 · 갱신된다. DNS A 레코드가 먼저 이 서버를 가리켜야 한다.
+# 운영 서버를 붙일 때는 아래에 그 주소의 블록을 더한다.
+
+# 테스트 서버: 화면과 API를 주소 하나로 준다.
+{$TEST_HOST} {
+	# 테스트 서버가 검색에 잡히지 않게 한다.
+	header X-Robots-Tag "noindex, nofollow"
+
+	# API · 올린 사진 · Swagger · 헬스체크는 백엔드로 바로 넘긴다. 실시간 소식(SSE)이 Next를 거치지 않는다.
+	@backend path /api/* /images/* /swagger-ui.html /swagger-ui/* /v3/api-docs /v3/api-docs/* /actuator/health
+	handle @backend {
+		reverse_proxy test-backend:8080
+	}
+
+	# 나머지는 프론트엔드. 응답 압축은 여기서 한다(Next의 압축은 꺼져 있다).
+	handle {
+		encode zstd gzip
+		reverse_proxy test-frontend:3000
+	}
+}
+
+# 테스트 서버가 보낸 메일 보기(Mailpit). 로그인은 Mailpit이 묻는다(deploy/test/.env의 MAILPIT_UI_AUTH).
+{$TEST_MAIL_HOST} {
+	header X-Robots-Tag "noindex, nofollow"
+	reverse_proxy test-mailpit:8025
+}

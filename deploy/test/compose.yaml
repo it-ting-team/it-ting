@@ -1,0 +1,139 @@
+# 테스트 서버: 프론트엔드 · 백엔드 · MySQL · Redis · Mailpit.
+# 포트를 밖으로 열지 않는다. 밖에서 오는 요청은 공용 프록시(deploy/edge)가 Docker 네트워크 it-ting-edge로 넘긴다.
+# 값은 같은 폴더의 .env에서 읽는다(.env.example을 복사해 채운다). 띄우는 일은 deploy/deploy.sh가 한다.
+# 메모리 상한의 합은 약 3.4GB다(VM e2-medium 4GB 기준, docs/infra/test-server.md).
+
+name: it-ting-test
+
+services:
+  frontend:
+    image: ghcr.io/it-ting-team/it-ting-frontend:${IMAGE_TAG:-test}
+    restart: unless-stopped
+    mem_limit: 512m
+    networks:
+      edge:
+        aliases:
+          - test-frontend
+
+  backend:
+    image: ghcr.io/it-ting-team/it-ting-backend:${IMAGE_TAG:-test}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:?.env에 MYSQL_DATABASE가 필요합니다}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:?.env에 MYSQL_USER가 필요합니다}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:?.env에 MYSQL_PASSWORD가 필요합니다}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # 화면과 API가 같은 주소다. 서버가 사용자를 보내는 주소(재설정 링크, Google 로그인 뒤)도 이 주소다.
+      ITTING_FRONTEND_URL: https://${TEST_HOST:?.env에 TEST_HOST가 필요합니다}
+      # http://localhost:3000은 팀원이 내 PC의 프론트엔드(next dev의 /api 프록시)로 이 서버를 부를 때의 출처다.
+      ITTING_CORS_ALLOWED_ORIGINS: https://${TEST_HOST},http://localhost:3000
+      # 메일은 Mailpit이 받아 두고 실제로 보내지 않는다.
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+      ITTING_MAIL_FROM: no-reply@${TEST_HOST}
+      # 올린 사진. 폴더는 아래 볼륨(images-data)이고, 주소는 https://<TEST_HOST>/images/... 다(프록시가 백엔드로 넘긴다).
+      ITTING_IMAGES_STORAGE_DIR: /var/lib/itting/images
+      ITTING_IMAGES_PUBLIC_BASE_URL: https://${TEST_HOST}
+      # 아래는 비워 두어도 서버가 뜬다. 비우면 그 기능만 실패한다.
+      ITTING_MATTERMOST_WEBHOOKS_15: ${MATTERMOST_WEBHOOK_URLS_15:-}
+      ITTING_MATTERMOST_WEBHOOKS_16: ${MATTERMOST_WEBHOOK_URLS_16:-}
+      ITTING_PUSH_PUBLIC_KEY: ${ITTING_PUSH_PUBLIC_KEY:-}
+      ITTING_PUSH_PRIVATE_KEY: ${ITTING_PUSH_PRIVATE_KEY:-}
+      ITTING_PUSH_SUBJECT: ${ITTING_PUSH_SUBJECT:-}
+      ITTING_GOOGLE_CLIENT_ID: ${ITTING_GOOGLE_CLIENT_ID:-}
+      ITTING_GOOGLE_CLIENT_SECRET: ${ITTING_GOOGLE_CLIENT_SECRET:-}
+      ITTING_GOOGLE_REDIRECT_URI: https://${TEST_HOST}/api/v1/oauth/google/callback
+    healthcheck:
+      # 이미지에 curl이 없어 bash의 /dev/tcp로 헬스체크 주소를 부른다.
+      test:
+        - CMD
+        - bash
+        - -c
+        - |
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 &&
+          grep -q '"status":"UP"' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+    volumes:
+      # 올린 사진. 컨테이너를 다시 띄워도 남는다.
+      - images-data:/var/lib/itting/images
+    # 힙은 이 상한의 70%(약 1GB)까지 쓴다(backend/Dockerfile).
+    mem_limit: 1400m
+    networks:
+      default:
+      edge:
+        aliases:
+          - test-backend
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    # 문자셋은 utf8mb4, 시간대는 UTC. 로컬(compose.yaml)과 테스트 컨테이너와 같게 맞춘다.
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --innodb-buffer-pool-size=512M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?.env에 MYSQL_ROOT_PASSWORD가 필요합니다}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    mem_limit: 1g
+
+  redis:
+    image: redis:7.4
+    restart: unless-stopped
+    # 로그인 세션이 들어 있다. 메모리가 차면 지우지 않고 쓰기를 거절한다(기본값).
+    command: ["redis-server", "--maxmemory", "256mb"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 384m
+
+  # 서버가 보낸 메일을 실제로 보내지 않고 받아 둔다. 받은 메일은 https://<TEST_MAIL_HOST> 에서 본다.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    environment:
+      # 받은 메일 화면의 로그인. "아이디:비밀번호"
+      MP_UI_AUTH: ${MAILPIT_UI_AUTH:?.env에 MAILPIT_UI_AUTH가 필요합니다}
+      MP_MAX_MESSAGES: 500
+    mem_limit: 128m
+    networks:
+      default:
+      edge:
+        aliases:
+          - test-mailpit
+
+volumes:
+  mysql-data:
+  redis-data:
+  images-data:
+
+networks:
+  edge:
+    name: it-ting-edge
+    external: true

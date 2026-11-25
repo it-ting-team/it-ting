@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,6 +49,12 @@ jobs:
             echo "backend=true" >> "$GITHUB_OUTPUT"
           else
             echo "backend=false" >> "$GITHUB_OUTPUT"
+          fi
+          # Docker 이미지와 배포 설정에 영향을 주는 파일
+          if echo "$files" | grep -qE '^(deploy/|backend/(Dockerfile|\.dockerignore|build\.gradle)$|frontend/(Dockerfile|\.dockerignore|next\.config\.ts|package\.json|package-lock\.json)$|\.github/workflows/)'; then
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker=false" >> "$GITHUB_OUTPUT"
           fi
 
   backend:
@@ -99,6 +106,53 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$payload" \
             "$DISCORD_WEBHOOK_PR_URL"
+
+  docker:
+    # 테스트 서버에 올릴 이미지가 만들어지는지, 배포 설정이 맞는지 본다. 올리지는 않는다(올리는 것은 deploy-test.yml).
+    name: Docker 이미지 · 배포 설정
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+      - name: 백엔드 jar
+        working-directory: backend
+        run: ./gradlew bootJar
+      - name: 백엔드 이미지
+        run: docker build --tag it-ting-backend:ci backend
+      - name: 프론트엔드 이미지
+        run: docker build --build-context buildenv=deploy/test --tag it-ting-frontend:ci frontend
+      - name: Compose 설정
+        env:
+          # 검사용 값. 실제 값은 서버의 .env에만 있다.
+          TEST_HOST: test.example.com
+          TEST_MAIL_HOST: mail-test.example.com
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: itting
+          MYSQL_USER: itting
+          MYSQL_PASSWORD: ci
+          MAILPIT_UI_AUTH: "ci:ci"
+        run: |
+          docker compose -f deploy/test/compose.yaml config --quiet
+          docker compose -f deploy/edge/compose.yaml config --quiet
+      - name: Caddyfile
+        run: |
+          docker run --rm \
+            -e TEST_HOST=test.example.com -e TEST_MAIL_HOST=mail-test.example.com \
+            -v "$PWD/deploy/edge/caddy:/etc/caddy:ro" \
+            caddy:2.11 caddy validate --config /etc/caddy/Caddyfile
+      - name: 배포 스크립트 문법
+        run: |
+          bash -n deploy/deploy.sh
+          bash -n deploy/setup-server.sh
 
   merge-flow:
     name: 병합 흐름
@@ -168,7 +222,7 @@ jobs:
     # 요약. 위 job이 모두 통과하거나 건너뛰었을 때만 통과한다.
     name: ci
     if: always()
-    needs: [changes, backend, merge-flow, migrations, secrets, skills-sync]
+    needs: [changes, backend, docker, merge-flow, migrations, secrets, skills-sync]
     runs-on: ubuntu-latest
     steps:
       - env:
