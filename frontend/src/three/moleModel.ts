@@ -32,7 +32,26 @@ export function trimLoopSeams(clips: THREE.AnimationClip[]): number {
   return n
 }
 
-export const loadMoleGltf = () => loadGlb(moleUrl).then((g) => { trimLoopSeams(g.animations); return g })
+/**
+ * 커피 컵 되살리기: v1_3 부터 glb 의 컵 부품 4개(coffee_cup_band · _body · _coffee · _handle)가 크기 0, 위치 (0, 0, 2)로 저장돼 있음.
+ * 부모 coffee_cup 의 기본 크기가 0(핸드오프 문서는 0.0001)이라 내보낼 때 부품 위치 계산이 깨진 것으로 보임 → mole_drink 가 부모를 0 → 1.12 로 키워도 컵이 안 보였음.
+ * 부품 모양은 v1_2 와 같아서 v1_2 glb 의 값(부모 안 위치, 회전 없음, 크기 1)으로 되돌림. 크기가 0 인 부품만 고침(모델을 다시 내보내면 아무것도 안 함)
+ */
+const CUP_PARTS: Record<string, [number, number, number]> = {
+  coffee_cup_band: [0, 0, 0.001], coffee_cup_body: [0, 0, 0.001], coffee_cup_coffee: [0, 0.008, 0.001], coffee_cup_handle: [0.107, 0.088, 0.001],
+}
+export function restoreCoffeeCup(scene: THREE.Object3D): number {
+  let n = 0
+  for (const [name, [x, y, z]] of Object.entries(CUP_PARTS)) {
+    const o = scene.getObjectByName(name)
+    if (!o || o.scale.x !== 0) continue // 고쳐진 glb 가 오면 그 값을 그대로 둠
+    o.position.set(x, y, z); o.quaternion.identity(); o.scale.setScalar(1)
+    n++
+  }
+  return n
+}
+
+export const loadMoleGltf = () => loadGlb(moleUrl).then((g) => { trimLoopSeams(g.animations); restoreCoffeeCup(g.scene); return g })
 
 /**
  * glb 의 `mole` 노드(씬 맨 위) translation y = +0.03m (v1_3 부터. 채팅용 옛 glb 에는 없었음).
