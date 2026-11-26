@@ -527,8 +527,11 @@ export function SignupSsafy() {
   const codeRef = useRef<HTMLInputElement>(null)
   const floors = campuses.data?.find((c) => c.id === campusId)?.floors ?? []
 
+  // 가입을 마쳤음. 마친 뒤에는 비밀번호를 지우므로 아래 검사가 온보딩 이동을 /signup 으로 덮어쓰지 않게 함
+  const [signedUp, setSignedUp] = useState(false)
+
   // 이메일 가입인데 비밀번호가 없음 = 새로 고침 · 바로 들어옴 → 회원가입 1 부터 (02 "가입 진행")
-  if (!viaGoogle && !signupDraft.password && !LOGIN_FREE) return <Navigate to="/signup" replace />
+  if (!viaGoogle && !signupDraft.password && !signedUp && !LOGIN_FREE) return <Navigate to="/signup" replace />
 
   /** 공통 실패 처리. 칸에 붙일 것은 칸으로, 가입 시간이 지났으면 처음부터 */
   const fail = (e: unknown) => {
@@ -567,6 +570,7 @@ export function SignupSsafy() {
         ...(viaGoogle ? {} : { password: signupDraft.password }),
         code: code.code, campusFloorId: toDtoId(floorId), hasAgreedTerms: terms, hasAgreedPrivacy: privacy,
       })
+      setSignedUp(true)
       clearSignupDraft()
       void resetSession()
       nav(pathAfterLogin(r.nextStep), { replace: true })
