@@ -103,12 +103,14 @@ VM 한 대(GCP Compute Engine `e2-medium`, 서울)에 Docker Compose 묶음 둘�
 - DB를 처음 상태로 되돌리려면 `docker compose -f /opt/it-ting/test/compose.yaml down -v` 후 `bash /opt/it-ting/deploy.sh`를 실행한다. 데이터, 로그인 세션, 올린 사진이 모두 지워진다.
 - 백엔드에 새 필수 환경 변수가 생기면(없으면 서버가 뜨지 않는 것) 그 PR에서 `deploy/test/compose.yaml`의 `backend.environment`에도 더한다. 비밀값이면 `deploy/test/.env.example`에 이름을 더하고 서버의 `.env`에 값을 넣는다. 필요한 이름은 `application-test.yml` 맨 위에 적혀 있다.
 - 컨테이너마다 메모리 상한이 있다(`deploy/test/compose.yaml`의 `mem_limit`). 합은 약 3.4GB다. 로컬에서 띄운 직후에는 모두 합쳐 약 1GB를 썼다(2026-11-25).
+- 실시간 소식(`GET /api/v1/me/event-stream`)은 Redis에 기댄다. 소식은 Redis 채널 `itting:event-stream`을 거쳐 모든 백엔드에 전해지므로 백엔드를 여러 대로 늘려도 받는 사람이 어느 서버에 붙어 있든 간다. 로그아웃한 세션의 연결은 Redis가 "키가 지워졌다"고 알려 주면 바로 끊는다(`notify-keyspace-events`). 이 설정은 백엔드가 뜰 때 스스로 켠다. Redis만 다시 띄우면 설정이 풀리고, 그동안은 알림 대신 25초마다 세션을 다시 확인해 끊는다(늦어도 25초 뒤). 백엔드를 다시 띄우면 설정이 다시 켜진다. Redis를 설정을 바꿀 수 없는 관리형 서비스로 옮기면 그쪽에서 직접 켠다.
+- 백엔드를 다시 띄우면 열려 있던 실시간 소식 연결이 모두 끊긴다. 브라우저가 스스로 다시 연결하고 놓친 것은 조회 API로 맞춘다.
 
 ### 프론트엔드 빌드 값을 바꿀 때
 
 `deploy/test/frontend.build.env`를 고쳐 PR로 올린다. 이름의 뜻은 `frontend/.env.example`에 있다.
 
-- 실시간 소식 API(KAN-57)가 병합되면 `NEXT_PUBLIC_API_MOCK_AREAS=events`의 값을 비운다. 지금은 SSE API가 없어 연결만 꺼 두었다.
+- `NEXT_PUBLIC_API_MOCK_AREAS`는 비워 둔다. 모든 영역과 실시간 소식(SSE, 영역 이름 `events`)을 실제 백엔드로 부른다.
 - 값은 이미지를 만들 때 박힌다. 서버에서 바꿀 수 없고 다시 배포해야 한다.
 
 ### 내 PC의 프론트엔드에서 테스트 서버 부르기
@@ -117,7 +119,6 @@ VM 한 대(GCP Compute Engine `e2-medium`, 서울)에 Docker Compose 묶음 둘�
 
 ```bash
 NEXT_PUBLIC_API_MODE=real
-NEXT_PUBLIC_API_MOCK_AREAS=events
 API_PROXY_TARGET=https://<TEST_HOST>
 ```
 

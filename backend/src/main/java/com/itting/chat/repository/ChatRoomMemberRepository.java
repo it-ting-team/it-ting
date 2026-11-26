@@ -16,6 +16,10 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
 	/** 방에 들어온 적이 있는 모든 사람. 나간 사람도 담는다. */
 	List<ChatRoomMember> findAllByChatRoomId(Long chatRoomId);
 
+	/** 방에 지금 있는 사람의 계정 id. 나간 사람은 담지 않는다. */
+	@Query("SELECT m.userId FROM ChatRoomMember m WHERE m.chatRoomId = :chatRoomId AND m.leftAt IS NULL")
+	List<Long> findJoinedUserIds(@Param("chatRoomId") Long chatRoomId);
+
 	/**
 	 * 내 참여자 줄을 트랜잭션이 끝날 때까지 잠그고 읽는다. 같은 사람의 나가기가 동시에 두 번 들어와도 한 번만 처리되게 한다.
 	 */
