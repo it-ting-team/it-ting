@@ -228,6 +228,29 @@ export function useLocation(): Location {
   return useMemo(() => ({ pathname, search, hash, state: getNavState(`${pathname}${search}`), key: `${pathname}${search}` }), [pathname, search, hash])
 }
 
+/**
+ * 화면에 들어올 때 받은 완료 토스트를 한 번만 보여 주도록 지운다 (00 공통 16 완료 토스트).
+ * 화면은 이동 state 의 toast · 주소의 ?toast= 를 처음 그릴 때 읽어 두고, 이 훅이 그 뒤 둘 다 지운다.
+ * 그래서 새로고침하거나 같은 주소를 다시 열어도 토스트가 또 뜨지 않는다. 이동 state 의 다른 값은 그대로 둔다.
+ * ?toast= 는 Next 이동 없이 history.replaceState 로만 지운다 (화면을 다시 받지 않고, 이동 막기에도 걸리지 않음)
+ */
+export function useConsumeArrivalToast() {
+  useEffect(() => {
+    const href = `${window.location.pathname}${window.location.search}`
+    const st = getNavState(href)
+    if (st && typeof st === 'object' && 'toast' in st) {
+      const rest = { ...(st as Record<string, unknown>) }
+      delete rest.toast
+      setNavState(href, Object.keys(rest).length ? rest : undefined)
+    }
+    const u = new URL(window.location.href)
+    if (u.searchParams.has('toast')) {
+      u.searchParams.delete('toast')
+      window.history.replaceState(window.history.state, '', `${u.pathname}${u.search}${u.hash}`)
+    }
+  }, [])
+}
+
 /* ===== 링크 ===== */
 
 type AnchorProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>

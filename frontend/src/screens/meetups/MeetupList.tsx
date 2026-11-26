@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from '@/lib/nav'
+import { Link, useConsumeArrivalToast, useNavigate, useSearchParams } from '@/lib/nav'
 import { ConfirmDialog, EmptyMole } from '../../components/Feedback'
 import MeetupCard from '../../components/MeetupCard'
 import Pagination from '../../components/Pagination'
@@ -169,6 +169,7 @@ export function MyMeetups() {
   const run = useOptimistic()
   const [cancelAsk, setCancelAsk] = useState<string | null>(null)
   const [toast, setToast] = useState<MToast | null>(() => (params.get('toast') === 'cancelled' ? { title: '모임을 취소했어요', desc: '신청자와 참여자에게 알림이 갔어요' } : params.get('toast') === 'deleted' ? { title: '삭제가 완료되었어요', desc: '삭제한 내용은 되돌릴 수 없어요' } : null))
+  useConsumeArrivalToast()
   const manage = params.get('manage')
   const setManage = (id: string | null) => setParams((p) => { if (id) p.set('manage', id); else p.delete('manage'); return p }, { replace: true })
 

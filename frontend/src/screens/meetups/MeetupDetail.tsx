@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import NotFound from '../../components/NotFound'
-import { Link, Navigate, useParams, useSearchParams } from '@/lib/nav'
+import { Link, Navigate, useConsumeArrivalToast, useParams, useSearchParams } from '@/lib/nav'
 import Avatar from '../../components/Avatar'
 import Footer from '../../components/Footer'
 import ProfilePopup from '../../components/ProfilePopup'
@@ -93,6 +93,7 @@ function MeetupDetailView({ d: data }: { d: MeetupDetailVM }) {
     if (t === 'edited') return TOAST.edited
     return null
   })
+  useConsumeArrivalToast()
   const [confirm, setConfirm] = useState<null | 'withdraw' | 'quit'>(null)
   const [profile, setProfile] = useState<User | null>(null)
   const key = meetupKeys.detail(m.id)

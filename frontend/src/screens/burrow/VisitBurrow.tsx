@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import NotFound from '../../components/NotFound'
 import { roomLookOf } from '../../data/roomLook'
-import { Navigate, useNavigate, useParams, useSearchParams } from '@/lib/nav'
+import { Navigate, useConsumeArrivalToast, useNavigate, useParams, useSearchParams } from '@/lib/nav'
 import RoomView from '../../components/RoomView'
 import { getMyWorn } from '../../data/moleItems'
 import RoomModeToggle from '../../components/RoomModeToggle'
@@ -94,6 +94,7 @@ function VisitBurrowView({ b }: { b: BurrowVM }) {
   const [reqOpen, setReqOpen] = useState(params.get('modal') === 'request')
   const [reqMsg, setReqMsg] = useState('')
   const [sent, setSent] = useState(params.get('toast') === 'request')
+  useConsumeArrivalToast()
   // 방노트 깃발 → 신고 팝업 (프로필 팝업과 같은 ReportDialog) → 접수 토스트
   const [reportOpen, setReportOpen] = useState(false)
   const [reported, setReported] = useState(false)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate } from '@/lib/nav'
+import { Link, useConsumeArrivalToast, useLocation, useNavigate } from '@/lib/nav'
 import Avatar from '../../components/Avatar'
 import Footer from '../../components/Footer'
 import InterestChip from '../../components/InterestChip'
@@ -37,10 +37,12 @@ export const UNSAVE_TOAST: ToastSpec = { title: '저장을 취소했어요' }
 export const POST_DELETED_TOAST: ToastSpec = { title: '게시물을 삭제했어요', desc: '삭제한 글은 되돌릴 수 없어요' }
 export const ALREADY_REPORTED_TOAST: ToastSpec = { title: '이미 신고했어요' }
 
-/** 화면 이동 때 넘긴 완료 토스트 (navigate state.toast) */
+/** 화면 이동 때 넘긴 완료 토스트 (navigate state.toast). 한 번 보여 주면 지워서 새로고침해도 다시 뜨지 않음 */
 export function useArrivalToast() {
   const loc = useLocation()
-  return useState<ToastSpec | null>(() => (loc.state as { toast?: ToastSpec } | null)?.toast ?? null)
+  const t = useState<ToastSpec | null>(() => (loc.state as { toast?: ToastSpec } | null)?.toast ?? null)
+  useConsumeArrivalToast()
+  return t
 }
 
 /* ===== 아이콘 (이 화면에서만 씀) ===== */
