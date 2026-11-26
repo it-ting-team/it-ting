@@ -153,7 +153,7 @@ const EMPTY: Record<TabId, string> = {
  * 3 가까운 날짜순 목록(순서는 서버). 승인되지 않은 신청(REJECTED)은 신청 대기 탭에 "승인되지 않음"으로 남음
  * 4 상태별 버튼(myStatus): PENDING = 신청 취소 / CONFIRMED = 모임 채팅 / HOST = 신청 관리(pendingCount) · 모임 수정(canEdit 이 false 면 끔)
  * 5 확인 필요 한 줄: pendingCount(새 참여 신청) · unreadCount(새 메시지) · PENDING(주최자 확인 대기)
- * 찜: 하트 = 찜 해제(토스트 되돌리기: 다시 찜 + 풀기 전 빈자리 알림을 다시 켬), 모집 완료 모임만 빈자리 알림 받기, 남은 자리 1~2면 "N자리 남았어요"
+ * 찜: 하트 = 찜 해제(토스트 되돌리기: 다시 찜 + 풀기 전 빈자리 알림을 다시 켬), 모집 완료이고 아직 신청하지 않은 모임만 빈자리 알림 받기, 남은 자리 1~2면 "N자리 남았어요"
  * 데모용 쿼리: ?tab=upcoming|pending|hosting|wish|past, ?manage=<모임 id> (신청 관리 팝업, F9 알림에서 들어올 때)
  */
 export function MyMeetups() {
@@ -230,12 +230,14 @@ function MyRow({ c, tab, busy, onUnlike, onAlert, onWithdraw, onManage, onOther 
   const closed = c.recruit === 'closed'
   const cancelled = c.recruit === 'cancelled'
   const left = Math.max(0, m.capacity - c.confirmed)
+  // 빈자리 알림 받기: 모집 완료이고 아직 신청하지 않은 모임에만 (주최자 · 신청 대기 · 참여 확정 · 다시 신청할 수 없는 사람에게는 쓸모가 없음)
+  const canAlert = isWish && closed && c.my === 'NONE'
   const status = isWish
     ? (closed ? { label: '모집 완료', cls: s.stDone } : { label: '모집 중', cls: s.stOk })
     : cancelled ? { label: '취소됨', cls: s.stNo } : tab === 'past' ? { label: '지난 모임', cls: s.stDone }
     : c.my === 'HOST' ? { label: '내가 연 모임', cls: s.stHost } : (MY_LABEL[c.my] ?? MY_LABEL.PENDING!)
   let note: React.ReactNode = null
-  if (isWish) note = closed ? (c.alert ? <span className={s.noteMuted}>● 자리가 나면 알려드릴게요</span> : null) : left > 0 && left <= 2 ? <span className={s.noteHot}>● {left}자리 남았어요</span> : null
+  if (isWish) note = closed ? (canAlert && c.alert ? <span className={s.noteMuted}>● 자리가 나면 알려드릴게요</span> : null) : left > 0 && left <= 2 ? <span className={s.noteHot}>● {left}자리 남았어요</span> : null
   else if (tab !== 'past' && c.pendingCount > 0) note = <span className={s.noteHot}>● 새 참여 신청 {c.pendingCount}건</span>
   else if (tab !== 'past' && c.my === 'PENDING') note = <span className={s.noteMuted}>● 주최자 확인을 기다리고 있어요</span>
   else if (c.my === 'REJECTED') note = <span className={s.noteMuted}>아쉽게도 모임 참여가 승인되지 않았어요</span>
@@ -260,11 +262,11 @@ function MyRow({ c, tab, busy, onUnlike, onAlert, onWithdraw, onManage, onOther 
         {isWish ? (
           <>
             <button type="button" className={s.heartBtn} aria-label="찜 해제" disabled={busy} onClick={onUnlike}>♥</button>
-            {closed
+            {canAlert
               ? <button type="button" className={`btn btn-line btn-sm ${c.alert ? s.alertOn : ''}`} aria-pressed={c.alert} disabled={busy} onClick={() => onAlert(!c.alert)}>
                   <span aria-hidden>🔔</span> {c.alert ? '빈자리 알림 받는 중' : '빈자리 알림 받기'}
                 </button>
-              : c.my === 'NONE' ? <Link to={`/meetups/${m.id}`} className="btn btn-cta btn-sm">참여 신청</Link>
+              : !closed && c.my === 'NONE' ? <Link to={`/meetups/${m.id}`} className="btn btn-cta btn-sm">참여 신청</Link>
               : <Link to={`/meetups/${m.id}`} className="btn btn-line btn-sm">모임 상세</Link>}
           </>
         ) : tab === 'past' ? (
