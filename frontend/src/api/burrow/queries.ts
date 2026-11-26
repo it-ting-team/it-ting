@@ -29,6 +29,15 @@ export function useMyBurrow() {
   return useQuery({ queryKey: burrowKeys.mine, queryFn: async ({ signal }) => toMyBurrow(await burrowApi.myBurrow(signal)) })
 }
 
+const NO_INTERESTS: string[] = []
+/**
+ * 내 관심사 이름 (GET /me/burrow, 고른 순서). 들판 · 미니맵 · 등불의 "나와 겹치는 관심사" 계산에 씀.
+ * 받기 전에는 빈 목록이다. 목 사용자(data/mock)의 관심사로 겹침을 계산하지 않게 한다.
+ */
+export function useMyInterests(): string[] {
+  return useMyBurrow().data?.interests ?? NO_INTERESTS
+}
+
 /**
  * 실제 모드: 내 두더지 모습(getMyWorn, 찻방 · 탐색 · 방문의 "나")을 서버 값으로 맞춤. AppShell(로그인 영역)에 한 번 둠.
  * 목 모드는 목 서버가 저장할 때 setMyWorn 을 부르므로 아무것도 안 함
