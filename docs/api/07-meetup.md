@@ -53,7 +53,7 @@
 | 내 모임 | 들어올 때 | `GET /api/v1/me/meetups/summary`, `GET /api/v1/me/meetups`에 `tab=UPCOMING`, `GET /api/v1/meetup-calendar`에 `scope=MINE` | 탭 옆 숫자, 다음 모임 카드, 미니 캘린더, "확인 필요" 한 줄의 문구 |
 | 내 모임 | 탭을 바꿀 때 | `GET /api/v1/me/meetups`에 그 탭 | 빈 상태 |
 | 찜한 모임 | 하트, "되돌리기" | `DELETE /api/v1/meetups/{meetupId}/like`, `PUT /api/v1/meetups/{meetupId}/like`. 풀기 전에 빈자리 알림이 켜져 있었으면 되돌릴 때 `PUT /api/v1/meetups/{meetupId}/vacancy-alert`도 부른다 | 토스트, 풀기 전의 빈자리 알림 설정 기억하기 |
-| 찜한 모임 | "빈자리 알림 받기" | `PUT /api/v1/meetups/{meetupId}/vacancy-alert`, `DELETE /api/v1/meetups/{meetupId}/vacancy-alert` | 모집 완료인 모임에만 보여 주기 |
+| 찜한 모임 | "빈자리 알림 받기" | `PUT /api/v1/meetups/{meetupId}/vacancy-alert`, `DELETE /api/v1/meetups/{meetupId}/vacancy-alert` | `recruitStatus`가 `CLOSED`이고 `myStatus`가 `NONE`인 모임에만 보여 주기 |
 | 캘린더 팝업 | 열 때, 달을 넘길 때, 보기를 바꿀 때 | `GET /api/v1/meetup-calendar` | 달력 그리기, 날짜를 고르면 그날의 모임만 보여 주기 |
 | 신청 관리 | 열 때 | `GET /api/v1/meetups/{meetupId}/applications` | 정원이 차면 수락 끄기 |
 | 신청 관리 | "수락" | `POST /api/v1/meetup-applications/{meetupApplicationId}/accept` | 목록 다시 받기 |
@@ -916,7 +916,7 @@ PUT /api/v1/meetups/23/vacancy-alert
 2. `meetup_like`에 내 줄이 없으면 `409`와 `MEETUP_NOT_LIKED`.
 3. 내 `meetup_like.vacancy_alert`를 `true`로 바꾼다.
 
-모집 완료인 모임에만 버튼을 보여 주는 것은 프론트엔드가 한다. 서버는 모집 상태를 보지 않는다.
+모집 완료이고 아직 신청하지 않은 모임(`recruitStatus`가 `CLOSED`, `myStatus`가 `NONE`)에만 버튼을 보여 주는 것은 프론트엔드가 한다. 서버는 모집 상태와 내 상태를 보지 않는다.
 
 ### 응답 `data`
 

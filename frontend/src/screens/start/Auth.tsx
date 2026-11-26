@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from '@/lib/nav'
+import { Link, Navigate, useConsumeArrivalToast, useLocation, useNavigate, useSearchParams } from '@/lib/nav'
 import roomCutout from '../../assets/room-cutout.png'
 import Modal from '../../components/Modal'
 import { Toast } from '../../components/Feedback'
@@ -168,6 +168,7 @@ export function Login() {
   const [formErr, setFormErr] = useState<string | null>(null)
   const [suspended, setSuspended] = useState<SuspensionVM | null>(null)
   const [toast, setToast] = useState(loc.state?.toast ?? null)
+  useConsumeArrivalToast()
   const [params, setParams] = useSearchParams()
   useEffect(() => {
     // 시연: ?demo=error · ?demo=suspended

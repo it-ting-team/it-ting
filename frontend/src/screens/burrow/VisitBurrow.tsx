@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import NotFound from '../../components/NotFound'
 import { roomLookOf } from '../../data/roomLook'
-import { Navigate, useNavigate, useParams, useSearchParams } from '@/lib/nav'
+import { Navigate, useConsumeArrivalToast, useNavigate, useParams, useSearchParams } from '@/lib/nav'
 import RoomView from '../../components/RoomView'
 import { getMyWorn } from '../../data/moleItems'
 import RoomModeToggle from '../../components/RoomModeToggle'
@@ -10,7 +10,7 @@ import Modal from '../../components/Modal'
 import { ReportDialog, TOAST, Toast } from '../../components/Feedback'
 import { ChatIcon, SendIcon } from '../../components/Icons'
 import MoundMole from '../../components/MoundMole'
-import { ME_ID, USERS } from '../../data/mock'
+import { ME_ID } from '../../data/mock'
 import GuestbookModal from './GuestbookModal'
 import { NotePanel, RoomNoteBody, useNotePanel } from './RoomNote'
 import SceneButton from '../../components/SceneButton'
@@ -25,7 +25,6 @@ import { ErrorState, QueryGate, Skeleton, SkeletonLines } from '../../components
 import s from './Burrow.module.css'
 import { CHAT_REQUEST_MAX, GUESTBOOK_MAX } from '../../lib/validation'
 import FxPanel from '../../components/FxPanel'
-import { getMyInterests } from '../../data/interests'
 import { talkMoodOf } from '../../data/interestFx'
 
 // 방명록 50자 · 대화 요청 인사 50자 (lib/validation.ts, 05 명세)
@@ -75,7 +74,6 @@ function VisitBurrowView({ b }: { b: BurrowVM }) {
   const owner = b.owner
   const regular = b.isRegular
   const [regToast, setRegToast] = useState<string | null>(null)
-  const me = USERS[ME_ID]
   const run = useOptimistic()
   const qc = useQueryClient()
   const act = useVisitActions(b)
@@ -96,6 +94,7 @@ function VisitBurrowView({ b }: { b: BurrowVM }) {
   const [reqOpen, setReqOpen] = useState(params.get('modal') === 'request')
   const [reqMsg, setReqMsg] = useState('')
   const [sent, setSent] = useState(params.get('toast') === 'request')
+  useConsumeArrivalToast()
   // 방노트 깃발 → 신고 팝업 (프로필 팝업과 같은 ReportDialog) → 접수 토스트
   const [reportOpen, setReportOpen] = useState(false)
   const [reported, setReported] = useState(false)
@@ -103,7 +102,8 @@ function VisitBurrowView({ b }: { b: BurrowVM }) {
   // 나와 겹치는 관심사 (서버의 isShared)
   const shared = b.shared
   // 관심사 이펙트: 나와 같은 관심사 가구가 빛남 · 집주인 대화 의향(목 데이터) 반딧불 (docs/interest-effects.md)
-  const [fx] = useState(() => ({ viewer: getMyInterests(me.interests), talk: talkMoodOf(owner.id) }))
+  // viewer 는 이펙트가 주인 관심사와 겹치는 것만 골라 쓰므로, 서버가 겹친다고 한 것(isShared)을 그대로 넘긴다
+  const [fx] = useState(() => ({ viewer: shared, talk: talkMoodOf(owner.id) }))
   // 방 모습: 관심사로 계산 (명세: 가구는 세부 관심사마다 하나로 정해져 있고 고르지 않음, 무드는 대표 관심사). 내 땅굴과 같은 함수 (data/roomLook.ts)
   const look = useMemo(() => roomLookOf(owner.id, owner.interests), [owner.id, owner.interests])
 
