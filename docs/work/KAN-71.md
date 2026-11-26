@@ -69,9 +69,10 @@ flowchart TD
 | `frontend/src/api/burrow/queries.ts` | `useMyInterests()` 추가. `GET /me/burrow`의 내 관심사, 받기 전에는 빈 목록 |
 | `frontend/src/screens/burrow/VisitBurrow.tsx` | 3D 이펙트의 `viewer`를 목 사용자 관심사 대신 서버 `isShared`(`b.shared`)로 |
 | `frontend/src/screens/burrow/ExploreBurrow.tsx`, `Minimap.tsx` | 들판 이펙트 · 등불 · 미니맵의 "내 관심사"를 `me()` 대신 `useMyInterests()`로 |
-| `frontend/src/lib/nav.tsx` | `useConsumeArrivalToast()` 추가. 이동 state의 `toast`만 지우고(다른 값은 둠), 주소의 `?toast=`는 `history.replaceState`로 지움 |
+| `frontend/src/lib/nav.tsx` | `useConsumeArrivalToast()` 추가. 이동 state의 `toast`만 지우고(다른 값은 둠), 주소의 `?toast=`는 `history.replaceState(null, …)`로 지움(Next가 `useSearchParams`도 새 주소로 맞춤) |
 | `frontend/src/screens/board/parts.tsx`(`useArrivalToast`), `start/Auth.tsx`(로그인), `meetups/MeetupDetail.tsx`, `meetups/MeetupList.tsx`(내 모임), `burrow/VisitBurrow.tsx` | 토스트를 읽은 화면에서 위 훅을 부름 |
 | `frontend/src/screens/meetups/MeetupList.tsx` | 찜한 모임 카드: 빈자리 알림 버튼과 "자리가 나면 알려드릴게요"를 `myStatus`가 `NONE`일 때만 |
+| `frontend/src/screens/meetups/MeetupDetail.tsx` | 모집 완료된 모임을 찜할 때 토스트의 "찜한 모임에서 빈자리 알림을 받을 수 있어요"를 `myStatus`가 `NONE`일 때만 |
 | `docs/spec/00-common.md` | 16 완료 토스트: 한 번만 뜬다 |
 | `docs/spec/07-meetup.md` | 찜한 모임 5: 미신청 모임에만 보이고 그 밖에는 "모임 상세" |
 | `docs/api/07-meetup.md` | 프론트엔드가 할 일 표와 `PUT …/vacancy-alert`의 버튼 조건 |
@@ -84,10 +85,14 @@ flowchart TD
   - 겹치는 관심사: 알파(맛집탐방 · 카페/커피 · 요리/레시피)가 베타(맛집탐방 · 카페/커피 · 주류)의 땅굴에서 `?fx=all` → 고치기 전 "나와 겹치는 것 1개", 고친 뒤 "♥ 나와 2개 겹쳐요"와 두 가구 모두 "나도 좋아함". 등불의 "내 관심사"가 목 사용자 관심사 → 맛집탐방 1집 · 카페/커피 1집 · 요리/레시피 0집
   - 완료 토스트: 글 등록 뒤 새로고침 · 주소로 다시 열기에서 토스트 안 뜸. `/meetups/2?toast=edited` → 토스트가 뜨고 주소가 `/meetups/2`로 바뀌며 새로고침해도 안 뜸
   - 빈자리 알림: 정원이 찬 모임을 찜한 참여 확정자는 "모임 상세", 미신청자는 "🔔 빈자리 알림 받기"
+  - 찜 토스트: 정원이 찬 모임을 찜하면 참여 확정자는 안내 없이, 미신청자는 "찜한 모임에서 빈자리 알림을 받을 수 있어요"와 함께 뜸
+  - `?toast=`를 지운 뒤 탭을 바꾸고 새로 고치고 뒤로 가도 토스트가 다시 뜨지 않음
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
+- 로컬 코드 리뷰: P0 0건, P1 0건. 그 밖에 2건 고침(`?toast=`를 지울 때 Next의 기록 값을 넘겨 `useSearchParams`가 옛 주소를 들고 있던 것, 모임 상세 찜 토스트의 빈자리 알림 안내)
 
 ### 계획과 달라진 점
 
+- 리뷰에서 찾은 모임 상세의 찜 토스트 안내도 같은 규칙(미신청자에게만)으로 맞췄다
 - 빈자리 알림 버튼을 참여 확정자만이 아니라 빈자리가 나도 할 수 있는 일이 없는 상태(주최자, 신청 대기, 미승인, 참여 취소, 내보내짐) 모두에서 숨겼다
 
 ### 남은 일
