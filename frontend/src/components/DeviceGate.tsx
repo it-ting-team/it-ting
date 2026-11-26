@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.svg'
 import mound from '../assets/mole-mound.png'
 import styles from './DeviceGate.module.css'
 
