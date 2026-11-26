@@ -1,9 +1,14 @@
 package com.itting.chat.repository;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.itting.chat.domain.ChatRoomType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -76,7 +81,42 @@ public class ChatRoomReadRepository {
 				});
 	}
 
+	/**
+	 * 내가 들어갈 수 있는 대화방을 모두 읽는다(대화 목록). 내가 나간 방과 삭제된 모임의 방은 없다. 순서는 정해 주지 않는다.
+	 * 방마다 마지막 메시지의 id, 안 읽은 수, 1:1이면 상대와 상대가 나갔는지를 함께 담는다.
+	 */
+	public List<JoinedRoom> findJoinedRooms(Long userId) {
+		return jdbc.query("""
+				SELECT cr.id, cr.type, cr.meetup_id, m.title AS meetup_title, cr.created_at,
+				       (SELECT MAX(lm.id) FROM chat_message lm WHERE lm.chat_room_id = cr.id) AS last_message_id,
+				       (SELECT o.user_id FROM chat_room_member o
+				        WHERE o.chat_room_id = cr.id AND o.user_id <> :userId AND cr.type = 'DIRECT') AS counterpart_id,
+				       (SELECT o.left_at IS NOT NULL FROM chat_room_member o
+				        WHERE o.chat_room_id = cr.id AND o.user_id <> :userId AND cr.type = 'DIRECT') AS counterpart_left,
+				""" + UNREAD_COUNT + " AS unread_count " + JOINED_ROOMS, Map.of("userId", userId), (rs, row) -> {
+					Long meetupId = rs.getObject("meetup_id", Long.class);
+					return new JoinedRoom(rs.getLong("id"), ChatRoomType.valueOf(rs.getString("type")), meetupId,
+							rs.getString("meetup_title"),
+							rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC),
+							rs.getObject("last_message_id", Long.class), rs.getObject("counterpart_id", Long.class),
+							rs.getBoolean("counterpart_left"), rs.getLong("unread_count"));
+				});
+	}
+
 	public record RoomReadState(Long roomId, long unreadCount) {
+	}
+
+	/**
+	 * 대화 목록의 한 줄.
+	 *
+	 * @param meetupTitle 모임 대화방의 모임 이름. 1:1이면 null
+	 * @param createdAt 방을 만든 시각. 메시지가 없는 방의 순서를 정한다
+	 * @param lastMessageId 마지막 메시지. 메시지가 없으면 null
+	 * @param counterpartId 1:1 대화의 상대. 모임이면 null
+	 * @param counterpartLeft 1:1 대화의 상대가 방에서 나갔는지
+	 */
+	public record JoinedRoom(Long id, ChatRoomType type, Long meetupId, String meetupTitle, Instant createdAt,
+			Long lastMessageId, Long counterpartId, boolean counterpartLeft, long unreadCount) {
 	}
 
 }

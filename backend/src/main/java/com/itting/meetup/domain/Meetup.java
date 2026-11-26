@@ -68,6 +68,14 @@ public class Meetup extends BaseTimeEntity {
 		return !now.isBefore(details.startsAt());
 	}
 
+	/**
+	 * 모임이 끝났는지. 끝나는 시각을 정하지 않은 모임은 시작 시각으로 본다. 그 시각이 되면 끝난 것이다
+	 * ({@code docs/api/06-chat.md}의 "대화방에서 나가기").
+	 */
+	public boolean isEnded(Instant now) {
+		return !now.isBefore(details.endsAt() == null ? details.startsAt() : details.endsAt());
+	}
+
 	public boolean isRecruitmentEnded(Instant now) {
 		return !now.isBefore(recruitDeadlineAt == null ? details.startsAt() : recruitDeadlineAt);
 	}

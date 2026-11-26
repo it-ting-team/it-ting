@@ -195,7 +195,7 @@
 |---|---|
 | 모임을 만든다 | `chat_room`에 `type`이 `MEETUP`인 줄을 만들고, `chat_room_member`에 주최자를 넣는다 |
 | 신청을 수락한다 | `chat_room_member`에 그 사람을 넣고, `chat_message`에 `type`이 `JOINED`인 안내 메시지를 넣는다 |
-| 참여를 취소하거나 내보낸다 | 그 사람의 `chat_room_member.left_at`을 채우고, `chat_message`에 `type`이 `LEFT`인 안내 메시지를 넣는다 |
+| 참여를 취소하거나 내보낸다 | 그 사람의 `chat_room_member.left_at`을 채우고, `chat_message`에 `type`이 `LEFT`인 안내 메시지를 넣는다. 그 사람이 받은 이 대화방의 안 읽은 새 메시지 알림은 읽음으로 바꾼다 |
 
 - 안내 메시지는 대화방에 있는 사람들에게 채팅의 [실시간 소식](06-chat.md#실시간-소식)으로 간다.
 - 모임을 취소하거나 모임이 끝나도 대화방은 그대로 둔다. 그 뒤에 대화방에서만 나가는 일은 채팅의 [나가기](06-chat.md#post-apiv1chat-roomschatroomidleave)가 한다.

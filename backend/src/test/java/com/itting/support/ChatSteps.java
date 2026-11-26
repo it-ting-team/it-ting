@@ -82,6 +82,103 @@ public class ChatSteps {
 		sync();
 	}
 
+	/** 모임 대화방과 주최자의 참여자 줄. 모임을 만드는 API를 거치지 않은 모임({@link CommunitySteps#insertMeetup})에 붙인다. */
+	public long insertMeetupRoom(long meetupId, long hostId, Instant createdAt) {
+		sync();
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+		jdbcTemplate.update(connection -> {
+			var statement = connection.prepareStatement("""
+					INSERT INTO chat_room (type, meetup_id, created_at, updated_at) VALUES ('MEETUP', ?, ?, ?)
+					""", new String[] { "id" });
+			statement.setLong(1, meetupId);
+			statement.setObject(2, utc(createdAt));
+			statement.setObject(3, utc(createdAt));
+			return statement;
+		}, keyHolder);
+		long roomId = keyHolder.getKey().longValue();
+		join(roomId, hostId, createdAt);
+		return roomId;
+	}
+
+	/** 대화방에 들어온 사람의 참여자 줄. 안내 메시지는 넣지 않는다. */
+	public void join(long roomId, long userId, Instant joinedAt) {
+		sync();
+		jdbcTemplate.update("INSERT INTO chat_room_member (chat_room_id, user_id, joined_at) VALUES (?, ?, ?)", roomId,
+				userId, utc(joinedAt));
+		sync();
+	}
+
+	/** 사람이 보낸 메시지 한 줄. 넣은 순서대로 id가 커진다. */
+	public long text(long roomId, long senderId, String content, Instant createdAt) {
+		return insertMessage(roomId, "TEXT", senderId, content, createdAt);
+	}
+
+	/** 메시지 한 줄. {@code type}은 {@code TEXT}, {@code ACCEPTED}, {@code JOINED}, {@code LEFT}, {@code WITHDRAWN}이다. */
+	public long insertMessage(long roomId, String type, long senderId, String content, Instant createdAt) {
+		sync();
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+		jdbcTemplate.update(connection -> {
+			var statement = connection.prepareStatement("""
+					INSERT INTO chat_message (chat_room_id, type, sender_id, content, created_at) VALUES (?, ?, ?, ?, ?)
+					""", new String[] { "id" });
+			statement.setLong(1, roomId);
+			statement.setString(2, type);
+			statement.setLong(3, senderId);
+			statement.setString(4, content);
+			statement.setObject(5, utc(createdAt));
+			return statement;
+		}, keyHolder);
+		sync();
+		return keyHolder.getKey().longValue();
+	}
+
+	/** 메시지에 사진을 붙인다. */
+	public void attachImage(long messageId, int sortOrder, long imageId) {
+		sync();
+		jdbcTemplate.update("INSERT INTO chat_message_image (chat_message_id, sort_order, image_id) VALUES (?, ?, ?)",
+				messageId, sortOrder, imageId);
+		sync();
+	}
+
+	/** 메시지에 붙은 사진의 id. 보여 주는 순서대로. */
+	public List<Long> imageIdsOf(long messageId) {
+		sync();
+		return jdbcTemplate.queryForList(
+				"SELECT image_id FROM chat_message_image WHERE chat_message_id = ? ORDER BY sort_order", Long.class,
+				messageId);
+	}
+
+	/** 이 사람의 읽은 자리를 정한다. null이면 아무것도 읽지 않았다. */
+	public void setLastRead(long roomId, long userId, Long messageId) {
+		sync();
+		jdbcTemplate.update(
+				"UPDATE chat_room_member SET last_read_message_id = ? WHERE chat_room_id = ? AND user_id = ?",
+				messageId, roomId, userId);
+		sync();
+	}
+
+	/** 이 사람의 읽은 자리. 아무것도 읽지 않았으면 null. */
+	public Long lastRead(long roomId, long userId) {
+		sync();
+		return jdbcTemplate.queryForObject(
+				"SELECT last_read_message_id FROM chat_room_member WHERE chat_room_id = ? AND user_id = ?", Long.class,
+				roomId, userId);
+	}
+
+	/** 이 사람이 방에서 나간 시각. 나가지 않았으면 null. */
+	public Object leftAt(long roomId, long userId) {
+		sync();
+		return jdbcTemplate.queryForMap(
+				"SELECT left_at FROM chat_room_member WHERE chat_room_id = ? AND user_id = ?", roomId, userId)
+				.get("left_at");
+	}
+
+	public void setNotice(long roomId, String notice) {
+		sync();
+		jdbcTemplate.update("UPDATE chat_room SET notice = ? WHERE id = ?", notice, roomId);
+		sync();
+	}
+
 	/** 두 사람의 요청을 모두. 오래된 것부터. */
 	public List<Map<String, Object>> requestsBetween(long firstId, long secondId) {
 		sync();
@@ -148,7 +245,7 @@ public class ChatSteps {
 	}
 
 	/**
-	 * 이 사람들이 만든 채팅 줄(요청 · 대화방 · 참여자 · 메시지)과 알림만 지운다. 계정은 남긴다. 테스트 트랜잭션을 쓰지 않는(커밋하는)
+	 * 이 사람들이 만든 채팅 줄(요청 · 대화방 · 참여자 · 메시지 · 메시지의 사진)과 알림만 지운다. 계정은 남긴다. 테스트 트랜잭션을 쓰지 않는(커밋하는)
 	 * 테스트가 여러 번 겨룰 때 사이마다 부른다. 외래키 순서대로 지운다.
 	 */
 	public void deleteChatOf(long... userIds) {
@@ -158,16 +255,21 @@ public class ChatSteps {
 		jdbcTemplate.update("DELETE FROM notification WHERE user_id IN (" + in + ") OR actor_id IN (" + in + ")");
 		jdbcTemplate.update("DELETE FROM chat_request WHERE sender_id IN (" + in + ") OR receiver_id IN (" + in + ")");
 		for (Long roomId : roomIds) {
+			jdbcTemplate.update("""
+					DELETE FROM chat_message_image
+					WHERE chat_message_id IN (SELECT id FROM chat_message WHERE chat_room_id = ?)
+					""", roomId);
 			jdbcTemplate.update("DELETE FROM chat_message WHERE chat_room_id = ?", roomId);
 			jdbcTemplate.update("DELETE FROM chat_room_member WHERE chat_room_id = ?", roomId);
 			jdbcTemplate.update("DELETE FROM chat_room WHERE id = ?", roomId);
 		}
 	}
 
-	/** 이 사람들이 만든 채팅 줄 · 알림 · 계정을 지운다. 커밋하는 테스트가 끝에 부른다. */
+	/** 이 사람들이 만든 채팅 줄 · 알림 · 올린 사진 · 계정을 지운다. 커밋하는 테스트가 끝에 부른다. */
 	public void deleteAllOf(long... userIds) {
 		deleteChatOf(userIds);
 		String in = inList(userIds);
+		jdbcTemplate.update("DELETE FROM uploaded_image WHERE uploader_id IN (" + in + ")");
 		jdbcTemplate.update("DELETE FROM user_interest WHERE user_id IN (" + in + ")");
 		jdbcTemplate.update("DELETE FROM user_profile WHERE user_id IN (" + in + ")");
 		jdbcTemplate.update("DELETE FROM `user` WHERE id IN (" + in + ")");
