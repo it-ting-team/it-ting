@@ -172,7 +172,7 @@ function MeetupDetailView({ d: data }: { d: MeetupDetailVM }) {
               const on = data.liked
               const hadAlert = data.alert
               like(!on)
-              setToast(on ? { title: '찜을 해제했어요', undo: () => like(true, hadAlert) } : { title: '찜한 모임에 담았어요', desc: rec === 'closed' ? '찜한 모임에서 빈자리 알림을 받을 수 있어요' : undefined, link: { label: '찜한 모임 보기', to: '/meetups/me?tab=wish' } })
+              setToast(on ? { title: '찜을 해제했어요', undo: () => like(true, hadAlert) } : { title: '찜한 모임에 담았어요', desc: rec === 'closed' && data.my === 'NONE' ? '찜한 모임에서 빈자리 알림을 받을 수 있어요' : undefined, link: { label: '찜한 모임 보기', to: '/meetups/me?tab=wish' } })
             }}>
             <HeartIcon size={20} />
           </button>
