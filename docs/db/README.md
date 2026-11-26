@@ -45,7 +45,7 @@
 
 | 칼럼 | 두는 곳 | 빼는 곳과 까닭 |
 |---|---|---|
-| `created_at` | 모든 테이블 | `chat_room_member`는 `joined_at`이 같은 뜻이다. `daily_recommendation_member`와 `post_interest`는 부모 행에 딸려 함께 생기므로 부모의 시각을 따른다 |
+| `created_at` | 모든 테이블 | `chat_room_member`는 `joined_at`이 같은 뜻이다. `daily_recommendation_member`, `post_interest`, `chat_message_image`는 부모 행에 딸려 함께 생기므로 부모의 시각을 따른다 |
 | `updated_at` | 만든 뒤에 값이 바뀌는 테이블 | 한 번 쓰면 바뀌지 않는 테이블(버전, 메시지, 좋아요 · 저장 · 단골, 조치 기록, 탈퇴 기록)에는 두지 않는다. `chat_request.responded_at`, `meetup_application.status_changed_at`, `notification.read_at`은 같은 뜻이라 따로 두지 않는다 |
 | `deleted_at` | 지워도 줄을 남겨야 하는 테이블(`interest_category`, `interest`, `campus`, `campus_floor`, `meetup`, `post`, `comment`, `notice`) | 아래 네 경우 |
 

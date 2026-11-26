@@ -5,7 +5,10 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.itting.meetup.domain.MeetupCategory;
@@ -163,6 +166,24 @@ public class MeetupListRepository {
 				+ " AND m.id = :meetupId) matched";
 		return jdbc.query(sql, new MapSqlParameterSource().addValue("now", utc(now)).addValue("meetupId", meetupId),
 				(rs, row) -> toCard(rs, RecruitStatus.valueOf(rs.getString("recruit_status")))).stream().findFirst();
+	}
+
+	/**
+	 * 삭제되지 않은 모임들의 카드를 한 번에 읽는다. {@link #findCard}와 같은 값이다.
+	 *
+	 * @return 모임 id → 카드. 없거나 삭제된 모임은 담지 않는다
+	 */
+	public Map<Long, MeetupCardResponse> findCards(Collection<Long> meetupIds, Instant now) {
+		Map<Long, MeetupCardResponse> cards = new HashMap<>();
+		if (meetupIds.isEmpty()) {
+			return cards;
+		}
+		String sql = "SELECT matched.*, " + RECRUIT_STATUS + " AS recruit_status FROM (" + CARD_SOURCE
+				+ " AND m.id IN (:meetupIds)) matched";
+		jdbc.query(sql, new MapSqlParameterSource().addValue("now", utc(now)).addValue("meetupIds", meetupIds),
+				(rs, row) -> toCard(rs, RecruitStatus.valueOf(rs.getString("recruit_status"))))
+				.forEach(card -> cards.put(card.id(), card));
+		return cards;
 	}
 
 	public List<DashboardRow> findMyMeetups(Long userId, MyMeetupTab tab, Instant now) {
