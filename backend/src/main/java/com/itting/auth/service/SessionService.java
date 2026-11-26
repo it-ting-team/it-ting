@@ -67,6 +67,11 @@ public class SessionService {
 				.forEach(sessionRepository::deleteById);
 	}
 
+	/** 이 세션이 아직 살아 있는지. 지워졌거나 만료됐으면 false다. */
+	public boolean isAlive(String sessionId) {
+		return sessionRepository.findById(sessionId) != null;
+	}
+
 	/** 지금 요청의 세션만 지운다. 다른 기기의 세션은 그대로다. 쿠키는 Spring Session이 지운다. */
 	public void end(HttpServletRequest request) {
 		HttpSession session = request.getSession(false);
