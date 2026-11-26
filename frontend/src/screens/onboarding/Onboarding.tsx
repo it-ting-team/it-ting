@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { clampText, lengthOf, nicknameCharsMessage } from '../../lib/validation'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from '@/lib/nav'
-import logo from '../../assets/logo-clear.png'
+import logo from '../../assets/logo.svg'
 import MoleDresser, { MolePreview, MoleWithItems, WornChips } from '../../components/MoleDresser'
 import { DEFAULT_WORN, MAX_WORN, MOLE_ITEMS, MOLE_PARTS, blockedBy } from '../../data/moleItems'
 import RoomView from '../../components/RoomView'

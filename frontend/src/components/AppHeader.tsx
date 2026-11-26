@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Link, useSearchParams } from '@/lib/nav'
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.svg'
 import { BellIcon, GearIcon } from './Icons'
 import NotificationPopover from './NotificationPopover'
 import { useNotificationRealtime, useUnreadNotifications } from '../api/notifications'

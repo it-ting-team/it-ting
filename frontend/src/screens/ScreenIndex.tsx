@@ -1,5 +1,5 @@
 import { Link } from '@/lib/nav'
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.svg'
 
 /** 개발용: Figma 03. Screens 화면 ↔ 경로 목록 (docs/frontend-plan.md 와 같은 내용) */
 const GROUPS: { title: string; items: [string, string, string, boolean?][] }[] = [

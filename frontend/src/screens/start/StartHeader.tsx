@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from '@/lib/nav'
-import logo from '../../assets/logo-clear.png'
+import logo from '../../assets/logo.svg'
 import logoMole from '../../assets/auth/logo-mole.svg'
 import s from './Start.module.css'
 

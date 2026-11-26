@@ -6,7 +6,7 @@
  */
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
-import { LOOP_CLIPS, MOLE_NODE_Y, trimLoopSeams } from '../three/moleModel'
+import { LOOP_CLIPS, MOLE_NODE_Y, restoreCoffeeCup, trimLoopSeams } from '../three/moleModel'
 import { SIT_Y } from '../three/chatRoomLayout'
 
 const FS = 'node:fs' // @types/node 가 없어서 문자열로 불러 타입 검사를 피함 (vitest 는 app/ 에서 실행)
@@ -16,7 +16,7 @@ function parse(path: string) {
   const buf = fs.readFileSync(path)
   const len = new DataView(buf.buffer, buf.byteOffset, buf.byteLength).getUint32(12, true)
   return JSON.parse(new TextDecoder().decode(buf.subarray(20, 20 + len))) as {
-    nodes: { name?: string; translation?: number[] }[]
+    nodes: { name?: string; translation?: number[]; scale?: number[] }[]
     animations: { name: string; channels: { target: { node: number; path: string } }[] }[]
   }
 }
@@ -99,5 +99,46 @@ describe('반복 동작 이음매 (시작 시간 0.0417초)', () => {
   })
   it('반복 동작 목록은 핸드오프 표의 "반복 O" 8개', () => {
     expect([...LOOP_CLIPS].sort()).toEqual(['mole_butt_wiggle', 'mole_idle', 'mole_look_around', 'mole_showcase', 'mole_sit_idle', 'mole_sit_idle_beanbag', 'mole_sit_idle_chair', 'mole_walk'])
+  })
+})
+
+describe('커피 컵 부품 (v1_3 부터 glb 에 크기 0 으로 저장됨)', () => {
+  const PARTS = ['coffee_cup_band', 'coffee_cup_body', 'coffee_cup_coffee', 'coffee_cup_handle']
+  /** glb 노드 값 그대로 컵(부모) 아래에 부품 4개를 만든 장면 */
+  const sceneFromGlb = () => {
+    const root = new THREE.Group()
+    const cup = new THREE.Group()
+    cup.name = 'coffee_cup'
+    root.add(cup)
+    for (const name of PARTS) {
+      const n = j.nodes.find((x) => x.name === name)!
+      const o = new THREE.Object3D()
+      o.name = name
+      if (n.translation) o.position.fromArray(n.translation)
+      if (n.scale) o.scale.fromArray(n.scale)
+      cup.add(o)
+    }
+    return root
+  }
+  // 3D 쪽에서 coffee_cup 기본 크기를 0.0001 로 바꿔 다시 내보내면 이 시험이 실패함 → 이 시험과 restoreCoffeeCup 을 지우면 됨
+  it('glb 그대로면 부품 4개가 모두 크기 0 (mole_drink 가 부모 coffee_cup 만 키워서 컵이 안 보였음)', () => {
+    const scene = sceneFromGlb()
+    for (const name of PARTS) expect(scene.getObjectByName(name)!.scale.x, name).toBe(0)
+  })
+  it('restoreCoffeeCup: 크기 1 · v1_2 자리로 되돌림 (손잡이는 컵 옆 0.107m)', () => {
+    const scene = sceneFromGlb()
+    expect(restoreCoffeeCup(scene)).toBe(4)
+    for (const name of PARTS) expect(scene.getObjectByName(name)!.scale.toArray(), name).toEqual([1, 1, 1])
+    expect(scene.getObjectByName('coffee_cup_handle')!.position.toArray()).toEqual([0.107, 0.088, 0.001])
+    expect(scene.getObjectByName('coffee_cup_body')!.position.toArray()).toEqual([0, 0, 0.001])
+  })
+  it('여러 번 불러도 같은 결과, 크기가 있는 부품(다시 내보낸 glb)은 그대로 둠', () => {
+    const scene = sceneFromGlb()
+    restoreCoffeeCup(scene)
+    expect(restoreCoffeeCup(scene)).toBe(0)
+    const handle = scene.getObjectByName('coffee_cup_handle')!
+    handle.position.set(0.2, 0.1, 0); handle.scale.setScalar(0.9)
+    expect(restoreCoffeeCup(scene)).toBe(0)
+    expect(handle.position.toArray()).toEqual([0.2, 0.1, 0])
   })
 })
