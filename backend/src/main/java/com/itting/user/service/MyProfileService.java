@@ -15,6 +15,7 @@ import com.itting.burrow.service.MyBurrowService;
 import com.itting.campus.domain.CampusErrorCode;
 import com.itting.campus.repository.CampusFloorRepository;
 import com.itting.global.error.BusinessException;
+import com.itting.global.error.CommonErrorCode;
 import com.itting.global.response.ApiError;
 import com.itting.interest.domain.InterestErrorCode;
 import com.itting.interest.domain.UserInterest;
@@ -25,12 +26,14 @@ import com.itting.question.domain.UserAnswer;
 import com.itting.question.repository.IntroQuestionRepository;
 import com.itting.question.repository.UserAnswerRepository;
 import com.itting.term.service.TermService;
+import com.itting.user.domain.User;
 import com.itting.user.domain.UserErrorCode;
 import com.itting.user.domain.UserProfile;
 import com.itting.user.dto.MoleUpdateRequest;
 import com.itting.user.dto.ProfileUpdateRequest;
 import com.itting.user.dto.UserDisplayResponse;
 import com.itting.user.repository.UserProfileRepository;
+import com.itting.user.repository.UserRepository;
 import jakarta.validation.Validator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -49,6 +52,8 @@ import org.springframework.validation.beanvalidation.SpringValidatorAdapter;
  */
 @Service
 public class MyProfileService {
+
+	private final UserRepository userRepository;
 
 	private final UserProfileRepository userProfileRepository;
 
@@ -76,12 +81,13 @@ public class MyProfileService {
 
 	private final TransactionTemplate transaction;
 
-	public MyProfileService(UserProfileRepository userProfileRepository, CampusFloorRepository campusFloorRepository,
-			InterestRepository interestRepository, UserInterestRepository userInterestRepository,
-			IntroQuestionRepository introQuestionRepository, UserAnswerRepository userAnswerRepository,
-			BurrowRepository burrowRepository, BurrowService burrowService, MyBurrowService myBurrowService,
+	public MyProfileService(UserRepository userRepository, UserProfileRepository userProfileRepository,
+			CampusFloorRepository campusFloorRepository, InterestRepository interestRepository,
+			UserInterestRepository userInterestRepository, IntroQuestionRepository introQuestionRepository,
+			UserAnswerRepository userAnswerRepository, BurrowRepository burrowRepository, BurrowService burrowService, MyBurrowService myBurrowService,
 			TermService termService, NicknameService nicknameService, Validator validator,
 			PlatformTransactionManager transactionManager) {
+		this.userRepository = userRepository;
 		this.userProfileRepository = userProfileRepository;
 		this.campusFloorRepository = campusFloorRepository;
 		this.interestRepository = interestRepository;
@@ -105,6 +111,8 @@ public class MyProfileService {
 	 */
 	@Transactional
 	public UserDisplayResponse.Mole changeMole(Long userId, MoleUpdateRequest request) {
+		// 탈퇴가 먼저 프로필을 지웠으면 프로필이 없는 오류 대신 401로 답한다.
+		lockActiveUser(userId);
 		UserProfile profile = userProfileRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new IllegalStateException("프로필이 없는 계정: " + userId));
 		profile.changeMole(request.head().orElse(null), request.face().orElse(null), request.neck().orElse(null),
@@ -117,7 +125,8 @@ public class MyProfileService {
 	 * 내 정보를 저장하고 바뀐 내 땅굴 전체를 준다.
 	 *
 	 * @throws BusinessException 입력이 어긋나면 {@code INVALID_INPUT}, 없는 캠퍼스-층 · 관심사 · 질문이면 각각의
-	 *         {@code ..._NOT_FOUND}, 닉네임을 다른 사람이 쓰거나 맡아 두었으면 {@code NICKNAME_DUPLICATED}
+	 *         {@code ..._NOT_FOUND}, 닉네임을 다른 사람이 쓰거나 맡아 두었으면 {@code NICKNAME_DUPLICATED}, 탈퇴한
+	 *         계정이면 {@code UNAUTHENTICATED}
 	 */
 	public MyBurrowResponse changeProfile(Long userId, ProfileUpdateRequest request) {
 		validate(request);
@@ -129,11 +138,13 @@ public class MyProfileService {
 	}
 
 	/**
-	 * 프로필 행을 잠그고 저장한다. 같은 사람의 저장이 동시에 와도 차례로 처리한다.
+	 * 계정 행, 프로필 행 순서로 잠그고 저장한다. 같은 사람의 저장이 동시에 와도 차례로 처리한다. 계정 행을 먼저 잡아 탈퇴(계정 →
+	 * 관심사 · 답변 · 프로필 삭제)와 같은 순서로 잠그므로, 겹쳐도 교착하지 않고 탈퇴한 계정에 관심사 · 답변이 남지 않는다.
 	 *
 	 * @return 닉네임을 바꿨으면 true. 커밋한 뒤 맡아 둔 닉네임을 푼다
 	 */
 	private boolean save(Long userId, ProfileUpdateRequest request) {
+		lockActiveUser(userId);
 		UserProfile profile = userProfileRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new IllegalStateException("프로필이 없는 계정: " + userId));
 
@@ -188,6 +199,15 @@ public class MyProfileService {
 			}
 			throw e;
 		}
+	}
+
+	/**
+	 * 내 계정 줄을 공유 잠금으로 잡고 아직 활성인지 본다. 트랜잭션의 첫 SQL로 부른다. 탈퇴({@code WithdrawalService})가 같은 줄을
+	 * 먼저 잠그므로, 겹치면 탈퇴가 끝난 뒤 보고 거절하거나 탈퇴가 이 요청이 끝난 뒤 새 줄까지 정리한다.
+	 */
+	private void lockActiveUser(Long userId) {
+		userRepository.findByIdForShare(userId).filter(User::isActive)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.UNAUTHENTICATED));
 	}
 
 	/** 빠진 관심사의 줄은 지우고, 새 관심사는 줄을 만들고, 모든 줄의 순서를 보낸 순서(1부터)로 맞춘다. */

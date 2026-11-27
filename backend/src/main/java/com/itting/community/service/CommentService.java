@@ -27,7 +27,9 @@ import com.itting.global.error.BusinessException;
 import com.itting.global.error.CommonErrorCode;
 import com.itting.notification.domain.NotificationType;
 import com.itting.notification.service.NotificationService;
+import com.itting.user.domain.User;
 import com.itting.user.dto.UserDisplayResponse;
+import com.itting.user.repository.UserRepository;
 import com.itting.user.service.UserDisplayService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,11 +58,14 @@ public class CommentService {
 
 	private final NotificationService notificationService;
 
+	private final UserRepository users;
+
 	private final Clock clock;
 
 	public CommentService(PostAccess postAccess, PostRepository postRepository, CommentRepository commentRepository,
 			CommentVersionRepository commentVersionRepository, CommentLikeRepository commentLikeRepository,
-			UserDisplayService userDisplayService, NotificationService notificationService, Clock clock) {
+			UserDisplayService userDisplayService, NotificationService notificationService, UserRepository users,
+			Clock clock) {
 		this.postAccess = postAccess;
 		this.postRepository = postRepository;
 		this.commentRepository = commentRepository;
@@ -68,6 +73,7 @@ public class CommentService {
 		this.commentLikeRepository = commentLikeRepository;
 		this.userDisplayService = userDisplayService;
 		this.notificationService = notificationService;
+		this.users = users;
 		this.clock = clock;
 	}
 
@@ -158,6 +164,7 @@ public class CommentService {
 	 * 알림은 {@code COMMENT_LIKED:<댓글 id>:<누른 사람 id>} 키로 한 번만 만들고, 알림이 가는 곳은 그 댓글이 달린 글이다.
 	 */
 	public CommentLikeResponse like(Long userId, Long commentId) {
+		lockActiveUser(userId);
 		Comment comment = commentRepository.findById(commentId)
 				.filter(Comment::isPublic)
 				.orElseThrow(() -> new BusinessException(CommunityErrorCode.COMMENT_NOT_FOUND));
@@ -218,6 +225,15 @@ public class CommentService {
 	/** 그 글의 댓글과 답글 가운데 삭제되지 않은 것의 수. 가려진 것도 센다. */
 	private long countComments(Long postId) {
 		return commentRepository.countByPostIdAndStatusNot(postId, PostStatus.DELETED);
+	}
+
+	/**
+	 * 내 계정 줄을 공유 잠금으로 잡고 아직 활성인지 본다. 트랜잭션의 첫 SQL로 부른다. 탈퇴({@code WithdrawalService})가 같은 줄을
+	 * 먼저 잠그므로, 겹치면 탈퇴가 끝난 뒤 보고 거절하거나 탈퇴가 이 요청이 끝난 뒤 새 줄까지 정리한다.
+	 */
+	private void lockActiveUser(Long userId) {
+		users.findByIdForShare(userId).filter(User::isActive)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.UNAUTHENTICATED));
 	}
 
 	private Instant now() {

@@ -29,7 +29,9 @@ import com.itting.meetup.repository.MeetupRepository;
 import com.itting.notification.domain.NotificationType;
 import com.itting.notification.service.MeetupRequestCountReader;
 import com.itting.notification.service.NotificationService;
+import com.itting.user.domain.User;
 import com.itting.user.dto.UserDisplayResponse;
+import com.itting.user.repository.UserRepository;
 import com.itting.user.service.UserDisplayService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -45,21 +47,25 @@ public class MeetupApplicationService implements MeetupRequestCountReader {
 	private final NotificationService notifications;
 	private final UserDisplayService displays;
 	private final InterestTagService interests;
+	private final UserRepository users;
 	private final Clock clock;
 
 	public MeetupApplicationService(MeetupRepository meetups, MeetupParticipationRepository applications,
 			MeetupChatRooms chatRooms, NotificationService notifications, UserDisplayService displays,
-			InterestTagService interests, Clock clock) {
+			InterestTagService interests, UserRepository users, Clock clock) {
 		this.meetups = meetups;
 		this.applications = applications;
 		this.chatRooms = chatRooms;
 		this.notifications = notifications;
 		this.displays = displays;
 		this.interests = interests;
+		this.users = users;
 		this.clock = clock;
 	}
 
 	public MeetupApplicationResponse apply(Long meetupId, Long userId, String message) {
+		// 탈퇴와 같은 순서(계정 → 모임)로 잠근다.
+		lockActiveUser(userId);
 		Meetup meetup = lockMeetup(meetupId);
 		Instant now = clock.instant();
 		if (meetup.getHostId().equals(userId)) {
@@ -206,6 +212,15 @@ public class MeetupApplicationService implements MeetupRequestCountReader {
 
 	private long confirmedCount(Meetup meetup) {
 		return 1 + applications.countConfirmed(meetup.getId());
+	}
+
+	/**
+	 * 내 계정 줄을 공유 잠금으로 잡고 아직 활성인지 본다. 트랜잭션의 첫 SQL로 부른다. 탈퇴({@code WithdrawalService})가 같은 줄을
+	 * 먼저 잠그므로, 겹치면 탈퇴가 끝난 뒤 보고 거절하거나 탈퇴가 이 요청이 끝난 뒤 새 줄까지 정리한다.
+	 */
+	private void lockActiveUser(Long userId) {
+		users.findByIdForShare(userId).filter(User::isActive)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.UNAUTHENTICATED));
 	}
 
 	private Meetup lockMeetup(Long meetupId) {
