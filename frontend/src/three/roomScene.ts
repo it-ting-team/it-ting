@@ -462,8 +462,10 @@ export function mountRoomScene(container: HTMLElement, opts: RoomSceneOptions = 
   ;(globalThis as unknown as { __roomLook?: Record<string, unknown> }).__roomLook = { owner: opts.ownerId ?? null, wallpaper: wall.id, furniture: opts.furniture ?? {}, style: opts.style ?? null }
   const tileSrc = tileUrl(wall.id, q.level === 'low' ? 512 : 1024)
   let wallMat: THREE.MeshBasicMaterial | null = null
-  const fixedRows = FURNITURE_CATALOG.filter((r) => (r.type === 'base' || r.type === 'deco') && urlOf(r))
+  const fixedRows = FURNITURE_CATALOG.filter((r) => (r.type === 'base' || r.type === 'deco') && r.status !== 'unused' && urlOf(r))
   const fixedUrls = [...new Set(fixedRows.map((r) => urlOf(r)!))]
+  /** 카탈로그에서 뺀(unused) 고정 장식: 같은 glb 에 노드가 남아 있어서 불러온 뒤 장면에서 지움 (KAN-75: 과녁처럼 보이던 작은 러그 2개) */
+  const droppedRows = FURNITURE_CATALOG.filter((r) => r.status === 'unused' && urlOf(r))
   const planUrls = [...new Set(plan.items.filter((it) => it.built).map((it) => urlOf(it.row)).filter((u): u is string => !!u))]
   const softLoad = (u: string) => loadModel(u).catch((e) => { console.warn('[3D] 관심사 가구 모델을 못 불러와서 블록으로 대신해요', u, e); return null })
   /*
@@ -488,7 +490,7 @@ export function mountRoomScene(container: HTMLElement, opts: RoomSceneOptions = 
   const fillSlot = (g: THREE.Group, it: PlannedItem, src: THREE.Object3D | null) => {
     const { row, slot } = it
     if (src) {
-      // v3.8.1: 작은 소품은 바닥 칸 1.4배 · 원탁 칸 0.45배 (slot.model_scale)
+      // 작은 소품 배율 (slot.model_scale): 바닥 칸 20 · 21 · 22 는 1.8배, 14 는 1.6배, 13 은 1.4배 (KAN-75), 선반은 1배
       const m = src.clone(true); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.scale.setScalar(slot.model_scale ?? 1)
       markShadows(m)
       g.add(m)
@@ -543,6 +545,7 @@ export function mountRoomScene(container: HTMLElement, opts: RoomSceneOptions = 
     const roots = new Map<string, THREE.Object3D>()
     fixedUrls.forEach((u, i) => {
       const root = fixedG[i].scene.clone()
+      for (const r of droppedRows) if (urlOf(r) === u) root.getObjectByName(r.node)?.removeFromParent()
       roots.set(u, root)
       // 기본 가구(base)는 누를 수 있게 furniture 묶음에, 장식·벽 선반(deco)은 장면에
       const isBase = fixedRows.some((r) => r.type === 'base' && urlOf(r) === u)

@@ -37,7 +37,7 @@ const SHELF_SLOTS = SLOTS_V38.filter((s) => s.slot_type === 'prop' && s.kind ===
 const FLOOR_PROP_SLOTS = ['prop_slot_20', 'prop_slot_21', 'prop_slot_22', 'prop_slot_13', 'prop_slot_14'].map((n) => SLOTS_V38.find((s) => s.name === n)!)
 /** 원탁 위 칸(prop_slot_23·24)은 앱에서 쓰지 않음(2026-11-21 결정) → 원탁 자리는 바닥으로 */
 export const SMALL_ORDER = ['shelf', 'shelf', 'floor', 'shelf', 'floor', 'shelf', 'floor', 'floor', 'shelf', 'floor'] as const
-/** 자리 모델 배율: 바닥 칸 1.4배 · 원탁 칸 0.45배 (새 칸은 slot.model_scale, 13 · 14 는 small_prop_rule.model_scale) */
+/** 자리 모델 배율: 바닥 칸 20 · 21 · 22 는 1.8배, 14 는 1.6배, 13 은 1.4배 (KAN-75) · 원탁 칸 0.45배 (새 칸은 slot.model_scale, 13 · 14 는 small_prop_rule.model_scale) */
 export const scaleOfSlot = (s: Slot) => s.model_scale ?? s.small_prop_rule?.model_scale ?? 1
 const PET_SLOTS = SLOTS_V38.filter((s) => s.slot_type === 'pet')
 const slotByName = (n: string) => SLOTS_V38.find((s) => s.name === n)

@@ -237,7 +237,8 @@
     "category": null,
     "sub_interest": null,
     "slot": null,
-    "status": "built",
+    "status": "unused",
+    "note": "2026-11-27 KAN-75: 동심원 무늬가 과녁처럼 보여 방에서 뺌. glb 에는 노드가 남아 있어서 three/roomScene.ts 가 불러온 뒤 지움",
     "glb_compressed": "room_base_v3_1_draco_webp.glb",
     "fixed": true
   },
@@ -261,7 +262,8 @@
     "category": null,
     "sub_interest": null,
     "slot": null,
-    "status": "built",
+    "status": "unused",
+    "note": "2026-11-27 KAN-75: 동심원 무늬가 과녁처럼 보여 방에서 뺌. glb 에는 노드가 남아 있어서 three/roomScene.ts 가 불러온 뒤 지움",
     "glb_compressed": "room_base_v3_1_draco_webp.glb",
     "fixed": true
   },
