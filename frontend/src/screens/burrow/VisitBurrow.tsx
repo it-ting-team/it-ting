@@ -11,12 +11,12 @@ import { ReportDialog, TOAST, Toast } from '../../components/Feedback'
 import { ChatIcon, SendIcon } from '../../components/Icons'
 import MoundMole from '../../components/MoundMole'
 import { ME_ID } from '../../data/mock'
-import GuestbookModal from './GuestbookModal'
+import GuestbookModal, { type GuestbookReportDone } from './GuestbookModal'
 import { NotePanel, RoomNoteBody, useNotePanel } from './RoomNote'
 import SceneButton from '../../components/SceneButton'
 import { Link } from '@/lib/nav'
 import { api, errorText, isApiError, toastApiError, useOptimistic } from '../../api'
-import { reportBody } from '../../api/community'
+import { reportBody, useReport } from '../../api/community'
 import {
   ALREADY_RECEIVED_TEXT, EXPLORE_ERRORS, exploreHrefOf, exploreKeys, useSendChatRequest, useVisitActions, useVisitBurrow, type BurrowVM,
 } from '../../api/explore'
@@ -119,10 +119,21 @@ function VisitBurrowView({ b }: { b: BurrowVM }) {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: exploreKeys.burrow(owner.id) }) }, // 우체통 깃발 · 글 수
     onError: (e) => toastApiError(e, '방명록을 지우지 못했어요', BURROW_ERRORS),
   })
-  /** 방명록 글 신고 (POST /reports, targetType GUESTBOOK): 서로 다른 3명이면 서버가 가림 → 다시 받아서 목록·글 수에서 뺌 */
-  const reportEntry = (id: string, picked: string) => {
-    run.mutate({ call: () => api.community.createReport(reportBody('GUESTBOOK', id, picked)), errorTitle: '신고를 접수하지 못했어요', invalidate: [burrowKeys.guestbook(b.burrowId), exploreKeys.burrow(owner.id)] })
-  }
+  /**
+   * 방명록 글 신고 (POST /reports, targetType GUESTBOOK): 서로 다른 3명이면 서버가 가림 → 다시 받아서 목록·글 수에서 뺌.
+   * 글 · 댓글 신고와 같은 훅: 이미 신고했으면 onAlready, 그 밖의 실패는 오류 토스트, 접수되면 onReported
+   */
+  const reportMut = useReport()
+  const reportEntry = (id: string, picked: string, done: GuestbookReportDone) => reportMut.mutate(
+    { type: 'GUESTBOOK', id, picked, onAlready: done.onAlready },
+    {
+      onSuccess: done.onReported,
+      onSettled: () => {
+        void qc.invalidateQueries({ queryKey: burrowKeys.guestbook(b.burrowId) })
+        void qc.invalidateQueries({ queryKey: exploreKeys.burrow(owner.id) })
+      },
+    },
+  )
   /** 방노트의 신고 아이콘 (POST /reports, targetType MEMBER) */
   const reportOwner = (picked: string) => {
     setReportOpen(false)

@@ -94,6 +94,8 @@ export const TOAST = {
   edited: { title: '수정이 완료되었어요', desc: '변경한 내용이 저장되었어요' } as ToastSpec,
   deleted: { title: '삭제가 완료되었어요', desc: '삭제한 내용은 되돌릴 수 없어요' } as ToastSpec,
   reported: { title: '신고가 접수되었어요', desc: '검토 후 결과를 알림으로 알려드릴게요' } as ToastSpec,
+  /** 같은 대상을 다시 신고했을 때 (08 신고 팝업 1, 409 ALREADY_REPORTED) */
+  alreadyReported: { title: '이미 신고했어요' } as ToastSpec,
 }
 
 /**
