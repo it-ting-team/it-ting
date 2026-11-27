@@ -427,7 +427,11 @@ POST /api/v1/meetups
 
 ### 에러
 
-공통 에러 코드만 쓴다.
+공통 에러 코드에 더해 아래를 쓴다.
+
+| 상태 | `code` | 때 |
+|---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 
 ## GET /api/v1/meetups/{meetupId}
 
@@ -848,6 +852,7 @@ PUT /api/v1/meetups/19/like
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `MEETUP_NOT_FOUND` | 없는 모임이거나 삭제된 모임 |
 
 ## DELETE /api/v1/meetups/{meetupId}/like
@@ -938,6 +943,7 @@ PUT /api/v1/meetups/23/vacancy-alert
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `MEETUP_NOT_FOUND` | 없는 모임이거나 삭제된 모임 |
 | `409` | `MEETUP_NOT_LIKED` | 찜하지 않은 모임 |
 
@@ -1056,6 +1062,7 @@ POST /api/v1/meetups/19/applications
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `403` | `OWN_MEETUP_NOT_ALLOWED` | 내가 주최한 모임에 신청함 |
 | `404` | `MEETUP_NOT_FOUND` | 없는 모임이거나 삭제된 모임 |
 | `409` | `MEETUP_ALREADY_APPLIED` | 이미 신청해 기다리는 중이거나 참여가 확정됨 |

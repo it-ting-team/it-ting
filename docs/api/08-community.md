@@ -879,6 +879,7 @@ PUT /api/v1/posts/204/like
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `POST_NOT_FOUND` | 없는 글이거나 삭제된 글 |
 | `404` | `POST_HIDDEN` | 신고로 가려진 글 |
 
@@ -970,6 +971,7 @@ PUT /api/v1/posts/204/bookmark
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `POST_NOT_FOUND` | 없는 글이거나 삭제된 글 |
 | `404` | `POST_HIDDEN` | 신고로 가려진 글 |
 
@@ -1385,6 +1387,7 @@ PUT /api/v1/comments/901/like
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `COMMENT_NOT_FOUND` | 없는 댓글이거나, 삭제됐거나, 가려진 댓글. 신고로 가려지거나 삭제된 글에 달린 댓글 |
 
 ## DELETE /api/v1/comments/{commentId}/like
