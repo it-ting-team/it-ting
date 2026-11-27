@@ -271,7 +271,8 @@
 .trayLead { margin-left: 10px; font-size: 12px; color: var(--ink-400); }
 .leadMark { font-style: normal; font-size: 10px; padding: 1px 5px; margin-right: 2px; border-radius: 4px; background: rgba(255, 255, 255, .7); }
 .tray { position: relative; }
-.overToast {
+/* 토스트도 .tray 안의 p 라서, .tray 를 붙여야 .tray p 의 글자색(ink-900)에 덮이지 않음 (KAN-76) */
+.tray .overToast {
   position: absolute; left: 50%; bottom: -52px; transform: translateX(-50%); white-space: nowrap; z-index: 3;
   padding: 11px 18px; border-radius: 20px; background: var(--toast-bg); color: #fbf1e6; font-size: 14px;
   box-shadow: 0 10px 24px rgba(40, 22, 12, .3); animation: obFade .2s;
