@@ -13,4 +13,13 @@ public interface ImageStorage {
 	 */
 	String store(byte[] content, ImageFormat format);
 
+	/**
+	 * {@link #store}가 준 주소의 파일을 지운다. 이 저장소의 주소가 아니거나 파일이 이미 없으면 아무것도 하지 않는다
+	 * (KAN-66).
+	 *
+	 * @return 파일을 지웠으면 true
+	 * @throws java.io.UncheckedIOException 파일이 있는데 지우지 못했을 때
+	 */
+	boolean delete(String imageUrl);
+
 }
