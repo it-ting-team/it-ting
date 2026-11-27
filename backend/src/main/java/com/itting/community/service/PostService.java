@@ -5,12 +5,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.itting.community.domain.CommunityErrorCode;
@@ -19,7 +16,6 @@ import com.itting.community.domain.PostCategory;
 import com.itting.community.domain.PostImage;
 import com.itting.community.domain.PostInterest;
 import com.itting.community.domain.PostVersion;
-import com.itting.community.domain.UploadedImage;
 import com.itting.community.dto.PostCreateRequest;
 import com.itting.community.dto.PostCreateResponse;
 import com.itting.community.dto.PostInput;
@@ -29,7 +25,6 @@ import com.itting.community.repository.PostImageRepository;
 import com.itting.community.repository.PostInterestRepository;
 import com.itting.community.repository.PostRepository;
 import com.itting.community.repository.PostVersionRepository;
-import com.itting.community.repository.UploadedImageRepository;
 import com.itting.global.error.BusinessException;
 import com.itting.global.error.CommonErrorCode;
 import com.itting.global.response.ApiError;
@@ -60,7 +55,7 @@ public class PostService {
 
 	private final PostImageRepository postImageRepository;
 
-	private final UploadedImageRepository uploadedImageRepository;
+	private final ImageUsageService imageUsageService;
 
 	private final InterestCategoryRepository interestCategoryRepository;
 
@@ -72,13 +67,13 @@ public class PostService {
 
 	public PostService(PostRepository postRepository, PostVersionRepository postVersionRepository,
 			PostInterestRepository postInterestRepository, PostImageRepository postImageRepository,
-			UploadedImageRepository uploadedImageRepository, InterestCategoryRepository interestCategoryRepository,
+			ImageUsageService imageUsageService, InterestCategoryRepository interestCategoryRepository,
 			MeetupLinkService meetupLinkService, Validator validator, Clock clock) {
 		this.postRepository = postRepository;
 		this.postVersionRepository = postVersionRepository;
 		this.postInterestRepository = postInterestRepository;
 		this.postImageRepository = postImageRepository;
-		this.uploadedImageRepository = uploadedImageRepository;
+		this.imageUsageService = imageUsageService;
 		this.interestCategoryRepository = interestCategoryRepository;
 		this.meetupLinkService = meetupLinkService;
 		this.validator = new SpringValidatorAdapter(validator);
@@ -235,22 +230,9 @@ public class PostService {
 		return found == ids.size();
 	}
 
-	/** 모두 있는 사진이고, 내가 올렸고, 다른 글에 붙지 않았는지. */
+	/** 모두 있는 사진이고, 내가 올렸고, 다른 글이나 채팅 메시지에 붙지 않았는지. */
 	private boolean imagesUsable(Long userId, Long postId, List<Long> ids) {
-		if (ids.isEmpty()) {
-			return true;
-		}
-		Map<Long, UploadedImage> images = uploadedImageRepository.findAllById(ids).stream()
-				.collect(Collectors.toMap(UploadedImage::getId, Function.identity()));
-		if (images.size() != ids.size()
-				|| images.values().stream().anyMatch(image -> !image.getUploaderId().equals(userId))) {
-			return false;
-		}
-		Set<Long> attachedElsewhere = new HashSet<>();
-		postImageRepository.findAllByImageIdIn(ids).stream()
-				.filter(attached -> !attached.getPostId().equals(postId))
-				.forEach(attached -> attachedElsewhere.add(attached.getImageId()));
-		return attachedElsewhere.isEmpty();
+		return imageUsageService.usable(userId, postId, ids);
 	}
 
 }

@@ -10,11 +10,13 @@ import { QueryGate, SkeletonLines } from '../../components/AsyncState'
 import { PenIcon } from '../../components/Icons'
 import { ME_ID } from '../../data/mock'
 import { NO_SAVED_ROOM, roomLookOf } from '../../data/roomLook'
-import { toastApiError, useOptimistic } from '../../api'
+import { useQueryClient } from '@tanstack/react-query'
+import { toastApiError } from '../../api'
 import {
-  BURROW_ERRORS, burrowKeys, reportGuestbookEntry, useDeleteGuestbookEntry, useGuestbookEntries, useMyBurrow, useUpdateMole, type MyBurrowVM,
+  BURROW_ERRORS, burrowKeys, useDeleteGuestbookEntry, useGuestbookEntries, useMyBurrow, useUpdateMole, type MyBurrowVM,
 } from '../../api/burrow'
-import GuestbookModal from './GuestbookModal'
+import { useReport } from '../../api/community'
+import GuestbookModal, { type GuestbookReportDone } from './GuestbookModal'
 import UnsavedDialog from './UnsavedDialog'
 import MyInfoEdit, { INTRO_MAX } from './MyInfoEdit'
 import { lengthOf } from '../../lib/validation'
@@ -103,8 +105,19 @@ function MyBurrowView({ b }: { b: MyBurrowVM }) {
     onError: (e) => { toastApiError(e, '방명록을 지우지 못했어요', BURROW_ERRORS); resolve(false) },
   }))
   // 신고가 쌓여 가려지면 목록 · 글 수에서 빠지므로(명세 04) 끝나면 방명록과 내 땅굴을 다시 받음 (방문자 뷰 VisitBurrow 와 같음)
-  const run = useOptimistic()
-  const report = (id: string, reason: string) => run.mutate({ call: () => reportGuestbookEntry(id, reason), errorTitle: '신고하지 못했어요', errors: BURROW_ERRORS, invalidate: [burrowKeys.guestbook(b.burrowId), burrowKeys.mine] })
+  // 글 · 댓글 신고와 같은 훅: 이미 신고했으면 onAlready, 그 밖의 실패는 오류 토스트, 접수되면 onReported
+  const qc = useQueryClient()
+  const reportMut = useReport()
+  const report = (id: string, reason: string, done: GuestbookReportDone) => reportMut.mutate(
+    { type: 'GUESTBOOK', id, picked: reason, onAlready: done.onAlready },
+    {
+      onSuccess: done.onReported,
+      onSettled: () => {
+        void qc.invalidateQueries({ queryKey: burrowKeys.guestbook(b.burrowId) })
+        void qc.invalidateQueries({ queryKey: burrowKeys.mine })
+      },
+    },
+  )
 
   return (
     <main className={s.page}>

@@ -56,7 +56,7 @@ export interface Slot {
   /** v3.8: 동물 자리는 동물 이름(cat 등), 용품 자리와 짝(pair_slot) */
   pet?: string
   pair_slot?: string
-  /** v3.8.1: 작은 소품을 이 배율로 키워(바닥 1.4) 줄여(원탁 0.45) 놓음. max_m 은 배율을 곱한 뒤의 상자 */
+  /** v3.8.1: 작은 소품을 이 배율로 키워(바닥 1.4 ~ 1.8, KAN-75) 줄여(원탁 0.45) 놓음. max_m 은 배율을 곱한 뒤의 상자 */
   model_scale?: number
   /** v3.8.1: 되살린 바닥 자리(prop_slot_13·14)의 배율 */
   small_prop_rule?: { used_in_v3_8_1?: boolean; model_scale: number }

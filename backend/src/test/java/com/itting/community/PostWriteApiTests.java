@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.Map;
 
+import com.itting.support.ChatSteps;
 import com.itting.support.CommunitySteps;
 import com.itting.support.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
@@ -45,6 +46,9 @@ class PostWriteApiTests {
 
 	@Autowired
 	CommunitySteps steps;
+
+	@Autowired
+	ChatSteps chatSteps;
 
 	long me;
 
@@ -123,6 +127,20 @@ class PostWriteApiTests {
 
 		create(body("FREE", "제목", "본문", "[]", "[%d]".formatted(image), "null"))
 				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.fields[0].message").value("붙일 수 없는 사진이 있습니다."));
+	}
+
+	@Test
+	void 채팅_메시지에_붙은_사진은_글에_붙일_수_없다() throws Exception {
+		long image = steps.uploadImage(me, "https://cdn.example/chat.webp");
+		long room = chatSteps.insertDirectRoom(me, other, Instant.now());
+		long message = chatSteps.text(room, me, null, Instant.now());
+		chatSteps.attachImage(message, 1, image);
+
+		create(body("FREE", "제목", "본문", "[]", "[%d]".formatted(image), "null"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.code").value("INVALID_INPUT"))
+				.andExpect(jsonPath("$.error.fields[0].field").value("imageIds"))
 				.andExpect(jsonPath("$.error.fields[0].message").value("붙일 수 없는 사진이 있습니다."));
 	}
 

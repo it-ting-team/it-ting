@@ -45,6 +45,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	@Query("SELECT u FROM User u WHERE u.id = :id")
 	Optional<User> findByIdForShare(@Param("id") Long id);
 
+	/**
+	 * 두 계정 행을 id가 작은 것부터 함께 읽기 잠금으로 잡고 읽는다. 1:1 대화방에 메시지를 보낼 때 쓴다. 같은 두 사람의 대화 나가기
+	 * ({@link #findBothForUpdate})가 끝날 때까지 기다리게 하되, 두 사람이 동시에 보내는 것은 서로 기다리지 않는다
+	 * ({@code docs/db/chat.md}). 잠그는 순서가 {@link #findBothForUpdate}와 같아 교착하지 않는다. 없는 계정은 결과에 없다.
+	 *
+	 * <p>{@link #findBothForUpdate}처럼 잠그는 일이 트랜잭션의 첫 SQL이어야 한다.
+	 *
+	 * @return 계정 id → 잠근 계정. 잠근 순서대로다
+	 */
+	default Map<Long, User> findBothForShare(Long firstId, Long secondId) {
+		Map<Long, User> locked = new LinkedHashMap<>();
+		for (Long id : Stream.of(firstId, secondId).sorted().toList()) {
+			findByIdForShare(id).ifPresent(user -> locked.put(id, user));
+		}
+		return locked;
+	}
+
 	/** 이메일로 가입한 계정이 있는지. 탈퇴한 계정은 이메일을 비워 두므로 걸리지 않는다. */
 	boolean existsByEmail(String email);
 

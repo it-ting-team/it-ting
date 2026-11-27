@@ -7,6 +7,7 @@ import com.itting.burrow.domain.RegularBurrow;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface RegularBurrowRepository extends JpaRepository<RegularBurrow, RegularBurrow.Key> {
 
@@ -40,5 +41,10 @@ public interface RegularBurrowRepository extends JpaRepository<RegularBurrow, Re
 
 		Instant getCreatedAt();
 	}
+
+	/** 이 사람이 담은 단골과 이 땅굴을 담은 단골을 모두 지운다(회원 탈퇴). {@code burrowId}가 없으면 담은 것만 지운다. */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM RegularBurrow r WHERE r.userId = :userId OR r.burrowId = :burrowId")
+	int deleteAllByUserOrBurrow(@Param("userId") Long userId, @Param("burrowId") Long burrowId);
 
 }

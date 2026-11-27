@@ -53,7 +53,7 @@
 | 내 모임 | 들어올 때 | `GET /api/v1/me/meetups/summary`, `GET /api/v1/me/meetups`에 `tab=UPCOMING`, `GET /api/v1/meetup-calendar`에 `scope=MINE` | 탭 옆 숫자, 다음 모임 카드, 미니 캘린더, "확인 필요" 한 줄의 문구 |
 | 내 모임 | 탭을 바꿀 때 | `GET /api/v1/me/meetups`에 그 탭 | 빈 상태 |
 | 찜한 모임 | 하트, "되돌리기" | `DELETE /api/v1/meetups/{meetupId}/like`, `PUT /api/v1/meetups/{meetupId}/like`. 풀기 전에 빈자리 알림이 켜져 있었으면 되돌릴 때 `PUT /api/v1/meetups/{meetupId}/vacancy-alert`도 부른다 | 토스트, 풀기 전의 빈자리 알림 설정 기억하기 |
-| 찜한 모임 | "빈자리 알림 받기" | `PUT /api/v1/meetups/{meetupId}/vacancy-alert`, `DELETE /api/v1/meetups/{meetupId}/vacancy-alert` | 모집 완료인 모임에만 보여 주기 |
+| 찜한 모임 | "빈자리 알림 받기" | `PUT /api/v1/meetups/{meetupId}/vacancy-alert`, `DELETE /api/v1/meetups/{meetupId}/vacancy-alert` | `recruitStatus`가 `CLOSED`이고 `myStatus`가 `NONE`인 모임에만 보여 주기 |
 | 캘린더 팝업 | 열 때, 달을 넘길 때, 보기를 바꿀 때 | `GET /api/v1/meetup-calendar` | 달력 그리기, 날짜를 고르면 그날의 모임만 보여 주기 |
 | 신청 관리 | 열 때 | `GET /api/v1/meetups/{meetupId}/applications` | 정원이 차면 수락 끄기 |
 | 신청 관리 | "수락" | `POST /api/v1/meetup-applications/{meetupApplicationId}/accept` | 목록 다시 받기 |
@@ -195,7 +195,7 @@
 |---|---|
 | 모임을 만든다 | `chat_room`에 `type`이 `MEETUP`인 줄을 만들고, `chat_room_member`에 주최자를 넣는다 |
 | 신청을 수락한다 | `chat_room_member`에 그 사람을 넣고, `chat_message`에 `type`이 `JOINED`인 안내 메시지를 넣는다 |
-| 참여를 취소하거나 내보낸다 | 그 사람의 `chat_room_member.left_at`을 채우고, `chat_message`에 `type`이 `LEFT`인 안내 메시지를 넣는다 |
+| 참여를 취소하거나 내보낸다 | 그 사람의 `chat_room_member.left_at`을 채우고, `chat_message`에 `type`이 `LEFT`인 안내 메시지를 넣는다. 그 사람이 받은 이 대화방의 안 읽은 새 메시지 알림은 읽음으로 바꾼다 |
 
 - 안내 메시지는 대화방에 있는 사람들에게 채팅의 [실시간 소식](06-chat.md#실시간-소식)으로 간다.
 - 모임을 취소하거나 모임이 끝나도 대화방은 그대로 둔다. 그 뒤에 대화방에서만 나가는 일은 채팅의 [나가기](06-chat.md#post-apiv1chat-roomschatroomidleave)가 한다.
@@ -427,7 +427,11 @@ POST /api/v1/meetups
 
 ### 에러
 
-공통 에러 코드만 쓴다.
+공통 에러 코드에 더해 아래를 쓴다.
+
+| 상태 | `code` | 때 |
+|---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 
 ## GET /api/v1/meetups/{meetupId}
 
@@ -848,6 +852,7 @@ PUT /api/v1/meetups/19/like
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `MEETUP_NOT_FOUND` | 없는 모임이거나 삭제된 모임 |
 
 ## DELETE /api/v1/meetups/{meetupId}/like
@@ -916,7 +921,7 @@ PUT /api/v1/meetups/23/vacancy-alert
 2. `meetup_like`에 내 줄이 없으면 `409`와 `MEETUP_NOT_LIKED`.
 3. 내 `meetup_like.vacancy_alert`를 `true`로 바꾼다.
 
-모집 완료인 모임에만 버튼을 보여 주는 것은 프론트엔드가 한다. 서버는 모집 상태를 보지 않는다.
+모집 완료이고 아직 신청하지 않은 모임(`recruitStatus`가 `CLOSED`, `myStatus`가 `NONE`)에만 버튼을 보여 주는 것은 프론트엔드가 한다. 서버는 모집 상태와 내 상태를 보지 않는다.
 
 ### 응답 `data`
 
@@ -938,6 +943,7 @@ PUT /api/v1/meetups/23/vacancy-alert
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `MEETUP_NOT_FOUND` | 없는 모임이거나 삭제된 모임 |
 | `409` | `MEETUP_NOT_LIKED` | 찜하지 않은 모임 |
 
@@ -1056,6 +1062,7 @@ POST /api/v1/meetups/19/applications
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `403` | `OWN_MEETUP_NOT_ALLOWED` | 내가 주최한 모임에 신청함 |
 | `404` | `MEETUP_NOT_FOUND` | 없는 모임이거나 삭제된 모임 |
 | `409` | `MEETUP_ALREADY_APPLIED` | 이미 신청해 기다리는 중이거나 참여가 확정됨 |

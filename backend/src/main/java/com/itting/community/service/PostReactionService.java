@@ -9,8 +9,12 @@ import com.itting.community.dto.PostBookmarkResponse;
 import com.itting.community.dto.PostLikeResponse;
 import com.itting.community.repository.PostBookmarkRepository;
 import com.itting.community.repository.PostLikeRepository;
+import com.itting.global.error.BusinessException;
+import com.itting.global.error.CommonErrorCode;
 import com.itting.notification.domain.NotificationType;
 import com.itting.notification.service.NotificationService;
+import com.itting.user.domain.User;
+import com.itting.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +36,18 @@ public class PostReactionService {
 
 	private final NotificationService notificationService;
 
+	private final UserRepository users;
+
 	private final Clock clock;
 
 	public PostReactionService(PostAccess postAccess, PostLikeRepository postLikeRepository,
-			PostBookmarkRepository postBookmarkRepository, NotificationService notificationService, Clock clock) {
+			PostBookmarkRepository postBookmarkRepository, NotificationService notificationService, UserRepository users,
+			Clock clock) {
 		this.postAccess = postAccess;
 		this.postLikeRepository = postLikeRepository;
 		this.postBookmarkRepository = postBookmarkRepository;
 		this.notificationService = notificationService;
+		this.users = users;
 		this.clock = clock;
 	}
 
@@ -48,6 +56,7 @@ public class PostReactionService {
 	 * 알림은 {@code POST_LIKED:<글 id>:<누른 사람 id>} 키로 한 번만 만든다. 취소하고 다시 눌러도 늘지 않는다.
 	 */
 	public PostLikeResponse like(Long userId, Long postId) {
+		lockActiveUser(userId);
 		Post post = postAccess.findPublic(postId);
 		boolean created = postLikeRepository.insertIfAbsent(postId, userId, now()) == 1;
 		if (created) {
@@ -65,6 +74,7 @@ public class PostReactionService {
 
 	/** 공개 글을 저장한다. 내 글도 저장할 수 있고, 알림은 만들지 않는다. */
 	public PostBookmarkResponse bookmark(Long userId, Long postId) {
+		lockActiveUser(userId);
 		postAccess.findPublic(postId);
 		postBookmarkRepository.insertIfAbsent(postId, userId, now());
 		return new PostBookmarkResponse(true);
@@ -74,6 +84,15 @@ public class PostReactionService {
 	public PostBookmarkResponse unbookmark(Long userId, Long postId) {
 		postBookmarkRepository.deleteMine(postId, userId);
 		return new PostBookmarkResponse(false);
+	}
+
+	/**
+	 * 내 계정 줄을 공유 잠금으로 잡고 아직 활성인지 본다. 트랜잭션의 첫 SQL로 부른다. 탈퇴({@code WithdrawalService})가 같은 줄을
+	 * 먼저 잠그므로, 겹치면 탈퇴가 끝난 뒤 보고 거절하거나 탈퇴가 이 요청이 끝난 뒤 새 줄까지 정리한다.
+	 */
+	private void lockActiveUser(Long userId) {
+		users.findByIdForShare(userId).filter(User::isActive)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.UNAUTHENTICATED));
 	}
 
 	private Instant now() {

@@ -218,7 +218,11 @@ PATCH /api/v1/me/mole
 
 ### 에러
 
-공통 에러 코드만 쓴다.
+공통 에러 코드에 더해 아래를 쓴다.
+
+| 상태 | `code` | 때 |
+|---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 
 ## PATCH /api/v1/me/profile
 
@@ -358,6 +362,7 @@ PATCH /api/v1/me/profile
 
 | 상태 | `code` | 때 |
 |---|---|---|
+| `401` | `UNAUTHENTICATED` | 탈퇴하는 중에 같은 계정이 부름. 탈퇴가 끝난 뒤 답한다 |
 | `404` | `CAMPUS_FLOOR_NOT_FOUND` | 없거나 지운 캠퍼스-층 |
 | `404` | `INTEREST_NOT_FOUND` | 없거나 지운 세부 관심사가 `interestIds`에 있음 |
 | `404` | `INTRO_QUESTION_NOT_FOUND` | 없는 질문이 `answers`에 있음 |

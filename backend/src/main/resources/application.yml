@@ -101,6 +101,11 @@ itting:
   images:
     storage-dir: ${ITTING_IMAGES_STORAGE_DIR:}
     public-base-url: ${ITTING_IMAGES_PUBLIC_BASE_URL:}
+  # 실시간 소식 연결(docs/api/06-chat.md의 GET /api/v1/me/event-stream)
+  event-stream:
+    # 연결을 유지하려고 주석 줄(:ping)을 보내는 간격. 조용한 연결을 끊는 프록시보다 짧게 둔다.
+    # 브라우저가 끊은 연결은 이 신호를 쓰다 실패해 지워지므로, 길게 잡으면 끊긴 연결이 그만큼 오래 남는다.
+    heartbeat-interval: 25s
   # 서버가 사용자를 보내는 프론트엔드 주소(재설정 링크, Google 로그인 뒤)는 프로필마다 itting.frontend-url로 정한다.
   mattermost:
     # 기수: 그 기수 Mattermost 서버의 Incoming Webhook URL 목록. 프로필마다 .env나 환경 변수로 넣는다.

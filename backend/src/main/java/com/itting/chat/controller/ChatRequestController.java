@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 대화 요청 API 6개({@code docs/api/05-explore-visit.md}의 보내기, {@code docs/api/06-chat.md}의 목록 · 수 · 수락 · 거절 ·
  * 취소). 모두 로그인이 필요하고, 온보딩과 이번 학기 고르기를 마친 계정만 부른다.
  */
-@Tag(name = "06 채팅", description = "대화 요청 보내기 · 목록 · 수락 · 거절 · 취소")
+@Tag(name = "06 채팅", description = "대화 요청 · 대화방 · 메시지 · 읽음 · 나가기 · 공지")
 @RestController
 @RequestMapping("/api/v1")
 public class ChatRequestController {

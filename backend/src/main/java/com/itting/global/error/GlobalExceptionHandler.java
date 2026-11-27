@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -34,6 +36,9 @@ import tools.jackson.core.JacksonException;
 /**
  * 컨트롤러에서 나온 예외를 응답 틀({@code success}, {@code data}, {@code error})로 바꾼다.
  * 컨트롤러 밖(필터, 서블릿)에서 난 실패는 {@link ApiErrorController}가 같은 틀로 답한다.
+ *
+ * <p>응답은 요청의 {@code Accept}와 상관없이 JSON이다. {@code Accept: text/event-stream}으로만 부르는 실시간 소식 연결도
+ * 연결을 열기 전의 실패는 이 틀로 받는다.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -121,12 +126,22 @@ public class GlobalExceptionHandler {
 		}
 		return ResponseEntity.status(CommonErrorCode.METHOD_NOT_ALLOWED.status())
 				.headers(headers)
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(body(CommonErrorCode.METHOD_NOT_ALLOWED, null, null, null));
 	}
 
 	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
 	ResponseEntity<ApiResult<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
 		return respond(CommonErrorCode.UNSUPPORTED_MEDIA_TYPE, null, null);
+	}
+
+	/**
+	 * 열어 둔 연결(실시간 소식)을 받는 쪽이 끊었을 때. 브라우저가 탭을 닫으면 늘 생기는 일이라 서버 오류로 남기지 않는다.
+	 * 답을 받을 곳이 없으므로 아무것도 쓰지 않는다.
+	 */
+	@ExceptionHandler(AsyncRequestNotUsableException.class)
+	void handleDisconnected(AsyncRequestNotUsableException e) {
+		log.debug("받는 쪽이 열어 둔 연결을 끊었습니다.");
 	}
 
 	/**
@@ -144,6 +159,7 @@ public class GlobalExceptionHandler {
 
 	private static ResponseEntity<ApiResult<Void>> invalidInput(List<ApiError.FieldError> fields) {
 		return ResponseEntity.status(CommonErrorCode.INVALID_INPUT.status())
+				.contentType(MediaType.APPLICATION_JSON)
 				.body(body(CommonErrorCode.INVALID_INPUT, null, fields, null));
 	}
 
@@ -153,7 +169,9 @@ public class GlobalExceptionHandler {
 
 	private static ResponseEntity<ApiResult<Void>> respond(
 			ErrorCode code, String message, List<ApiError.FieldError> fields, Object detail) {
-		return ResponseEntity.status(code.status()).body(body(code, message, fields, detail));
+		return ResponseEntity.status(code.status())
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(body(code, message, fields, detail));
 	}
 
 	private static ApiResult<Void> body(ErrorCode code, String message, List<ApiError.FieldError> fields,

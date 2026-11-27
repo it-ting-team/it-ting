@@ -66,4 +66,17 @@ public class ChatRoom extends BaseTimeEntity {
 		return notice;
 	}
 
+	public boolean isDirect() {
+		return type == ChatRoomType.DIRECT;
+	}
+
+	/**
+	 * 모임 대화방의 공지를 쓰거나 고치거나 지운다. 공지는 대화방에 하나뿐이다.
+	 *
+	 * @param notice 새 공지. 지우면 null
+	 */
+	public void changeNotice(String notice) {
+		this.notice = notice;
+	}
+
 }

@@ -6,6 +6,7 @@ import com.itting.user.domain.UserProfile;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,5 +23,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long> 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT p FROM UserProfile p WHERE p.userId = :userId")
 	Optional<UserProfile> findByIdForUpdate(@Param("userId") Long userId);
+
+	/** 이 사람의 프로필을 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM UserProfile p WHERE p.userId = :userId")
+	int deleteByUserIdNow(@Param("userId") Long userId);
 
 }

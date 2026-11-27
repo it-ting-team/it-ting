@@ -72,6 +72,19 @@ public class MeetupParticipationRepository {
 				""", Map.of("id", meetupId, "includePending", includePending), APPLICATION);
 	}
 
+	/**
+	 * 이 사람이 신청해 기다리거나 참여가 확정된 예정 모임의 id. 시작하지 않았고 취소 · 삭제되지 않은 모임이다. id 순서다.
+	 * 회원 탈퇴가 정리할 모임을 찾는다. 잠그지 않고 읽으므로, 모임을 잠근 뒤 신청을 다시 읽어 확인한다.
+	 */
+	public List<Long> findUpcomingWithOpenApplication(Long userId, Instant now) {
+		return jdbc.queryForList("""
+				SELECT a.meetup_id FROM meetup_application a JOIN meetup m ON m.id = a.meetup_id
+				WHERE a.user_id = :userId AND a.status IN ('PENDING', 'CONFIRMED')
+				  AND m.deleted_at IS NULL AND m.canceled_at IS NULL AND m.starts_at > :now
+				ORDER BY a.meetup_id
+				""", Map.of("userId", userId, "now", utc(now)), Long.class);
+	}
+
 	public long countConfirmed(Long meetupId) {
 		return jdbc.queryForObject("""
 				SELECT COUNT(*) FROM meetup_application WHERE meetup_id = :id AND status = 'CONFIRMED'

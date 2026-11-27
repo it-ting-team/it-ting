@@ -7,7 +7,8 @@ import { EmptyMole, Toast } from '../../components/Feedback'
 import { HomeIcon } from '../../components/Icons'
 import { ErrorState } from '../../components/AsyncState'
 import { getMyWorn } from '../../data/moleItems'
-import { cropOf, floorLabel, me } from '../../data/field'
+import { cropOf, floorLabel } from '../../data/field'
+import { useMyInterests } from '../../api/burrow'
 import {
   exploreKeys, parsePlace, placeId, resetDailyRecommendationDemo, samePlace, useDailyRecommendation, useField, useHomePlace,
   type FieldPlace, type FieldVM,
@@ -85,11 +86,11 @@ function ExploreField({ field, home }: { field: FieldVM; home: FieldPlace | null
   const occupied = useMemo(() => field.residents.map((r) => r.seat), [field])
   const others = field.residents.filter((r) => !r.mine).length
   // 관심사 이펙트: 자리마다 대표 관심사·겹치는 관심사·드문 관심사·접속 (docs/interest-effects.md)
+  const myInterests = useMyInterests()
   const fxSeats = useMemo(() => {
-    const mineInt = me().interests
-    const close = closeSeatsOf(field.residents, mineInt)
-    return field.residents.map((r) => holeFxOf(r.seat, r.user, !!r.mine, mineInt)).filter((x): x is HoleFx => !!x).map((h) => ({ ...h, close: close.has(h.seat) }))
-  }, [field])
+    const close = closeSeatsOf(field.residents, myInterests)
+    return field.residents.map((r) => holeFxOf(r.seat, r.user, !!r.mine, myInterests)).filter((x): x is HoleFx => !!x).map((h) => ({ ...h, close: close.has(h.seat) }))
+  }, [field, myInterests])
   const seatParam = Number(params.get('seat'))
   const startSeat = bySeat.has(seatParam) ? seatParam : field.mySeat ?? field.residents[0]?.seat ?? 0
   const crop = cropOf(floor)
@@ -122,7 +123,6 @@ function ExploreField({ field, home }: { field: FieldVM; home: FieldPlace | null
 
   const here = bySeat.get(seat)
   const owner = here?.user
-  const mine = me()
   // 나와 같은 관심사 (서버의 isShared)
   const shared = owner && !here?.mine ? here?.shared ?? [] : []
   const focusX = panelOpen ? 0.403 : 0.5
@@ -260,7 +260,7 @@ function ExploreField({ field, home }: { field: FieldVM; home: FieldPlace | null
             {floorLabel(floor)} <span aria-hidden className={x.caret}>▾</span>
           </SceneButton>
           {/* 관심사 등불 (관심사 이펙트 f_lantern, docs/interest-effects.md 2차): 켜 둔 때만 보임 */}
-          <LanternPicker residents={field.residents} myInterests={mine.interests} />
+          <LanternPicker residents={field.residents} myInterests={myInterests} />
         </div>
 
         {others === 0 && ready && (

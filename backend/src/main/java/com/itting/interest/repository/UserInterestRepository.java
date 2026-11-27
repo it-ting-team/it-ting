@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.itting.interest.domain.UserInterest;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,5 +35,10 @@ public interface UserInterestRepository extends JpaRepository<UserInterest, User
 	/** 한 사람이 고른 세부 관심사의 id. 순서는 없다. */
 	@Query("SELECT ui.interestId FROM UserInterest ui WHERE ui.userId = :userId")
 	List<Long> findInterestIdsByUserId(@Param("userId") Long userId);
+
+	/** 이 사람의 관심사를 모두 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM UserInterest i WHERE i.userId = :userId")
+	int deleteAllByUserId(@Param("userId") Long userId);
 
 }

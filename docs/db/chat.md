@@ -159,6 +159,13 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 
 복합 기본키는 `PK(chat_message_id, sort_order)`다. 메시지 하나에 최대 3장을 붙인다. 사진은 먼저 올려 [`uploaded_image`](community.md#uploaded_image)에 기록하고, 메시지를 보낼 때 이 표로 메시지에 붙인다. 메시지를 고치거나 지우지 않으므로 이 표의 줄도 바뀌지 않는다.
 
+구현에서 정한 제약:
+
+- `CHECK (sort_order BETWEEN 1 AND 3)`: 메시지 하나에 3장까지다.
+- `created_at`을 두지 않는다. 메시지와 함께 생기고 바뀌지 않으므로 붙인 시각은 `chat_message.created_at`이다([공통 날짜 칼럼](README.md)).
+- 붙이기 전에 글(`post_image`)과 다른 메시지에 이미 붙은 사진인지 본다. 같은 사진을 두 메시지가 동시에 붙이면 `image_id`의 UNIQUE가 하나만 받아들이고, 다른 쪽은 쓸 수 없는 사진(`400`)으로 답한다.
+- 글과 메시지는 테이블이 달라 UNIQUE가 둘 사이를 막지 못한다. 같은 사람이 자기 사진 하나를 글과 메시지에 동시에 붙이면 둘 다 성공할 수 있다. 잠그지 않고 둔다(올린 사람 자신만 만들 수 있는 경우다). 그래서 사진을 지우는 작업(KAN-66)은 "붙어 있는 사진"을 볼 때 `post_image`와 이 표를 모두 본다.
+
 ## 저장하지 않는 것
 
 ### 계산해서 내려주는 값
@@ -168,7 +175,7 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 | 요청 만료 여부 | `chat_request.created_at`, `chat_request.status` | `PENDING`, `REJECTED`에서 현재 시각이 `created_at + 5일` 이상이면 활성 요청에서 제외한다. |
 | 받은 요청 수와 보낸 요청 수 | `chat_request.receiver_id`, `chat_request.sender_id`, `chat_request.status`, `chat_request.created_at` | 받은 요청은 현재 사용자가 수신자인 만료 전 `PENDING`을 센다. 보낸 요청은 현재 사용자가 발신자인 만료 전 `PENDING`, `REJECTED`를 센다. |
 | 땅굴 방문자 화면의 대화 버튼 | `chat_room.type`, `chat_room_member.chat_room_id`, `chat_room_member.user_id`, `chat_room_member.left_at`, `chat_request.sender_id`, `chat_request.receiver_id`, `chat_request.status`, `chat_request.created_at`, `user.status` | 두 사람이 모두 활동 중이며 나가지 않은 `DIRECT` 방이 있으면 ‘대화하기’다. 그 외에 내가 보낸 활성 요청이 있으면 ‘요청 보냄’이다. 그 외에는 ‘대화 요청하기’를 표시한다. 상대가 보낸 `PENDING` 요청이 있으면 새 요청을 막고, 내가 거절한 `REJECTED` 요청이 있으면 요청을 보낼 때 그 요청을 수락으로 처리한다. |
-| 안 읽은 메시지 수 | `chat_room_member.chat_room_id`, `chat_room_member.user_id`, `chat_room_member.last_read_message_id`, `chat_message.chat_room_id`, `chat_message.id`, `chat_message.type` | 같은 방의 `TEXT` 중 마지막으로 읽은 ID보다 큰 행을 센다. 읽은 ID가 NULL이면 하한을 적용하지 않는다. 안내 유형은 제외한다. 본인이 보낸 메시지를 별도로 제외할지는 미정이다. |
+| 안 읽은 메시지 수 | `chat_room_member.chat_room_id`, `chat_room_member.user_id`, `chat_room_member.last_read_message_id`, `chat_message.chat_room_id`, `chat_message.id`, `chat_message.type` | 같은 방의 `TEXT` 중 마지막으로 읽은 ID보다 크고 남이 보낸 행을 센다. 읽은 ID가 NULL이면 하한을 적용하지 않는다. 안내 유형과 본인이 보낸 메시지는 제외한다. |
 | 대화 목록의 마지막 메시지와 시각 | `chat_message.chat_room_id`, `chat_message.id`, `chat_message.type`, `chat_message.content`, `chat_message.created_at` | 같은 방에서 ID가 가장 큰 행을 찾는다. `TEXT`면 본문, 안내 유형이면 해당 안내 문구를 만들고 `created_at`을 시각으로 사용한다. |
 | 대화 목록 이름과 그림 | `chat_room.type`, `chat_room.meetup_id`, `chat_room_member.user_id`, `user.status`, `user_profile.nickname`, `user_profile.mole_head`, `user_profile.mole_face`, `user_profile.mole_neck`, `user_profile.mole_hand`, `meetup.title` | 1:1은 참여 행에서 본인을 제외한 계정의 닉네임과 두더지 아이템으로 표시한다. 상대가 탈퇴했다면 탈퇴한 사용자 이름과 기본 두더지를 사용한다. 모임 방의 이름은 `meetup.title`을 읽는다. |
 | 1:1 방 읽기 전용 여부 | `chat_room.type`, `chat_room_member.user_id`, `chat_room_member.left_at`, `user.status` | 현재 사용자가 아직 볼 수 있는 `DIRECT` 방에서, 상대가 나갔거나 상대 상태가 `WITHDRAWN`이면 읽기 전용이다. |
@@ -191,8 +198,11 @@ A가 B에게 요청을 보내고 B가 거절한다. A 화면에는 여전히 대
 
 같은 두 사람의 일은 한 번에 하나씩만 처리되므로 서로 동시에 보내도 요청은 하나이고, 같은 요청을 동시에 수락해도 대화방은 하나다. id 순서로 잠가 반대 방향의 일이 교착하지 않는다. 대화방 · 알림 · 이벤트는 같은 트랜잭션에서 만들고, 이벤트는 커밋된 뒤에 낸다.
 
+1:1 대화방에서 나가기도 같은 순서로 두 사람의 `user` 줄을 잠근다(`SELECT ... FOR UPDATE`). 1:1 대화방에 메시지를 보낼 때는 같은 두 줄을 같은 순서로 함께 읽기 잠금(`SELECT ... FOR SHARE`)으로 잡은 뒤 상대가 나갔는지 본다. 그래서 나가기와 보내기가 동시에 와도 `LEFT` 안내 메시지 뒤에 메시지가 들어가지 않고, 나간 사람에게 들어갈 수 없는 방의 알림이 가지 않는다. 함께 읽기 잠금끼리는 서로 기다리지 않으므로 두 사람이 동시에 보내는 것은 막히지 않는다. 모임 대화방은 읽기 전용이 되지 않아 보낼 때 잠그지 않는다. 모임 대화방에서 나갈 때는 내 `chat_room_member` 줄을 잠가, 같은 나가기가 겹쳐도 `LEFT` 안내 메시지가 하나만 들어가게 한다.
+
+읽은 자리(`last_read_message_id`)는 "지금 값보다 클 때만 바꾼다"를 한 SQL로 한다. 같은 사람의 읽음과 보내기가 겹쳐도 읽은 자리가 앞으로 돌아가지 않는다.
+
 ## 명세에 없어 구현 단계로 넘기는 것
 
 - 모임 방 목록 이미지의 표현
 - 둘 다 나간 1:1 방과 삭제된 모임에 연결된 방의 보관 기준
-- 본인 발신 메시지의 안 읽은 수 포함 여부(읽음 위치의 물리 FK는 걸지 않기로 정했다)

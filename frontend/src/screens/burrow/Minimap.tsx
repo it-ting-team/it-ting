@@ -3,7 +3,8 @@ import { useRegularOwnerIds } from '../../api/explore'
 import { useSearchParams } from '@/lib/nav'
 import Modal from '../../components/Modal'
 import Avatar from '../../components/Avatar'
-import { floorLabel, me, type FieldData, type Floor, type Resident } from '../../data/field'
+import { floorLabel, type FieldData, type Floor, type Resident } from '../../data/field'
+import { useMyInterests } from '../../api/burrow'
 import { FieldArt } from './explore-designs/FieldArt'
 import { FIELD_BOUNDS, LADDER, MAP_COLORS, buildVillage, camFootprint, camTarget, layoutNow, loadLayout, type Layout, type Village } from './explore-designs/fieldGeo'
 import { matchScore, sharedWith } from './explore-designs/match'
@@ -102,7 +103,7 @@ export default function Minimap({
   const regulars = useRegularOwnerIds()
   useSyncExternalStore(subscribeFx, fxVersion)
   const fxMap = fxOn('f_minimap')
-  const myInterests = useMemo(() => me().interests, [])
+  const myInterests = useMyInterests()
   const bySeat = useMemo(() => new Map(field.residents.map((r) => [r.seat, r])), [field])
   // 관심사 이펙트 "동네 이름표" (f_zones): 구역마다 유난히 많이 모인 관심사
   const zoneNames = useMemo(() => zoneNamesOf(field.residents), [field])

@@ -121,6 +121,19 @@ public class User extends BaseTimeEntity {
 		this.onboardedAt = now;
 	}
 
+	/**
+	 * 탈퇴한다. 상태를 {@code WITHDRAWN}으로 바꾸고 로그인에 쓰는 값과 Mattermost ID를 비운다. 같은 이메일 · Google 계정 ·
+	 * Mattermost 계정으로 다시 가입하면 새 계정이 된다({@code docs/db/account.md}).
+	 */
+	public void withdraw() {
+		this.status = UserStatus.WITHDRAWN;
+		this.email = null;
+		this.passwordHash = null;
+		this.googleSub = null;
+		this.googleEmail = null;
+		this.mattermostId = null;
+	}
+
 	public boolean isActive() {
 		return status == UserStatus.ACTIVE;
 	}

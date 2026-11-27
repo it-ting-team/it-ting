@@ -9,6 +9,7 @@ import com.itting.chat.domain.ChatRequest;
 import com.itting.chat.domain.ChatRequestStatus;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -66,6 +67,15 @@ public interface ChatRequestRepository extends JpaRepository<ChatRequest, Long> 
 			""")
 	long countSent(@Param("userId") Long userId, @Param("statuses") Collection<ChatRequestStatus> statuses,
 			@Param("aliveAfter") Instant aliveAfter);
+
+	/**
+	 * 이 사람이 보내거나 받은 요청을 모두 지운다(회원 탈퇴). 지난 요청과 답한 요청도 지운다.
+	 *
+	 * @return 지운 줄 수
+	 */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM ChatRequest r WHERE r.senderId = :userId OR r.receiverId = :userId")
+	int deleteAllByParty(@Param("userId") Long userId);
 
 	/** 내가 받은 요청 가운데 가장 최근에 보낸 사람. 요청이 없으면 비어 있다. */
 	@Query("""

@@ -108,7 +108,7 @@
 
 ### 새 학기를 고르지 않은 계정
 
-새 학기 들판이 열리면 이번 학기의 캠퍼스 · 층을 반드시 골라야 한다([명세](../spec/05-explore-visit.md#땅굴-메인--새-학기-안내)). `nextStep`이 `NEW_TERM`인 계정은 이 문서의 API, 로그인 없이 부르는 API, "새 학기를 고르기 전에도"라고 적힌 API([공통 API](00-common.md)의 학기 · 관심사 · 질문 목록, 이사 API)만 부를 수 있다. 온보딩 API도 부를 수 없다. 다른 API를 부르면 `403`과 `NEW_TERM_INCOMPLETE`로 답한다.
+새 학기 들판이 열리면 이번 학기의 캠퍼스 · 층을 반드시 골라야 한다([명세](../spec/05-explore-visit.md#땅굴-메인--새-학기-안내)). `nextStep`이 `NEW_TERM`인 계정은 이 문서의 API, 로그인 없이 부르는 API, "새 학기를 고르기 전에도"라고 적힌 API([공통 API](00-common.md)의 학기 · 관심사 · 질문 목록, 이사 API, [실시간 소식 연결](06-chat.md#get-apiv1meevent-stream))만 부를 수 있다. 온보딩 API도 부를 수 없다. 다른 API를 부르면 `403`과 `NEW_TERM_INCOMPLETE`로 답한다.
 
 ```json
 {

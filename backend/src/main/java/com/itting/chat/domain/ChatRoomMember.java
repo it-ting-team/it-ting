@@ -77,6 +77,11 @@ public class ChatRoomMember {
 		leftAt = now;
 	}
 
+	/** 아직 방에 있는지. 나갔으면 다시 들어올 수 없다. */
+	public boolean isJoined() {
+		return leftAt == null;
+	}
+
 	/** 복합 기본키 {@code (chat_room_id, user_id)}. */
 	public record Key(Long chatRoomId, Long userId) implements Serializable {
 	}
