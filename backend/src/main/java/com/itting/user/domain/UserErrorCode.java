@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 
 /**
  * 프로필 영역의 에러 코드. 닉네임을 확인하거나 저장하는 API(닉네임 확인, 온보딩 확정, 내 정보 수정), 프로필 팝업,
- * 비밀번호 변경이 쓴다.
+ * 비밀번호 변경, 회원 탈퇴가 쓴다.
  */
 public enum UserErrorCode implements ErrorCode {
 
@@ -22,7 +22,10 @@ public enum UserErrorCode implements ErrorCode {
 	CURRENT_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "지금 비밀번호가 맞지 않습니다."),
 
 	/** 새 비밀번호가 지금 비밀번호와 같음. 비밀번호 변경이 쓴다. */
-	PASSWORD_UNCHANGED(HttpStatus.BAD_REQUEST, "새 비밀번호가 지금 비밀번호와 같습니다.");
+	PASSWORD_UNCHANGED(HttpStatus.BAD_REQUEST, "새 비밀번호가 지금 비밀번호와 같습니다."),
+
+	/** 내가 연 예정 모임이 있어 탈퇴할 수 없음. 회원 탈퇴가 쓴다. 어떤 모임인지는 탈퇴 전 확인이 준다. */
+	HOSTING_MEETUP_EXISTS(HttpStatus.CONFLICT, "내가 연 예정 모임이 있어 탈퇴할 수 없습니다.");
 
 	private final HttpStatus status;
 

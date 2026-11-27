@@ -25,4 +25,9 @@ public interface PostBookmarkRepository extends JpaRepository<PostBookmark, Post
 	@Query("DELETE FROM PostBookmark b WHERE b.postId = :postId AND b.userId = :userId")
 	int deleteMine(@Param("postId") Long postId, @Param("userId") Long userId);
 
+	/** 이 사람의 줄을 모두 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM PostBookmark x WHERE x.userId = :userId")
+	int deleteAllByUserId(@Param("userId") Long userId);
+
 }

@@ -26,6 +26,11 @@ public class MeetupLikeRepository {
 				""", Map.of("meetupId", meetupId, "userId", userId, "now", LocalDateTime.ofInstant(now, ZoneOffset.UTC)));
 	}
 
+	/** 이 사람의 찜과 빈자리 알림을 모두 지운다(회원 탈퇴). */
+	public void deleteAllByUser(Long userId) {
+		jdbc.update("DELETE FROM meetup_like WHERE user_id = :userId", Map.of("userId", userId));
+	}
+
 	public void delete(Long meetupId, Long userId) {
 		jdbc.update("DELETE FROM meetup_like WHERE meetup_id = :meetupId AND user_id = :userId",
 				Map.of("meetupId", meetupId, "userId", userId));

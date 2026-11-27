@@ -28,4 +28,9 @@ public interface PostLikeRepository extends JpaRepository<PostLike, PostLike.Key
 
 	long countByPostId(Long postId);
 
+	/** 이 사람의 줄을 모두 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM PostLike x WHERE x.userId = :userId")
+	int deleteAllByUserId(@Param("userId") Long userId);
+
 }

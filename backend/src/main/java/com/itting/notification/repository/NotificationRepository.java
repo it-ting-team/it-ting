@@ -134,4 +134,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 	@Query(value = "DELETE FROM notification WHERE created_at < :cutoff LIMIT :batchSize", nativeQuery = true)
 	int deleteCreatedBefore(@Param("cutoff") Instant cutoff, @Param("batchSize") int batchSize);
 
+	/** 이 사람이 받은 알림을 모두 지운다(회원 탈퇴). 이 사람이 일으킨 남의 알림({@code actor_id})은 남긴다. */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM Notification n WHERE n.userId = :userId")
+	int deleteAllByUserId(@Param("userId") Long userId);
+
 }

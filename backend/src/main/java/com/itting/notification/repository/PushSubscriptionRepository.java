@@ -38,4 +38,9 @@ public interface PushSubscriptionRepository extends JpaRepository<PushSubscripti
 	@Query("DELETE FROM PushSubscription s WHERE s.id = :id")
 	int deleteBySubscriptionId(@Param("id") Long id);
 
+	/** 이 사람의 브라우저 푸시 등록을 모두 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM PushSubscription p WHERE p.userId = :userId")
+	int deleteAllByUserId(@Param("userId") Long userId);
+
 }

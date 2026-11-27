@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import com.itting.burrow.domain.BurrowEntrance;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -55,5 +56,10 @@ public interface BurrowEntranceRepository extends JpaRepository<BurrowEntrance, 
 			FOR UPDATE
 			""", nativeQuery = true)
 	int findMaxSlotForUpdate(@Param("termId") Long termId, @Param("campusFloorId") Long campusFloorId);
+
+	/** 땅굴의 입구를 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM BurrowEntrance e WHERE e.burrowId = :burrowId")
+	int deleteAllByBurrowId(@Param("burrowId") Long burrowId);
 
 }

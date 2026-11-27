@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
  * 확인받은 그 브라우저에서만 쓸 수 있다. 만든 뒤 10분 동안 유효하고, 같은 세션에서 다시 확인받으면 덮어쓰며, 쓰고 나면
  * 지운다.
  *
- * <p>{@code LINK} 기록은 {@code PUT /api/v1/me/google-link}가 쓴다. {@code WITHDRAW} 기록을 읽는 탈퇴 API는 KAN-61이
- * 만들고, 그때 {@link #find}로 읽고 {@link #delete}로 지운다.
+ * <p>{@code LINK} 기록은 {@code PUT /api/v1/me/google-link}가, {@code WITHDRAW} 기록은 회원 탈퇴({@code WithdrawalService})가
+ * {@link #find}로 읽고 {@link #delete}로 지운다.
  */
 @Service
 public class GoogleVerificationService {

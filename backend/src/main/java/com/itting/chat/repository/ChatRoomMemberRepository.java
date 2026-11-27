@@ -20,6 +20,10 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
 	@Query("SELECT m.userId FROM ChatRoomMember m WHERE m.chatRoomId = :chatRoomId AND m.leftAt IS NULL")
 	List<Long> findJoinedUserIds(@Param("chatRoomId") Long chatRoomId);
 
+	/** 이 사람이 지금 들어 있는 대화방의 id. 나간 방은 담지 않는다. id 순서다. */
+	@Query("SELECT m.chatRoomId FROM ChatRoomMember m WHERE m.userId = :userId AND m.leftAt IS NULL ORDER BY m.chatRoomId")
+	List<Long> findJoinedRoomIds(@Param("userId") Long userId);
+
 	/**
 	 * 내 참여자 줄을 트랜잭션이 끝날 때까지 잠그고 읽는다. 같은 사람의 나가기가 동시에 두 번 들어와도 한 번만 처리되게 한다.
 	 */
