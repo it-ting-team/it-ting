@@ -3,6 +3,8 @@ package com.itting.community.service.image;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
@@ -55,6 +57,34 @@ public class LocalDiskImageStorage implements ImageStorage {
 			throw new UncheckedIOException("사진을 저장하지 못했습니다: " + key, e);
 		}
 		return publicBaseUrl + ImageResourceConfig.URL_PATH + key;
+	}
+
+	/**
+	 * 주소가 {@code <publicBaseUrl>/images/}로 시작하고, 가리키는 곳이 {@code root} 안의 보통 파일일 때만 지운다.
+	 * {@code ../}로 밖을 가리키거나 폴더를 가리키는 주소는 지우지 않는다.
+	 */
+	@Override
+	public boolean delete(String imageUrl) {
+		String prefix = publicBaseUrl + ImageResourceConfig.URL_PATH;
+		if (imageUrl == null || !imageUrl.startsWith(prefix)) {
+			return false;
+		}
+		Path target;
+		try {
+			target = root.resolve(imageUrl.substring(prefix.length())).normalize();
+		}
+		catch (InvalidPathException e) {
+			return false;
+		}
+		if (!target.startsWith(root) || !Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+			return false;
+		}
+		try {
+			return Files.deleteIfExists(target);
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException("사진을 지우지 못했습니다: " + imageUrl, e);
+		}
 	}
 
 }
