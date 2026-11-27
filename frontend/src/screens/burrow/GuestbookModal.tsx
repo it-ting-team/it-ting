@@ -55,11 +55,13 @@ export function gbTime(iso: string, now = Date.now()) {
 export interface GuestbookCompose { value: string; onChange: (v: string) => void; onSubmit: () => void; max: number; placeholder: string }
 /** 목록을 아직 못 받았을 때 (처음 받는 중 · 받기 실패) */
 export interface GuestbookLoad { loading?: boolean; error?: unknown; onRetry?: () => void; retrying?: boolean }
+/** 신고 결과를 이 창에 알려 줌. 이 창이 완료 · 이미 신고함 토스트를 띄움. 그 밖의 실패는 부르는 쪽이 오류 토스트로 알림 */
+export interface GuestbookReportDone { onReported: () => void; onAlready: () => void }
 
 export default function GuestbookModal({ open, onClose, entries, onDelete, onDeleteOwn, onReport, compose, load, server }: {
   open: boolean; onClose: () => void; entries: GuestbookRow[]; onDelete?: (id: string) => void | Promise<unknown>; onDeleteOwn?: (id: string) => void
-  /** 신고 접수 (사유 문구는 ReportDialog 가 준 값). 3명이 되면 부르는 쪽 목록에서 빠짐 */
-  onReport?: (id: string, reason: string) => void; compose?: GuestbookCompose; load?: GuestbookLoad
+  /** 신고 접수 (사유 문구는 ReportDialog 가 준 값). 끝나면 done 으로 알림. 3명이 되면 부르는 쪽 목록에서 빠짐 */
+  onReport?: (id: string, reason: string, done: GuestbookReportDone) => void; compose?: GuestbookCompose; load?: GuestbookLoad
   /** 서버가 나눈 페이지 (주면 entries 는 그 페이지 글만) */
   server?: GuestbookServerPage
 }) {
@@ -149,7 +151,11 @@ export default function GuestbookModal({ open, onClose, entries, onDelete, onDel
           // 방문자가 자기 글을 지울 때의 문구는 명세에 없음(05 "아직 정하지 않은 것") → 주인 문구에 맞춰 방문자 쪽으로 바꿔 씀
           title={onDelete ? `${target ? authorOf(target).nickname : ''}님의 방명록을 삭제할까요?` : '내가 남긴 방명록을 삭제할까요?'}
           desc={onDelete ? '내 땅굴에서 사라지고 되돌릴 수 없어요. 작성자에게 따로 알림은 가지 않아요.' : '이 땅굴에서 사라지고 되돌릴 수 없어요.'} />
-        <ReportDialog open={!!reportId} target="방명록" onClose={() => setReportId(null)} onConfirm={(reason) => { if (reportId) onReport?.(reportId, reason); setReportId(null); setToast(TOAST.reported) }} />
+        <ReportDialog open={!!reportId} target="방명록" onClose={() => setReportId(null)} onConfirm={(reason) => {
+          // 완료 토스트는 신고가 접수된 뒤에만 (00 공통 16). 이미 신고한 글이면 "이미 신고했어요" (08 신고 팝업 1)
+          if (reportId) onReport?.(reportId, reason, { onReported: () => setToast(TOAST.reported), onAlready: () => setToast(TOAST.alreadyReported) })
+          setReportId(null)
+        }} />
       </Modal>
       <ProfilePopup user={profile} onClose={() => setProfile(null)} />
       <Toast open={!!toast} title={toast?.title ?? ''} desc={toast?.desc} onClose={() => setToast(null)} />
