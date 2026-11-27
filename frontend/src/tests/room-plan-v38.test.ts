@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { SUB_WORDS, wordsOfSub } from '../data/interestWords'
-import { BIG_SIZES, SLOTS_V38, dropByHeight, fits, placeWords, wordOrder } from '../data/roomPlanV38'
+import { BIG_SIZES, SLOTS_V38, dropByHeight, fits, placeWords, scaleOfSlot, wordOrder } from '../data/roomPlanV38'
 
 function rng(seed: number) {
   let a = seed || 1
@@ -46,8 +46,8 @@ describe('배치 규칙 v3.8', () => {
       'prop_slot_04', 'prop_slot_22', 'prop_slot_13', 'prop_slot_05', 'prop_slot_14',
     ])
     expect(r.placed.map((p) => p.kind)).toEqual(['shelf', 'shelf', 'floor_prop', 'shelf', 'floor_prop', 'shelf', 'floor_prop', 'floor_prop', 'shelf', 'floor_prop'])
-    // 바닥 칸 1.4배 · 선반 1배, 바닥 새 칸 먼지 0.6
-    expect(r.placed.map((p) => p.scale)).toEqual([1, 1, 1.4, 1, 1.4, 1, 1.4, 1.4, 1, 1.4])
+    // 바닥 칸 20 · 21 · 22 는 1.8배, 13 은 1.4배, 14 는 1.6배 (KAN-75) · 선반 1배, 바닥 새 칸 먼지 0.6
+    expect(r.placed.map((p) => p.scale)).toEqual([1, 1, 1.8, 1, 1.8, 1, 1.8, 1.4, 1, 1.6])
     // 새 칸(20~22)과 선반은 제자리 등장, 되살린 13 · 14 는 원래 낙하(HANDOFF v3.8.1: ry · drop 유지)
     for (const p of r.placed) expect(p.drop.mode, p.slot.name).toBe(/_(13|14)$/.test(p.slot.name) ? 'fall' : 'pop')
     expect(r.placed.filter((p) => p.slot.name.match(/_(20|21|22)$/)).every((p) => p.drop.dust === 0.6)).toBe(true)
@@ -61,7 +61,7 @@ describe('배치 규칙 v3.8', () => {
     expect(new Set(r.placed.map((p) => p.slot.name)).size).toBe(17)
     expect(r.placed.some((p) => p.kind === 'table_top' || /_(23|24)$/.test(p.slot.name))).toBe(false)
     expect(r.placed.filter((p) => p.kind === 'floor_prop').map((p) => p.slot.name)).toEqual(['prop_slot_20', 'prop_slot_21', 'prop_slot_22', 'prop_slot_13', 'prop_slot_14'])
-    for (const p of r.placed.filter((x) => x.slot.name === 'prop_slot_13' || x.slot.name === 'prop_slot_14')) expect(p.scale).toBe(1.4)
+    for (const p of r.placed.filter((x) => x.kind === 'floor_prop')) expect(p.scale, p.slot.name).toBe({ prop_slot_13: 1.4, prop_slot_14: 1.6 }[p.slot.name] ?? 1.8)
     // 바닥 5칸이 차는 6번째 바닥 차례(작은 소품 11번째 이후)는 선반으로 감
     const eleven = placeWords(smalls.slice(0, 11))
     expect(eleven.placed[10].kind).toBe('shelf')
@@ -69,7 +69,16 @@ describe('배치 규칙 v3.8', () => {
 
   it('slots.json 에는 원탁 위 칸 23 · 24 가 그대로 있음(지우지 않음, 앱에서만 안 씀)', () => {
     for (const n of ['prop_slot_23', 'prop_slot_24']) { expect(slot(n).kind).toBe('table_top'); expect(slot(n).pos_three[1]).toBeCloseTo(0.39) }
-    for (const n of ['prop_slot_20', 'prop_slot_21', 'prop_slot_22']) expect(slot(n).max_m).toEqual({ w: 0.45, d: 0.45, h: 0.5 })
+    for (const n of ['prop_slot_20', 'prop_slot_21', 'prop_slot_22']) expect(slot(n).max_m).toEqual({ w: 0.55, d: 0.55, h: 0.63 })
+  })
+
+  it('KAN-75: 바닥 소품 칸의 상자(max_m)는 선반 칸 상자 × 배율 이상 (작은 소품 행의 크기 = 이 상자 → 두더지가 피해 걷는 발자리가 키운 모델보다 작지 않게)', () => {
+    const cell = slot('prop_slot_01').max_m
+    expect(cell).toEqual({ w: 0.3, d: 0.28, h: 0.35 })
+    for (const n of ['prop_slot_13', 'prop_slot_14', 'prop_slot_20', 'prop_slot_21', 'prop_slot_22']) {
+      const s = slot(n), k = scaleOfSlot(s)
+      for (const a of ['w', 'd', 'h'] as const) expect(s.max_m[a] + 1e-9, `${n} ${a}`).toBeGreaterThanOrEqual(cell[a] * k)
+    }
   })
 
   it('큰 모델 · 벽 · 동물 짝은 v3.8 그대로 (작은 소품이 섞여도 같은 자리)', () => {

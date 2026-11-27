@@ -490,7 +490,7 @@ export function mountRoomScene(container: HTMLElement, opts: RoomSceneOptions = 
   const fillSlot = (g: THREE.Group, it: PlannedItem, src: THREE.Object3D | null) => {
     const { row, slot } = it
     if (src) {
-      // v3.8.1: 작은 소품은 바닥 칸 1.4배 · 원탁 칸 0.45배 (slot.model_scale)
+      // 작은 소품 배율 (slot.model_scale): 바닥 칸 20 · 21 · 22 는 1.8배, 14 는 1.6배, 13 은 1.4배 (KAN-75), 선반은 1배
       const m = src.clone(true); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.scale.setScalar(slot.model_scale ?? 1)
       markShadows(m)
       g.add(m)
