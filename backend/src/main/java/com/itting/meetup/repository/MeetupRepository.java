@@ -28,4 +28,15 @@ public interface MeetupRepository extends JpaRepository<Meetup, Long> {
 			""")
 	List<Long> findReminderCandidates(Instant from, Instant through, Instant now);
 
+	/**
+	 * 내가 연 예정 모임. 시작하지 않았고 취소 · 삭제되지 않은 모임을 시작이 가까운 것부터 준다. 내 모임의 {@code tab=HOSTING}과
+	 * 같다. 탈퇴를 막는 모임이다({@code docs/api/10-settings.md}의 "탈퇴할 때 하는 일").
+	 */
+	@Query("""
+			SELECT m FROM Meetup m
+			WHERE m.hostId = :hostId AND m.deletedAt IS NULL AND m.canceledAt IS NULL AND m.details.startsAt > :now
+			ORDER BY m.details.startsAt, m.id
+			""")
+	List<Meetup> findHostingUpcoming(Long hostId, Instant now);
+
 }

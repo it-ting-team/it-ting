@@ -57,6 +57,11 @@ public class ChatMessage extends BaseCreatedTimeEntity {
 		return create(chatRoomId, ChatMessageType.LEFT, userId, null);
 	}
 
+	/** 회원 탈퇴로 대화방에서 나갔다는 안내. {@code userId}는 탈퇴한 사람이다. */
+	public static ChatMessage withdrawn(Long chatRoomId, Long userId) {
+		return create(chatRoomId, ChatMessageType.WITHDRAWN, userId, null);
+	}
+
 	private static ChatMessage create(Long chatRoomId, ChatMessageType type, Long senderId, String content) {
 		ChatMessage message = new ChatMessage();
 		message.chatRoomId = chatRoomId;

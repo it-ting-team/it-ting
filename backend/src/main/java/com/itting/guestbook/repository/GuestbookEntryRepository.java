@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,5 +25,10 @@ public interface GuestbookEntryRepository extends JpaRepository<GuestbookEntry, 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT e FROM GuestbookEntry e WHERE e.id = :id")
 	Optional<GuestbookEntry> findByIdForUpdate(@Param("id") Long id);
+
+	/** 이 땅굴이 받은 방명록 글을 모두 지운다(회원 탈퇴). 탈퇴한 사람이 남의 땅굴에 쓴 글은 남긴다. */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM GuestbookEntry g WHERE g.burrowId = :burrowId")
+	int deleteAllByBurrowId(@Param("burrowId") Long burrowId);
 
 }

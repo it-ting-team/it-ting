@@ -27,4 +27,9 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, Commen
 
 	long countByCommentId(Long commentId);
 
+	/** 이 사람의 줄을 모두 지운다(회원 탈퇴). */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("DELETE FROM CommentLike x WHERE x.userId = :userId")
+	int deleteAllByUserId(@Param("userId") Long userId);
+
 }
