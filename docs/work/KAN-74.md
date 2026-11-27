@@ -138,7 +138,8 @@ sequenceDiagram
 - `WithdrawalWriteRaceTests` 6개 통과. 서비스 코드를 되돌리고 돌리면 6개 모두 실패한다(만들기 겨루기는 시작을 늦추는 장치를 넣은 뒤 실패를 확인했다)
 - `./gradlew build` 통과. 테스트 852개(기존 846 + 새 6), 실패 0
 - `git merge-tree --write-tree HEAD origin/dev`: 충돌 없음
-- 로컬 코드 리뷰(스킬 `code-review`): PR 전에 한다
+- 로컬 코드 리뷰(스킬 `code-review`): P0 0건, P1 0건. `MyProfileService`에서 주석 위치만 바로잡았다
+- Swagger 호출 결과(스킬 `api-evidence`): `local` 프로필로 띄워 고친 서비스마다 정상 호출 하나씩, 6개를 호출했다. 모임 만들기 201, 신청 201, 모임 찜 200, 글 좋아요 200, 댓글 좋아요 200, 내 정보 저장 200. 탈퇴와 겹친 `401`은 탈퇴가 세션을 모두 지워 Swagger로 재현할 수 없어 `WithdrawalWriteRaceTests`로 확인했다. 스크린샷과 응답은 PR 본문의 "호출 결과"에 있다
 
 ### 계획과 달라진 점
 
