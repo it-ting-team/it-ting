@@ -95,7 +95,8 @@
 .warn { color: #c4462b; font-weight: 500; }
 .trayChips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
 .trayChips button { height: 30px; padding: 0 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-.overToast {
+/* 토스트도 .pickTray 바로 아래 p 라서, .pickTray 를 붙여야 위 .pickTray > p 의 글자색(ink-900)에 덮이지 않음 (KAN-76) */
+.pickTray .overToast {
   position: absolute; left: 50%; bottom: -54px; transform: translateX(-50%); white-space: nowrap;
   padding: 11px 18px; border-radius: 20px; background: var(--toast-bg); color: #fbf1e6; font-size: 13px; font-weight: 600;
   box-shadow: 0 10px 24px rgba(40, 22, 12, .3); animation: fade .2s; z-index: 2;
