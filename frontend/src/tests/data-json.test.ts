@@ -208,9 +208,13 @@ describe('room_base_v3_1 (3D 핸드오프 v3.8.1): 고정 장식 5개', () => {
     for (const id of FIXED) {
       const r = CATALOG.find((x) => x.id === id)
       expect(r, id).toBeDefined()
-      expect(r!.type, id).toBe('base'); expect((r as unknown as { node: string }).node, id).toBe(id); expect(r!.status, id).toBe('built')
+      // KAN-75: 작은 러그 2개는 방에서 뺌(unused). glb 에는 노드가 남아 있고 three/roomScene.ts 가 불러온 뒤 지움
+      expect(r!.type, id).toBe('base'); expect((r as unknown as { node: string }).node, id).toBe(id); expect(r!.status, id).toBe(id.startsWith('rug_') ? 'unused' : 'built')
       expect(r!.glb_compressed, id).toBe('room_base_v3_1_draco_webp.glb')
     }
+  })
+  it('KAN-75: 방에서 뺀(unused) 행은 작은 러그 2개뿐', () => {
+    expect(CATALOG.filter((r) => r.status === 'unused').map((r) => r.id).sort()).toEqual(['rug_front_oval', 'rug_right_small'])
   })
   it('glb 파일 안에 5개 노드(fixed)와 조명 갓의 KHR_materials_emissive_strength 가 있고 옛 room_base_v3 파일은 없음', async () => {
     const fs = (await import(/* @vite-ignore */ FS)) as { readFileSync(p: string): Uint8Array; existsSync(p: string): boolean }
