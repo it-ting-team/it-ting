@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from '@/lib/nav'
+import { Link, useNavigate } from '@/lib/nav'
 import Avatar from '../../components/Avatar'
 import { ConfirmDialog } from '../../components/Feedback'
 import fb from '../../components/Feedback.module.css'
@@ -11,7 +11,7 @@ import { toneOf } from '../../data/mock'
 import { meetupToneOf } from '../../data/meetupCategory'
 import type { User } from '../../data/types'
 import { type MeetupX, TODAY, ddayOf, hourLabel, placeLine, startMs } from '../../data/meetupStore'
-import { patch, useOptimistic } from '../../api'
+import { isNotFound, patch, useOptimistic } from '../../api'
 import {
   MEETUP_ERRORS, meetupCalls, meetupKeys, useMeetupApplications, useMeetupCalendar, useMyMeetupSummary,
   type MeetupApplicationVM, type MeetupApplicationsVM, type MeetupCalendarScope, type MeetupMyStatus,
@@ -221,7 +221,12 @@ export function ManageModal({ id, onClose }: { id: string | null; onClose: () =>
   const [ask, setAsk] = useState<null | { kind: 'reject' | 'kick'; row: MeetupApplicationVM }>(null)
   const [profile, setProfile] = useState<User | null>(null)
   const v = q.data
-  if (!id) return null
+  // 지운 모임(404 MEETUP_NOT_FOUND, 예: 삭제된 모임의 "새 참여 신청" 알림): 다시 시도해도 같으므로 오류 대신
+  // "삭제된 모임이에요" 안내 화면으로 (09 알림 – 팝업 6, 00 공통 21). 뒤로 가면 알림 화면으로 돌아가게 지금 주소를 바꿈
+  const nav = useNavigate()
+  const gone = !!id && q.isError && isNotFound(q.error)
+  useEffect(() => { if (gone) nav('/gone/meetup', { replace: true }) }, [gone, nav])
+  if (!id || gone) return null
   const key = meetupKeys.applications(id)
   const act = (kind: 'accept' | 'reject' | 'kick', row: MeetupApplicationVM) => run.mutate({
     call: () => meetupCalls[kind](row.id), errors: MEETUP_ERRORS, invalidate: [meetupKeys.all],
